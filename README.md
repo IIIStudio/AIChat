@@ -4,6 +4,8 @@
 
 兼容 OpenAI Chat Completions API 格式，支持多模型切换、流式输出和 Markdown 渲染。
 
+![](image/2.jpg)
+
 ## 快速开始
 
 1. 在浏览器中打开 `index.html`
