@@ -609,7 +609,25 @@
 
         function copyMessageText(btnElement) {
             const block = btnElement.closest('.message-block');
-            let content = block.querySelector('.message-content').textContent;
+            const contentEl = block.querySelector('.message-content');
+            // 优先复制原始 Markdown 内容（存在 data-raw 属性时）
+            let content = contentEl.getAttribute('data-raw');
+            if (!content) {
+                // 回退：从 data-index 获取消息内容
+                const idx = parseInt(contentEl.getAttribute('data-index'));
+                if (!isNaN(idx)) {
+                    const session = sessions.find(s => s.id === currentSessionId);
+                    if (session && session.messages[idx]) {
+                        const msg = session.messages[idx];
+                        content = Array.isArray(msg.content) 
+                            ? msg.content.filter(c => c.type === 'text').map(c => c.text).join('\n')
+                            : msg.content;
+                    }
+                }
+                if (!content) {
+                    content = contentEl.textContent;
+                }
+            }
             content = content.replace(/\n{3,}/g, '\n\n').trim();
             navigator.clipboard.writeText(content).then(() => { showToast('已复制到剪贴板'); })
             .catch(() => { showToast('复制失败，请重试'); });
@@ -1362,7 +1380,7 @@
                 welcomeScreen.style.display = 'block';
             } else {
                 welcomeScreen.style.display = 'none';
-                session.messages.forEach(msg => {
+                session.messages.forEach((msg, idx) => {
                     let displayContent, imageUrl;
                     if (Array.isArray(msg.content)) {
                         const textPart = msg.content.find(c => c.type === 'text');
@@ -1372,7 +1390,7 @@
                     } else {
                         displayContent = msg.content;
                     }
-                    appendMessageDOM(msg.role, displayContent, msg.thought, imageUrl, msg.model);
+                    appendMessageDOM(msg.role, displayContent, msg.thought, imageUrl, msg.model, idx);
                 });
             }
         }
@@ -1390,7 +1408,7 @@
             fetchAIResponse();
         }
 
-        function appendMessageDOM(role, content, thought = null, imageUrl = null, msgModel = null) {
+        function appendMessageDOM(role, content, thought = null, imageUrl = null, msgModel = null, msgIndex = null) {
             welcomeScreen.style.display = 'none';
             
             const blockDiv = document.createElement('div');
@@ -1413,6 +1431,9 @@
             msgDiv.className = `message ${role}`;
             const contentDiv = document.createElement('div');
             contentDiv.className = 'message-content';
+            // 保存原始内容（Markdown 格式）
+            contentDiv.setAttribute('data-raw', content);
+            if (msgIndex != null) contentDiv.setAttribute('data-index', msgIndex);
             if (role === 'assistant' && content) {
                 contentDiv.innerHTML = marked.parse(content).trim();
             } else {
@@ -1527,7 +1548,8 @@
 
             const preset = getActivePreset();
             const fakeThought = "Thinking about your request...";
-            const aiMessageElement = appendMessageDOM('assistant', '正在思考...', fakeThought);
+            const msgIdx = currentSession.messages.length;
+            const aiMessageElement = appendMessageDOM('assistant', '正在思考...', fakeThought, null, null, msgIdx);
 
             try {
                 let messages = [...currentSession.messages];
@@ -1565,6 +1587,7 @@
                     aiReply = data.choices[0].message.content;
                 }
                 aiMessageElement.textContent = aiReply;
+                aiMessageElement.setAttribute('data-raw', aiReply);
                 currentSession.messages.push({ role: "assistant", content: aiReply, thought: fakeThought, model: activeModel });
                 saveSessionsToStorage();
                 aiMessageElement.innerHTML = marked.parse(aiReply).trim();
@@ -1588,21 +1611,26 @@
                         saveSessionsToStorage();
                         aiMessageElement.closest('.message-block')?.remove();
                         // 插入提示
-                        const tipEl = appendMessageDOM('assistant', '⚠️ 该模型不支持图片输入，已自动转为纯文字发送', null);
+                        const tipMsg = '⚠️ 该模型不支持图片输入，已自动转为纯文字发送';
+                        const tipEl = appendMessageDOM('assistant', tipMsg, null, null, null, currentSession.messages.length);
                         if (tipEl) tipEl.style.color = '#b0882a';
-                        currentSession.messages.push({ role: "assistant", content: '⚠️ 该模型不支持图片输入，已自动转为纯文字发送' });
+                        currentSession.messages.push({ role: "assistant", content: tipMsg });
                         saveSessionsToStorage();
                         setTimeout(() => fetchAIResponse(), 100);
                     } else {
-                        aiMessageElement.textContent = '该模型不支持图片输入，请移除图片或切换到支持多模态的模型后重试。';
+                        const errMsg = '该模型不支持图片输入，请移除图片或切换到支持多模态的模型后重试。';
+                        aiMessageElement.textContent = errMsg;
+                        aiMessageElement.setAttribute('data-raw', errMsg);
                         aiMessageElement.style.color = "#ff4d4f";
-                        currentSession.messages.push({ role: "assistant", content: '该模型不支持图片输入，请移除图片或切换到支持多模态的模型后重试。' });
+                        currentSession.messages.push({ role: "assistant", content: errMsg });
                         saveSessionsToStorage();
                     }
                 } else {
-                    aiMessageElement.textContent = `请求失败: ${msg}`;
+                    const errFull = `请求失败: ${msg}`;
+                    aiMessageElement.textContent = errFull;
+                    aiMessageElement.setAttribute('data-raw', errFull);
                     aiMessageElement.style.color = "#ff4d4f";
-                    currentSession.messages.push({ role: "assistant", content: `请求失败: ${msg}` });
+                    currentSession.messages.push({ role: "assistant", content: errFull });
                     saveSessionsToStorage();
                 }
             } finally {
@@ -1640,7 +1668,7 @@
                 displayText = text;
             }
 
-            appendMessageDOM('user', displayText, null, imageForDisplay);
+            appendMessageDOM('user', displayText, null, imageForDisplay, null, currentSession.messages.length);
             currentSession.messages.push({ role: "user", content: content });
             currentSession.presetId = activePresetId;
             saveSessionsToStorage();
