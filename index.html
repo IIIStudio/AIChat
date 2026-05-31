@@ -1,0 +1,1652 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="一个支持多模型切换、图片识别、流式输出、Markdown 渲染的 AI 对话客户端，兼容 OpenAI 格式 API，支持多运营商管理与参数预设。">
+    <meta name="keywords" content="AI Chat, 多模型切换, 图片识别, Markdown, 流式输出, OpenAI API, 参数预设, 大模型对话, LLM">
+    <title>AI Chat — 多模型智能对话客户端</title>
+    <script src="https://cdn.jsdmirror.com/npm/marked/marked.min.js"></script>
+    <style>
+        :root {
+            --bg-main: #ffffff;
+            --bg-sidebar: #fbfbfa;
+            --bg-gray: #f4f4f4;
+            --bg-active-chat: #eeebe5;
+            --bg-hover: #f9f9f9;
+            --text-main: #111111;
+            --text-muted: #888888;
+            --border-color: #e5e5e5;
+            --black-btn: #111111;
+            --chat-max-width: 820px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        body {
+            display: flex;
+            height: 100vh;
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            overflow: hidden;
+        }
+
+        /* --- 全局轻提示 --- */
+        .toast {
+            position: fixed;
+            top: 24px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-20px);
+            background-color: var(--text-main);
+            color: white;
+            padding: 10px 24px;
+            border-radius: 30px;
+            font-size: 14px;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 9999;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; visibility: visible; }
+
+        /* --- 左侧边栏 --- */
+        .sidebar {
+            width: 260px;
+            border-right: 1px solid #f0f0f0;
+            display: flex;
+            flex-direction: column;
+            padding: 24px 16px;
+            transition: width 0.3s ease, padding 0.3s ease, opacity 0.2s ease;
+            overflow: hidden;
+            flex-shrink: 0;
+            background-color: var(--bg-sidebar);
+        }
+        .sidebar.hidden { width: 0; padding-left: 0; padding-right: 0; opacity: 0; border-right: none; }
+
+        .sidebar-brand { display: flex; align-items: center; gap: 8px; font-size: 14px; margin-bottom: 32px; padding: 0 4px; white-space: nowrap; }
+        .sidebar-brand strong { font-weight: 700; }
+        .sidebar-brand span { color: var(--text-muted); }
+
+        .sidebar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding: 0 4px; white-space: nowrap; }
+        .sidebar-header h2 { font-size: 18px; font-weight: 700; }
+        .sidebar-actions { display: flex; gap: 12px; color: var(--text-main); cursor: pointer; }
+        .sidebar-actions svg { opacity: 0.7; transition: opacity 0.2s; }
+        .sidebar-actions svg:hover { opacity: 1; }
+
+        .chat-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
+        .chat-history-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; border-radius: 8px; font-size: 14px; cursor: pointer; color: var(--text-muted); transition: all 0.2s; white-space: nowrap; }
+        .chat-history-item:hover { background-color: var(--bg-hover); color: var(--text-main); }
+        .chat-history-item.active { background-color: var(--bg-active-chat); color: var(--text-main); }
+        .chat-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
+        
+        .chat-history-icons { display: none; gap: 10px; color: var(--text-muted); }
+        .chat-history-item:hover .chat-history-icons, .chat-history-item.active .chat-history-icons { display: flex; }
+        .chat-history-icons svg:hover { color: var(--text-main); }
+
+        /* --- 右侧主体 --- */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            min-width: 0;
+        }
+
+        .top-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 24px;
+            min-height: 60px;
+            z-index: 10;
+        }
+
+        .nav-left-actions { display: flex; align-items: center; color: var(--text-main); cursor: pointer; }
+        .sidebar-toggle-btn { display: none; opacity: 0.7; transition: opacity 0.2s; }
+        .sidebar-toggle-btn:hover { opacity: 1; }
+
+        .settings-btn {
+            background: none;
+            border: 1px solid var(--border-color);
+            padding: 6px 12px;
+            border-radius: 12px;
+            cursor: pointer;
+            color: var(--text-muted);
+            font-size: 13px;
+            transition: all 0.2s;
+            margin-left: auto;
+        }
+        .settings-btn:hover { color: var(--text-main); border-color: var(--text-muted); }
+
+        /* --- 聊天区域  --- */
+        .chat-container {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px 20px;
+            scroll-behavior: smooth;
+        }
+
+        .chat-inner {
+            width: 100%;
+            max-width: var(--chat-max-width);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .welcome-screen { margin-top: 25vh; text-align: center; width: 100%; }
+        .welcome-screen h1 { font-size: 32px; font-weight: 700; margin-bottom: 12px; }
+        .welcome-screen p { color: var(--text-muted); font-size: 14px; }
+
+        /* 消息区块 */
+        .message-block {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 32px;
+            width: 100%;
+        }
+
+        /* 思考过程 */
+        .thought-process {
+            display: flex;
+            flex-direction: column;
+            color: var(--text-muted);
+            font-size: 13px;
+            margin-bottom: 12px;
+        }
+        .thought-summary { 
+            display: inline-flex; 
+            align-items: center; 
+            gap: 6px; 
+            cursor: pointer; 
+            user-select: none; 
+            width: fit-content;
+        }
+        .thought-content {
+            padding-left: 12px;
+            border-left: 2px solid var(--border-color);
+            line-height: 1.6;
+            margin-top: 8px;
+            white-space: pre-wrap;
+        }
+
+        .message { display: flex; flex-direction: column; max-width: 100%; }
+        
+        .message.user { align-self: flex-end; align-items: flex-end; max-width: 85%; }
+        .message.assistant { align-self: flex-start; align-items: flex-start; }
+
+        .message-content {
+            font-size: 15px;
+            line-height: 1.6;
+            word-wrap: break-word;
+        }
+
+        .message.user .message-content { 
+            background-color: var(--bg-gray); 
+            padding: 12px 20px;
+            border-radius: 20px; 
+            white-space: pre-wrap;
+        }
+        .message.assistant .message-content { 
+            background-color: transparent; 
+            padding: 4px 0; 
+        }
+
+        /* 操作按钮 */
+        .message-actions { display: flex; align-items: center; gap: 12px; color: #b0b0b0; margin-top: 8px; }
+        .message-block.user-block .message-actions { align-self: flex-end; padding-right: 4px; }
+        .message-block.assistant-block .message-actions { align-self: flex-start; }
+        .message-actions svg { cursor: pointer; transition: color 0.2s; flex-shrink: 0; }
+        .message-actions svg:hover { color: var(--text-main); }
+        .msg-model-tag { display: inline-flex; align-items: center; font-size: 11px; color: var(--text-muted); cursor: pointer; padding: 2px 8px; border-radius: 10px; border: 1px solid transparent; margin-left: auto; transition: all 0.15s; user-select: none; white-space: nowrap; flex-shrink: 0; }
+        .msg-model-tag:hover { border-color: var(--border-color); color: var(--text-main); }
+        .msg-preset-tag { display: inline-flex; align-items: center; font-size: 11px; color: var(--text-muted); padding: 2px 8px; border-radius: 10px; border: 1px solid #e8e8e8; user-select: none; white-space: nowrap; flex-shrink: 0; }
+
+        /* --- 底部输入区 --- */
+        .input-area {
+            padding: 20px 20px 40px 20px;
+            display: flex;
+            justify-content: center;
+            background: linear-gradient(180deg, rgba(255,255,255,0) 0%, #ffffff 40%);
+        }
+
+        .input-pill {
+            display: flex;
+            align-items: center;
+            background-color: var(--bg-gray);
+            border-radius: 32px;
+            width: 100%;
+            max-width: var(--chat-max-width);
+            padding: 10px 12px 10px 20px;
+            gap: 12px;
+        }
+
+        .upload-icon {
+            color: var(--text-muted);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            padding: 4px;
+            border-radius: 50%;
+            transition: color 0.2s;
+        }
+        .upload-icon:hover { color: var(--text-main); }
+
+        .input-pill textarea {
+            flex: 1;
+            background: transparent;
+            border: none;
+            outline: none;
+            font-size: 15px;
+            resize: none;
+            height: 24px;
+            line-height: 24px;
+            max-height: 150px;
+            color: var(--text-main);
+            overflow-y: hidden;
+        }
+        .input-pill textarea::placeholder { color: #b3b3b3; }
+
+        .pill-right { display: flex; align-items: center; gap: 12px; }
+        .model-info { color: var(--text-muted); font-size: 13px; white-space: nowrap; }
+
+        .send-btn {
+            background-color: var(--black-btn);
+            color: white;
+            border: none;
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        .send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* --- 参数预设标签行 --- */
+        .preset-tags-area { padding: 0 20px; display: flex; justify-content: center; }
+        .preset-tags-row { display: flex; gap: 8px; overflow-x: auto; padding: 4px 0 10px 0; max-width: var(--chat-max-width); width: 100%; cursor: grab; user-select: none; scrollbar-width: none; }
+        .preset-tags-row::-webkit-scrollbar { display: none; }
+        .preset-tags-row.dragging { cursor: grabbing; scroll-behavior: auto; }
+        .preset-tag { display: inline-flex; align-items: center; gap: 4px; padding: 5px 14px; border-radius: 20px; font-size: 13px; cursor: pointer; border: 1px solid var(--border-color); background: white; color: var(--text-muted); white-space: nowrap; transition: all 0.15s; user-select: none; flex-shrink: 0; }
+        .preset-tag:hover { border-color: var(--text-muted); color: var(--text-main); }
+        .preset-tag.active { background: var(--text-main); color: white; border-color: var(--text-main); }
+        .preset-edit-row { display: flex; align-items: center; gap: 10px; }
+        .preset-edit-row label { min-width: 80px; font-size: 12px; color: var(--text-muted); font-weight: 500; }
+        .preset-edit-row input, .preset-edit-row textarea, .preset-edit-row select { flex: 1; padding: 7px 10px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 13px; outline: none; }
+        .preset-edit-row input:focus, .preset-edit-row textarea:focus { border-color: var(--black-btn); }
+        .preset-edit-row textarea { min-height: 60px; resize: vertical; }
+
+        /* 滑动条参数区 */
+        .preset-slider-group { margin: 2px 0; display: flex; align-items: center; gap: 8px; }
+        .preset-slider-group .slider-label { font-size: 12px; color: var(--text-muted); white-space: nowrap; min-width: 72px; }
+        .preset-slider-group .slider-val { font-size: 11px; font-weight: 600; color: var(--text-main); background: var(--bg-gray); padding: 1px 7px; border-radius: 8px; min-width: 34px; text-align: center; }
+        .preset-slider { flex: 1; -webkit-appearance: none; appearance: none; height: 4px; border-radius: 2px; background: #e5e5e5; outline: none; }
+        .preset-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 14px; height: 14px; border-radius: 50%; background: var(--text-main); cursor: pointer; border: 2px solid white; box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
+        .preset-slider::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: var(--text-main); cursor: pointer; border: 2px solid white; box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
+        .preset-stream-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; }
+        .preset-stream-row .stream-label { font-size: 13px; font-weight: 500; }
+        .preset-stream-opt { font-size: 12px; padding: 5px 16px; border-radius: 16px; border: 1px solid var(--border-color); cursor: pointer; background: white; color: var(--text-muted); transition: all 0.15s; }
+        .preset-stream-opt.active { background: var(--text-main); color: white; border-color: var(--text-main); }
+
+        /* 图片预览 */
+        .image-preview-area { display: flex; justify-content: center; padding: 0 20px 8px 20px; }
+        .image-preview-inner { display: flex; align-items: center; gap: 10px; max-width: var(--chat-max-width); width: 100%; }
+        .image-preview-thumb { width: 52px; height: 52px; border-radius: 10px; object-fit: cover; border: 1px solid var(--border-color); flex-shrink: 0; }
+        .image-preview-name { font-size: 12px; color: var(--text-muted); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .image-preview-remove { font-size: 11px; padding: 4px 10px; border-radius: 12px; border: 1px solid var(--border-color); background: white; cursor: pointer; color: var(--text-muted); white-space: nowrap; transition: all 0.15s; }
+        .image-preview-remove:hover { color: #cc4444; border-color: #cc4444; }
+        .user-image { max-width: 200px; max-height: 200px; border-radius: 12px; display: block; margin-top: 6px; cursor: pointer; }
+
+        /* Markdown 渲染 */
+        .message-content p { margin: 4px 0; }
+        .message-content pre { background: #f5f5f5; border-radius: 8px; padding: 12px 16px; overflow-x: auto; font-size: 13px; line-height: 1.5; margin: 8px 0; }
+        .message-content code { font-family: "SF Mono", "Fira Code", "Fira Mono", monospace; font-size: 13px; }
+        .message-content p code { background: #f0f0f0; padding: 1px 5px; border-radius: 4px; font-size: 13px; }
+        .message-content pre code { background: none; padding: 0; }
+        .message-content table { border-collapse: collapse; margin: 8px 0; }
+        .message-content th, .message-content td { border: 1px solid var(--border-color); padding: 6px 12px; font-size: 13px; }
+        .message-content th { background: #f5f5f5; }
+        .message-content ul, .message-content ol { padding-left: 20px; }
+
+        /* --- 弹窗 Modal --- */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.2);
+            backdrop-filter: blur(2px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+        .modal {
+            background: white;
+            padding: 24px;
+            border-radius: 16px;
+            width: 90vw; max-width: 620px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .modal h2 { font-size: 18px; margin-bottom: 8px; }
+        .modal label { font-size: 13px; color: var(--text-muted); font-weight: 500; }
+        .modal input { width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; outline: none; background: #fafafa; }
+        .modal input:focus { border-color: var(--black-btn); }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px; }
+        .modal-btn { padding: 8px 16px; border-radius: 8px; border: none; cursor: pointer; font-size: 14px; }
+        .btn-cancel { background: #f0f0f0; color: #333; }
+        .btn-save { background: var(--black-btn); color: white; }
+
+        svg { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+        .sidebar-brand svg, .sidebar-brand svg * { fill: currentColor !important; stroke: none !important; stroke-width: 0 !important; }
+        .message-content svg, .message-content svg * { fill: initial !important; stroke: initial !important; stroke-width: initial !important; stroke-linecap: initial !important; stroke-linejoin: initial !important; }
+        .message-content svg { max-width: 100%; height: auto; }
+
+        .settings-panels { display: flex; gap: 0; border: 1px solid var(--border-color); border-radius: 10px; overflow: hidden; min-height: 320px; margin-bottom: 12px; }
+        .settings-left { width: 180px; flex-shrink: 0; background: #fafafa; border-right: 1px solid var(--border-color); display: flex; flex-direction: column; }
+        .settings-left-header { padding: 12px 14px; font-size: 12px; color: var(--text-muted); font-weight: 500; border-bottom: 1px solid var(--border-color); }
+        .settings-left-list { flex: 1; overflow-y: auto; }
+        .provider-nav-item { padding: 10px 14px; font-size: 13px; cursor: pointer; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center; transition: background 0.15s; }
+        .provider-nav-item:hover { background: var(--bg-hover); }
+        .provider-nav-item.selected { background: var(--bg-active-chat); color: var(--text-main); font-weight: 500; }
+        .provider-nav-item.active { color: var(--text-main); }
+        .provider-nav-item .nav-badge { font-size: 10px; background: var(--bg-gray); padding: 1px 6px; border-radius: 8px; color: var(--text-muted); }
+        .settings-left-footer { padding: 8px 10px; border-top: 1px solid var(--border-color); }
+        .settings-left-footer button { width: 100%; padding: 7px; border: 1px dashed var(--border-color); background: transparent; color: var(--text-muted); border-radius: 6px; cursor: pointer; font-size: 12px; transition: all 0.2s; }
+        .settings-left-footer button:hover { border-color: var(--text-main); color: var(--text-main); }
+
+        .settings-right { flex: 1; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; background: white; }
+        .settings-right label { font-size: 12px; color: var(--text-muted); font-weight: 500; }
+        .settings-right input:not(.model-input) { width: 100%; padding: 7px 10px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 13px; outline: none; }
+        .settings-right input:focus { border-color: var(--black-btn); }
+
+        .models-section { display: flex; flex-direction: column; gap: 4px; }
+        .models-list { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+        .model-tag { display: inline-flex; align-items: center; gap: 4px; padding: 5px 11px; background: #f0f0f0; border-radius: 16px; font-size: 13px; color: var(--text-main); cursor: default; transition: background 0.15s; border: 1px solid transparent; }
+        .model-tag:hover { background: #e5e5e5; }
+        .model-tag .tag-x { font-size: 14px; cursor: pointer; color: #aaa; opacity: 0; transition: opacity 0.15s, color 0.15s; line-height: 1; padding: 0 2px; margin-left: 2px; }
+        .model-tag:hover .tag-x { opacity: 1; }
+        .model-tag .tag-x:hover { color: #cc4444; }
+        .tag-add-btn { display: inline-flex; align-items: center; padding: 5px 11px; border: 1px dashed #ccc; border-radius: 16px; font-size: 13px; color: var(--text-muted); cursor: pointer; background: transparent; transition: all 0.15s; }
+        .tag-add-btn:hover { border-color: var(--text-main); color: var(--text-main); }
+        .tag-add-input { padding: 5px 11px; border: 1px solid var(--border-color); border-radius: 16px; font-size: 13px; outline: none; width: 150px; background: white; }
+        .tag-add-input:focus { border-color: var(--black-btn); }
+
+        .settings-right-actions { display: flex; justify-content: flex-end; margin-top: 4px; }
+        .settings-right-actions .del-btn { font-size: 11px; padding: 4px 10px; border-radius: 6px; border: 1px solid #e8d0d0; background: white; cursor: pointer; color: #cc4444; transition: all 0.15s; }
+        .settings-right-actions .del-btn:hover:not(:disabled) { background: #fee; border-color: #cc4444; }
+        .settings-right-actions .del-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+        .modal-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .modal-header-row h2 { margin-bottom: 0; }
+
+        .export-import-btns { display: flex; gap: 8px; }
+        .export-import-btns button { font-size: 12px; padding: 5px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: white; cursor: pointer; color: var(--text-muted); transition: all 0.2s; }
+        .export-import-btns button:hover { border-color: var(--text-main); color: var(--text-main); }
+        .set-active-from-modal { font-size: 11px; padding: 3px 8px; border-radius: 4px; border: 1px solid var(--border-color); background: white; cursor: pointer; white-space: nowrap; transition: all 0.15s; }
+        .set-active-from-modal:hover { border-color: var(--text-main); color: var(--text-main); }
+
+        .add-provider-btn { align-self: flex-start; background: transparent; border: 1px dashed var(--border-color); color: var(--text-muted); padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 13px; transition: all 0.2s; margin-bottom: 4px; }
+        .add-provider-btn:hover { border-color: var(--text-main); color: var(--text-main); }
+
+        .model-switcher { position: relative; }
+        .model-info { cursor: pointer; padding: 4px 8px; border-radius: 6px; transition: background 0.2s; user-select: none; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; }
+        .model-info:hover { background: rgba(0,0,0,0.05); }
+        .model-info::after { content: ' ▾'; font-size: 10px; opacity: 0.5; line-height: 1; }
+        .model-dropdown { position: absolute; bottom: 100%; right: 0; margin-bottom: 8px; background: white; border: 1px solid var(--border-color); border-radius: 10px; box-shadow: 0 4px 16px rgba(0,0,0,0.12); min-width: 240px; z-index: 50; display: none; }
+        .model-dropdown.show { display: block; }
+        .model-dropdown-item { padding: 10px 14px; font-size: 13px; cursor: pointer; white-space: nowrap; border-bottom: 1px solid #f5f5f5; display: flex; justify-content: space-between; align-items: center; gap: 8px; transition: background 0.15s; }
+        .model-dropdown-item:last-child { border-bottom: none; }
+        .model-dropdown-item:hover { background: var(--bg-hover); }
+        .model-dropdown-item.active { color: var(--text-main); font-weight: 600; background: #f9f9f9; }
+        .model-dropdown-item .provider-name { color: var(--text-muted); font-weight: normal; font-size: 11px; }
+
+        .model-info-text { white-space: nowrap; line-height: 18px; }
+        .model-logo { width: 18px; height: 18px; border-radius: 4px; flex-shrink: 0; object-fit: contain; }
+        .model-logo-fallback { width: 18px; height: 18px; border-radius: 4px; flex-shrink: 0; background: #e8e8e8; display: inline-flex; align-items: center; justify-content: center; font-size: 9px; color: var(--text-muted); }
+        .model-dropdown-item .dropdown-left { display: flex; align-items: center; gap: 8px; }
+        .msg-model-tag { display: inline-flex; align-items: center; gap: 5px; }
+    </style>
+</head>
+<body>
+
+    <div id="toast" class="toast">操作成功</div>
+
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-brand">
+            <svg id="logo-monochrome" style="width:18px;height:18px" class="ruyi-icon mr-2 transition-transform rotate-0 hover:rotate-180 duration-300 ease-[cubic-bezier(.56,-0.53,.79,1.39)] text-brand bg-transparent cursor-pointer ruyi-icon-logo-monochrome" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><g fill="none"><path d="M11.5286 1.87149C11.5769 1.73005 11.5356 1.5733 11.4233 1.47452C11.0472 1.14247 10.0965 0.443125 8.66911 0.339708C7.07054 0.223769 6.08089 0.652279 5.58096 0.969951C5.36531 1.10676 5.35326 1.41748 5.55499 1.57422L9.62723 4.73936C9.98617 5.01807 10.5125 4.8604 10.6591 4.43003L11.5286 1.87149Z" fill="currentColor"></path><path d="M1.49017 11.2664C1.32368 11.3781 1.24855 11.584 1.30235 11.7774C1.45724 12.3339 1.91868 13.4919 3.22833 14.5456C4.53797 15.5992 6.08738 15.7128 6.74962 15.6966C6.94764 15.692 7.12016 15.5617 7.17998 15.3724L9.79046 7.11064C9.97875 6.51425 9.31048 6.01386 8.79154 6.3626L1.49017 11.2664Z" fill="currentColor"></path><path d="M3.39813 2.54827C3.27013 2.49773 3.12683 2.50607 3.00579 2.57193C2.52256 2.83488 1.28526 3.64506 0.647135 5.30947C0.154627 6.59222 0.328071 8.01085 0.463488 8.70463C0.508009 8.9314 0.747306 9.06218 0.962489 8.97824L8.79485 5.92024C9.35414 5.70181 9.35646 4.91111 8.7981 4.6899L3.39813 2.54827Z" fill="currentColor"></path><path d="M15.0167 8.46843C15.243 8.62194 15.5528 8.48652 15.5922 8.21569C15.6961 7.49872 15.7861 6.25076 15.371 5.30933C14.8177 4.05487 13.8786 3.28133 13.433 2.9669C13.292 2.86766 13.1019 2.87786 12.9725 2.99241L10.9959 4.74541C10.6732 5.03154 10.7066 5.54492 11.0636 5.78746L15.0167 8.46936V8.46843Z" fill="currentColor"></path><path d="M9.49413 15.1604C9.47372 15.3937 9.67128 15.5866 9.90409 15.5616C10.6531 15.4813 12.1918 15.1841 13.3447 14.0827C14.467 13.0109 14.832 11.7384 14.9382 11.2319C14.9669 11.0951 14.9326 10.9528 14.8445 10.8442L11.3886 6.57909C11.0143 6.11719 10.2681 6.34535 10.2162 6.93757L9.49366 15.1604H9.49413Z" fill="currentColor"></path></g></svg>
+            <strong><a href="https://cnb.cool/IIIStudio/Code/HTML/AIChat" target="_blank" style="color:inherit;text-decoration:none;">AI Chat</a></strong> <span>@Flow</span>
+        </div>
+        
+        <div class="sidebar-header">
+            <h2>会话</h2>
+            <div class="sidebar-actions">
+                <svg onclick="createNewChat()" width="20" height="20" viewBox="0 0 24 24" title="新建会话"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                <svg onclick="toggleSidebar()" width="20" height="20" viewBox="0 0 24 24" title="隐藏侧边栏"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line></svg>
+            </div>
+        </div>
+
+        <div class="chat-list" id="chatList"></div>
+    </div>
+
+    <div class="main-content">
+        <div class="top-nav">
+            <div class="nav-left-actions">
+                <svg class="sidebar-toggle-btn" id="showSidebarBtn" onclick="toggleSidebar()" width="20" height="20" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line></svg>
+            </div>
+            <button class="settings-btn" onclick="openSettings()">配置 API</button>
+        </div>
+
+        <div class="chat-container" id="chatContainer">
+            <div class="chat-inner" id="chatInner">
+                <div class="welcome-screen" id="welcomeScreen">
+                    <h1>AI Chat</h1>
+                    <p>输入一条消息开始新的会话。</p>
+                </div>
+                </div>
+        </div>
+
+        <div class="preset-tags-area">
+            <div class="preset-tags-row" id="presetTagsRow"></div>
+        </div>
+
+        <div class="image-preview-area" id="imagePreviewArea" style="display:none;">
+            <div class="image-preview-inner">
+                <img class="image-preview-thumb" id="imagePreviewThumb" src="">
+                <span class="image-preview-name" id="imagePreviewName"></span>
+                <button class="image-preview-remove" onclick="clearImagePreview()">✕ 移除</button>
+            </div>
+        </div>
+
+        <div class="input-area">
+            <div class="input-pill">
+                <div class="upload-icon" onclick="document.getElementById('fileInput').click()" title="上传文件">
+                    <svg width="20" height="20" viewBox="0 0 24 24" stroke-width="2.5">
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                        <polyline points="7 8 12 3 17 8"></polyline>
+                        <line x1="4" y1="20" x2="20" y2="20"></line>
+                    </svg>
+                </div>
+                <input type="file" id="fileInput" style="display:none;" onchange="handleFileSelected(this)">
+                <textarea id="userInput" placeholder="输入你的问题, Enter 发送, Shift+Enter 换行" rows="1"></textarea>
+                <div class="pill-right">
+                    <div class="model-switcher">
+                        <span class="model-info" id="displayModelName" onclick="event.stopPropagation(); toggleModelDropdown()"></span>
+                        <div class="model-dropdown" id="modelDropdown"></div>
+                    </div>
+                    <button class="send-btn" id="sendBtn" onclick="sendMessage()">
+                        <svg width="18" height="18" viewBox="0 0 24 24" stroke="white" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="settingsModal">
+        <div class="modal" style="max-width:700px;">
+            <div class="modal-header-row">
+                <h2>模型 API 配置</h2>
+                <div class="export-import-btns">
+                    <button onclick="exportProviders()">导出 JSON</button>
+                    <button onclick="document.getElementById('importFileInput').click()">导入 JSON</button>
+                    <input type="file" id="importFileInput" style="display:none;" accept=".json" onchange="importProviders(this)">
+                </div>
+            </div>
+            <div class="settings-panels">
+                <div class="settings-left">
+                    <div class="settings-left-header">运营商列表</div>
+                    <div class="settings-left-list" id="settingsLeftList"></div>
+                    <div class="settings-left-footer">
+                        <button onclick="addProviderInModal()">+ 添加运营商</button>
+                    </div>
+                </div>
+                <div class="settings-right" id="settingsRightPanel">
+                    <div style="color:var(--text-muted);text-align:center;padding-top:60px;">请从左侧选择一个运营商</div>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="modal-btn btn-cancel" onclick="closeSettings()">取消</button>
+                <button class="modal-btn btn-save" onclick="saveSettings()">保存配置</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="renameModal">
+        <div class="modal">
+            <h2>重命名会话</h2>
+            <div><input type="text" id="renameInput" placeholder="输入新的标题"></div>
+            <div class="modal-actions">
+                <button class="modal-btn btn-cancel" onclick="closeRenameModal()">取消</button>
+                <button class="modal-btn btn-save" onclick="saveRename()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="presetEditModal">
+        <div class="modal" style="max-width:540px;">
+            <h2 id="presetEditTitle" style="margin-bottom:12px;">编辑参数预设</h2>
+            <div class="preset-edit-row"><label>名称</label><input type="text" id="presetEditName" placeholder="预设名称"></div>
+            <div class="preset-edit-row"><label>提示词</label><textarea id="presetEditSysPrompt" placeholder="System Prompt，为空则不注入"></textarea></div>
+
+            <div class="preset-slider-group">
+                <span class="slider-label">思维发散程度</span>
+                <span class="slider-val" id="tempVal">0.7</span>
+                <input type="range" class="preset-slider" id="presetEditTemp" min="0" max="2" step="0.1" value="0.7" oninput="document.getElementById('tempVal').textContent=this.value">
+            </div>
+
+            <div class="preset-slider-group">
+                <span class="slider-label">词汇范围</span>
+                <span class="slider-val" id="topPVal">1</span>
+                <input type="range" class="preset-slider" id="presetEditTopP" min="0" max="1" step="0.05" value="1" oninput="document.getElementById('topPVal').textContent=this.value">
+            </div>
+
+            <div class="preset-slider-group">
+                <span class="slider-label">重复惩罚</span>
+                <span class="slider-val" id="fpVal">0</span>
+                <input type="range" class="preset-slider" id="presetEditFp" min="-2" max="2" step="0.1" value="0" oninput="document.getElementById('fpVal').textContent=this.value">
+            </div>
+
+            <div class="preset-slider-group">
+                <span class="slider-label">话题多样性</span>
+                <span class="slider-val" id="ppVal">0</span>
+                <input type="range" class="preset-slider" id="presetEditPp" min="-2" max="2" step="0.1" value="0" oninput="document.getElementById('ppVal').textContent=this.value">
+            </div>
+
+            <div class="preset-stream-row">
+                <span class="stream-label">流式输出</span>
+                <span class="preset-stream-opt active" id="streamYes" onclick="selectStream(true)">开</span>
+                <span class="preset-stream-opt" id="streamNo" onclick="selectStream(false)">关</span>
+                <input type="hidden" id="presetEditStream" value="false">
+            </div>
+
+            <div class="modal-actions" style="justify-content:space-between;margin-top:4px;">
+                <button class="modal-btn" style="background:#fff;color:#cc4444;border:1px solid #e8d0d0;" id="presetDeleteBtn" onclick="deletePreset()">删除预设</button>
+                <div style="display:flex;gap:10px;">
+                    <button class="modal-btn btn-cancel" onclick="closePresetEdit()">取消</button>
+                    <button class="modal-btn btn-save" onclick="savePreset()">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- UI 与弹窗逻辑 ---
+        let toastTimeout;
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.classList.add('show');
+            clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => { toast.classList.remove('show'); }, 2500);
+        }
+
+        const sidebar = document.getElementById('sidebar');
+        const showSidebarBtn = document.getElementById('showSidebarBtn');
+        function toggleSidebar() {
+            sidebar.classList.toggle('hidden');
+            if (sidebar.classList.contains('hidden')) {
+                showSidebarBtn.style.display = 'block';
+                setTimeout(() => showSidebarBtn.style.opacity = '1', 50);
+            } else {
+                showSidebarBtn.style.opacity = '0';
+                setTimeout(() => showSidebarBtn.style.display = 'none', 200);
+            }
+        }
+
+        function copyMessageText(btnElement) {
+            const block = btnElement.closest('.message-block');
+            let content = block.querySelector('.message-content').textContent;
+            content = content.replace(/\n{3,}/g, '\n\n').trim();
+            navigator.clipboard.writeText(content).then(() => { showToast('已复制到剪贴板'); })
+            .catch(() => { showToast('复制失败，请重试'); });
+        }
+
+        // --- Providers 与模型切换 ---
+        let providers = [];
+        let activeProviderId = null;
+        let activeModel = '';
+        let providersBackup = null;
+        let editingProviderId = null;
+        let retryBlockEl = null;
+
+        function loadProviders() {
+            try {
+                const saved = localStorage.getItem('chatProviders');
+                if (saved) {
+                    const data = JSON.parse(saved);
+                    providers = data.providers || [];
+                    activeProviderId = data.activeProviderId || null;
+                    activeModel = data.activeModel || '';
+                    providers = providers.map(p => {
+                        if (p.model && !p.models) { p.models = [p.model]; delete p.model; }
+                        if (!p.models) p.models = [];
+                        return p;
+                    });
+                }
+            } catch(e) {}
+            if (providers.length === 0) {
+                const defaultId = Date.now();
+                providers.push({ id: defaultId, name: '默认', apiUrl: 'https://token-plan-cn.xiaomimimo.com/v1', apiKey: '', models: ['mimo-v2.5-pro', 'mimo-v2.5'] });
+                activeProviderId = defaultId;
+                activeModel = 'mimo-v2.5-pro';
+            } else {
+                if (!providers.find(p => p.id === activeProviderId)) {
+                    activeProviderId = providers[0]?.id || null;
+                    activeModel = (providers[0]?.models && providers[0].models[0]) || '';
+                }
+                if (!activeModel) {
+                    const ap = providers.find(p => p.id === activeProviderId);
+                    activeModel = (ap?.models && ap.models[0]) || '';
+                }
+            }
+            saveProvidersToStorage();
+        }
+
+        function saveProvidersToStorage() {
+            try { localStorage.setItem('chatProviders', JSON.stringify({ providers, activeProviderId, activeModel })); } catch(e) {}
+        }
+
+        function getActiveProvider() {
+            return providers.find(p => p.id === activeProviderId) || providers[0] || null;
+        }
+
+        function updateModelDisplay() {
+            const el = document.getElementById('displayModelName');
+            if (!el) return;
+            const logo = getActiveLogo();
+            const logoHtml = logo
+                ? `<img class="model-logo" src="${logo}" alt="" onerror="this.style.display='none'">`
+                : '<span class="model-logo-fallback">AI</span>';
+            el.innerHTML = `${logoHtml}<span class="model-info-text">${escapeHtml(activeModel || (getActiveProvider()?.models?.[0]) || '未配置')}</span>`;
+        }
+
+        function renderModelDropdown() {
+            const dropdown = document.getElementById('modelDropdown');
+            if (!dropdown) return;
+            dropdown.innerHTML = '';
+            const allItems = [];
+            providers.forEach(p => {
+                (p.models || []).forEach(m => {
+                    const logo = getModelDevLogo(p.name, p.apiUrl, m);
+                    allItems.push({ pid: p.id, pname: p.name, model: m, logo });
+                });
+            });
+            if (allItems.length <= 1) return;
+            allItems.forEach(item => {
+                const isActive = item.pid === activeProviderId && item.model === activeModel;
+                const div = document.createElement('div');
+                div.className = 'model-dropdown-item' + (isActive ? ' active' : '');
+                const logoHtml = item.logo
+                    ? `<img class="model-logo" src="${item.logo}" alt="" onerror="this.style.display='none'">`
+                    : '<span class="model-logo-fallback">AI</span>';
+                div.innerHTML = `<div class="dropdown-left">${logoHtml}<span>${escapeHtml(item.model)}</span></div><span class="provider-name">${escapeHtml(item.pname)}</span>`;
+                div.onclick = (e) => { e.stopPropagation(); switchModel(item.pid, item.model); };
+                dropdown.appendChild(div);
+            });
+        }
+
+        function switchModel(pid, model) {
+            activeProviderId = pid;
+            activeModel = model;
+            saveProvidersToStorage();
+            updateModelDisplay();
+            renderModelDropdown();
+            closeModelDropdown();
+            const p = getActiveProvider();
+            if (retryBlockEl) {
+                const el = retryBlockEl;
+                retryBlockEl = null;
+                regenerateMessage(el);
+            } else if (p) {
+                showToast(`已切换到 ${p.name} / ${model}`);
+            }
+        }
+
+        function retryWithDropdown(blockEl) {
+            retryBlockEl = blockEl;
+            toggleModelDropdown();
+        }
+
+        function toggleModelDropdown() {
+            const total = providers.reduce((s, p) => s + (p.models || []).length, 0);
+            if (total <= 1) { showToast('请先在设置中添加更多模型'); return; }
+            const d = document.getElementById('modelDropdown');
+            d.classList.toggle('show');
+            if (d.classList.contains('show')) renderModelDropdown();
+        }
+
+        function closeModelDropdown() {
+            const d = document.getElementById('modelDropdown');
+            if (d) d.classList.remove('show');
+        }
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.model-switcher')) closeModelDropdown();
+        });
+
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str || '';
+            return div.innerHTML;
+        }
+
+        function normalizeApiUrl(url) {
+            if (!url) return url;
+            url = url.trim().replace(/\/+$/, '');
+            if (!url.endsWith('/chat/completions')) {
+                url = url + '/chat/completions';
+            }
+            return url;
+        }
+
+        // --- models.dev Logo 匹配 ---
+        // 试图从模型名、提供商名和 API URL 推断 models.dev 上的 provider ID
+        function getModelDevLogo(providerName, apiUrl, modelName) {
+            const k = (providerName || '').toLowerCase() + '|' + (apiUrl || '').toLowerCase() + '|' + (modelName || '').toLowerCase();
+            const candidates = [
+                ['openai',     ['openai', 'gpt-', 'chatgpt', 'o1', 'o3', 'o4']],
+                ['anthropic',  ['anthropic', 'claude']],
+                ['google',     ['google', 'gemini', 'gemma', 'generativelanguage', 'palm']],
+                ['deepseek',   ['deepseek']],
+                ['mistral',    ['mistral', 'ministral', 'codestral']],
+                ['meta',       ['meta', 'llama', 'llama3', 'llama4']],
+                ['alibaba',    ['alibaba', 'qwen', 'tongyi', 'dashscope']],
+                ['zhipuai',    ['zhipu', 'glm', 'chatglm', 'bigmodel']],
+                ['moonshot',   ['moonshot', 'kimi']],
+                ['xai',        ['x.ai', 'xai', 'grok']],
+                ['minimax',    ['minimax']],
+                ['baidu',      ['baidu', 'ernie', 'wenxin', 'qianfan']],
+                ['bytedance',  ['bytedance', 'doubao', 'volcengine', 'volc', 'ark']],
+                ['cohere',     ['cohere', 'command']],
+                ['groq',       ['groq']],
+                ['fireworks',  ['fireworks']],
+                ['perplexity', ['perplexity', 'pplx', 'sonar']],
+                ['replicate',  ['replicate']],
+                ['together',   ['together']],
+                ['cerebras',   ['cerebras']],
+                ['upstage',    ['upstage', 'solar']],
+                ['xiaomi',     ['xiaomi', 'xiaomimimo', 'mimo']],
+                ['nvidia',     ['nvidia', 'nvapi', 'nemotron']],
+                ['iflowcn',    ['iflow']],
+                ['stepfun',    ['stepfun', 'step-']],
+                ['huggingface',['huggingface', 'hf.co']],
+            ];
+            for (const [pid, patterns] of candidates) {
+                for (const pat of patterns) {
+                    if (k.includes(pat)) {
+                        return `https://models.dev/logos/${encodeURIComponent(pid)}.svg`;
+                    }
+                }
+            }
+            return null;
+        }
+
+        function getActiveLogo() {
+            const p = getActiveProvider();
+            if (!p) return null;
+            return getModelDevLogo(p.name, p.apiUrl, activeModel);
+        }
+
+        // --- 设置面板渲染 ---
+        function flushEditingProvider() {
+            const p = providers.find(p => p.id === editingProviderId);
+            if (!p) return;
+            const nameEl = document.getElementById('editPname');
+            const urlEl = document.getElementById('editPurl');
+            const keyEl = document.getElementById('editPkey');
+            if (nameEl) p.name = nameEl.value.trim() || p.name;
+            if (urlEl) p.apiUrl = urlEl.value.trim();
+            if (keyEl) p.apiKey = keyEl.value.trim();
+        }
+
+        function renderSettingsLeft() {
+            const list = document.getElementById('settingsLeftList');
+            if (!list) return;
+            list.innerHTML = '';
+            providers.forEach(p => {
+                const item = document.createElement('div');
+                const isEditing = p.id === editingProviderId;
+                const isActive = p.id === activeProviderId;
+                item.className = 'provider-nav-item' + (isEditing ? ' selected' : '') + (isActive && !isEditing ? ' active' : '');
+                item.innerHTML = `<span>${escapeHtml(p.name)}</span>${isActive ? '<span class="nav-badge">当前</span>' : ''}`;
+                item.title = p.name;
+                item.onclick = () => selectProviderForEdit(p.id);
+                list.appendChild(item);
+            });
+        }
+
+        function renderSettingsRight() {
+            const panel = document.getElementById('settingsRightPanel');
+            if (!panel) return;
+            const p = providers.find(p => p.id === editingProviderId);
+            if (!p) {
+                panel.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding-top:60px;">请从左侧选择一个运营商</div>';
+                return;
+            }
+            const isActive = p.id === activeProviderId;
+            const modelsHtml = (p.models || []).map((m, i) => {
+                const mLogo = getModelDevLogo(p.name, p.apiUrl, m);
+                const mLogoHtml = mLogo
+                    ? `<img class="model-logo" src="${mLogo}" alt="" onerror="this.style.display='none'" style="width:14px;height:14px;border-radius:3px;">`
+                    : '';
+                return `<span class="model-tag">${mLogoHtml}${escapeHtml(m)}<span class="tag-x" onclick="removeModelFromEditing(${i})">×</span></span>`;
+            }).join('');
+
+            panel.innerHTML = `
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
+                    <label style="margin:0;white-space:nowrap;">运营商名称</label>
+                    <input type="text" id="editPname" value="${escapeHtml(p.name)}" placeholder="运营商名称" style="flex:1;">
+                    ${isActive ? '<span style="font-size:11px;color:var(--text-muted);white-space:nowrap;">✓ 当前使用</span>' : '<button class="set-active-from-modal" onclick="setActiveFromModal()">设为当前</button>'}
+                </div>
+                <label>API URL</label>
+                <input type="text" id="editPurl" value="${escapeHtml(p.apiUrl || '')}" placeholder="API 端点地址">
+                <label>API Key</label>
+                <input type="password" id="editPkey" value="${escapeHtml(p.apiKey || '')}" placeholder="sk-...">
+                <label>模型列表</label>
+                <div class="models-section">
+                    <div class="models-list" id="editModelsList">
+                        ${modelsHtml}
+                        <button class="tag-add-btn" onclick="showAddModelInput()">+ 添加</button>
+                    </div>
+                </div>
+                <div class="settings-right-actions">
+                    <button class="del-btn" onclick="deleteProviderFromModal()" ${providers.length <= 1 ? 'disabled' : ''}>删除此运营商</button>
+                </div>
+            `;
+        }
+
+        function selectProviderForEdit(id) {
+            flushEditingProvider();
+            editingProviderId = id;
+            renderSettingsLeft();
+            renderSettingsRight();
+        }
+
+        function addModelToEditing() {
+            const p = providers.find(p => p.id === editingProviderId);
+            if (!p) return;
+            if (!p.models) p.models = [];
+            p.models.push('');
+            renderSettingsRight();
+        }
+
+        function removeModelFromEditing(idx) {
+            flushEditingProvider();
+            const p = providers.find(p => p.id === editingProviderId);
+            if (!p || !p.models) return;
+            p.models.splice(idx, 1);
+            renderSettingsRight();
+        }
+
+        function showAddModelInput() {
+            const list = document.getElementById('editModelsList');
+            if (!list) return;
+            const btn = list.querySelector('.tag-add-btn');
+            if (btn) btn.style.display = 'none';
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'tag-add-input';
+            input.placeholder = '输入模型名';
+            let committed = false;
+            const commit = () => { if (committed) return; committed = true; commitNewModel(input); };
+            input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); commit(); } });
+            input.addEventListener('blur', () => { setTimeout(commit, 120); });
+            list.appendChild(input);
+            input.focus();
+        }
+
+        function commitNewModel(input) {
+            flushEditingProvider();
+            const val = input.value.trim();
+            if (val) {
+                const p = providers.find(p => p.id === editingProviderId);
+                if (p) { if (!p.models) p.models = []; p.models.push(val); }
+            }
+            renderSettingsRight();
+        }
+
+        function setActiveFromModal() {
+            if (!editingProviderId) return;
+            const p = providers.find(p => p.id === editingProviderId);
+            activeProviderId = editingProviderId;
+            activeModel = p?.models?.[0] || '';
+            renderSettingsLeft();
+            renderSettingsRight();
+            updateModelDisplay();
+        }
+
+        function deleteProviderFromModal() {
+            if (providers.length <= 1) return;
+            const pid = editingProviderId;
+            providers = providers.filter(p => p.id !== pid);
+            if (activeProviderId === pid) {
+                activeProviderId = providers[0]?.id || null;
+                activeModel = (providers[0]?.models && providers[0].models[0]) || '';
+            }
+            editingProviderId = providers[0]?.id || null;
+            renderSettingsLeft();
+            renderSettingsRight();
+            updateModelDisplay();
+        }
+
+        function addProviderInModal() {
+            const newId = Date.now();
+            providers.push({ id: newId, name: '新运营商', apiUrl: '', apiKey: '', models: [] });
+            editingProviderId = newId;
+            renderSettingsLeft();
+            renderSettingsRight();
+        }
+
+        function openSettings() {
+            providersBackup = JSON.parse(JSON.stringify({ providers, activeProviderId, activeModel }));
+            editingProviderId = activeProviderId || providers[0]?.id || null;
+            renderSettingsLeft();
+            renderSettingsRight();
+            document.getElementById('settingsModal').style.display = 'flex';
+        }
+
+        function closeSettings() {
+            if (providersBackup) {
+                const restored = JSON.parse(JSON.stringify(providersBackup));
+                providers = restored.providers;
+                activeProviderId = restored.activeProviderId;
+                activeModel = restored.activeModel;
+                providersBackup = null;
+                updateModelDisplay();
+                renderModelDropdown();
+            }
+            document.getElementById('settingsModal').style.display = 'none';
+        }
+
+        function saveSettings() {
+            flushEditingProvider();
+            // Update activeModel if current provider was edited and no longer has it
+            const ap = providers.find(p => p.id === activeProviderId);
+            if (ap && ap.models && ap.models.length > 0 && !ap.models.includes(activeModel)) {
+                activeModel = ap.models[0];
+            }
+            providersBackup = null;
+            saveProvidersToStorage();
+            updateModelDisplay();
+            renderModelDropdown();
+            document.getElementById('settingsModal').style.display = 'none';
+            showToast('配置已保存');
+        }
+
+        // --- 导入导出 ---
+        function exportProviders() {
+            flushEditingProvider();
+            const exportSessions = JSON.parse(JSON.stringify(sessions));
+            const data = { providers, activeProviderId, activeModel, paramPresets, activePresetId, sessions: exportSessions, currentSessionId, exportedAt: new Date().toISOString() };
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'chat-providers-' + new Date().toISOString().slice(0, 10) + '.json';
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast(`已导出 (${providers.length}个运营商, ${sessions.length}个会话)`);
+        }
+
+        function importProviders(input) {
+            const file = input.files && input.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if (!data.providers || !Array.isArray(data.providers)) throw new Error('无效格式');
+                    data.providers = data.providers.map(p => {
+                        if (p.model && !p.models) { p.models = [p.model]; delete p.model; }
+                        if (!p.models) p.models = [];
+                        return p;
+                    });
+                    providers = data.providers;
+                    activeProviderId = data.activeProviderId || providers[0]?.id || null;
+                    activeModel = data.activeModel || (providers[0]?.models && providers[0].models[0]) || '';
+                    if (!providers.find(p => p.id === activeProviderId)) {
+                        activeProviderId = providers[0]?.id || null;
+                        activeModel = (providers[0]?.models && providers[0].models[0]) || '';
+                    }
+                    editingProviderId = activeProviderId;
+                    providersBackup = JSON.parse(JSON.stringify({ providers, activeProviderId, activeModel }));
+                    renderSettingsLeft();
+                    renderSettingsRight();
+                    updateModelDisplay();
+                    renderModelDropdown();
+                    saveProvidersToStorage();
+                    // 恢复预设
+                    if (data.paramPresets && Array.isArray(data.paramPresets)) {
+                        paramPresets = data.paramPresets;
+                        activePresetId = data.activePresetId || paramPresets[0]?.id || null;
+                        if (!paramPresets.find(p => p.id === activePresetId)) activePresetId = paramPresets[0]?.id || null;
+                        savePresets();
+                        renderPresetTags();
+                    }
+                    // 恢复会话
+                    if (data.sessions && Array.isArray(data.sessions)) {
+                        sessions = data.sessions;
+                        currentSessionId = data.currentSessionId || sessions[0]?.id || null;
+                        if (!sessions.find(s => s.id === currentSessionId)) currentSessionId = sessions[0]?.id || null;
+                        saveSessionsToStorage();
+                        switchChat(currentSessionId);
+                    }
+                    showToast(`已导入 (${providers.length}个运营商, ${sessions.length}个会话)`);
+                } catch(err) {
+                    showToast('导入失败: JSON 格式不正确');
+                }
+            };
+            reader.readAsText(file);
+            input.value = '';
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            loadProviders();
+            updateModelDisplay();
+            renderModelDropdown();
+            loadPresets();
+            renderPresetTags();
+            loadSessionsFromStorage();
+            switchChat(currentSessionId);
+        });
+
+        // --- 参数预设管理 ---
+        let paramPresets = [];
+        let activePresetId = null;
+        let editingPresetId = null;
+
+        function loadPresets() {
+            try {
+                const saved = localStorage.getItem('chatPresets');
+                if (saved) {
+                    const data = JSON.parse(saved);
+                    paramPresets = data.presets || [];
+                    activePresetId = data.activePresetId || null;
+                }
+            } catch(e) {}
+            if (paramPresets.length === 0) {
+                paramPresets = [
+                    { id: 1, name: '通用对话', systemPrompt: '', stream: true, temperature: 0.7, top_p: 1, frequency_penalty: 0, presence_penalty: 0 }
+                ];
+                activePresetId = 1;
+            }
+            if (!paramPresets.find(p => p.id === activePresetId)) {
+                activePresetId = paramPresets[0]?.id || null;
+            }
+            savePresets();
+        }
+
+        function savePresets() {
+            try { localStorage.setItem('chatPresets', JSON.stringify({ presets: paramPresets, activePresetId })); } catch(e) {}
+        }
+
+        function getActivePreset() {
+            return paramPresets.find(p => p.id === activePresetId) || null;
+        }
+
+        function renderPresetTags() {
+            const row = document.getElementById('presetTagsRow');
+            if (!row) return;
+            row.innerHTML = '';
+            paramPresets.forEach(p => {
+                const tag = document.createElement('span');
+                tag.className = 'preset-tag' + (p.id === activePresetId ? ' active' : '');
+                tag.textContent = p.name;
+                tag.addEventListener('click', () => selectPreset(p.id));
+                tag.addEventListener('contextmenu', (e) => { e.preventDefault(); openPresetEdit(p.id); });
+                row.appendChild(tag);
+            });
+            const addTag = document.createElement('span');
+            addTag.className = 'preset-tag';
+            addTag.textContent = '+ 添加';
+            addTag.style.cssText = 'border-style:dashed;';
+            addTag.addEventListener('click', () => openPresetEdit(null));
+            row.appendChild(addTag);
+        }
+
+        function selectPreset(id) {
+            activePresetId = id;
+            savePresets();
+            renderPresetTags();
+            const p = getActivePreset();
+            if (p) showToast(`已选择预设: ${p.name}`);
+        }
+
+        function selectStream(v) {
+            document.getElementById('presetEditStream').value = v ? 'true' : 'false';
+            document.getElementById('streamYes').classList.toggle('active', v);
+            document.getElementById('streamNo').classList.toggle('active', !v);
+        }
+
+        function openPresetEdit(id) {
+            editingPresetId = id;
+            const p = id ? paramPresets.find(p => p.id === id) : null;
+            document.getElementById('presetEditTitle').textContent = id ? '编辑参数预设' : '新建参数预设';
+            document.getElementById('presetEditName').value = p ? p.name : '';
+            document.getElementById('presetEditSysPrompt').value = p ? (p.systemPrompt || '') : '';
+            const t = p ? p.temperature : 0.7;
+            document.getElementById('presetEditTemp').value = t;
+            document.getElementById('tempVal').textContent = t;
+            const tp = p ? p.top_p : 1;
+            document.getElementById('presetEditTopP').value = tp;
+            document.getElementById('topPVal').textContent = tp;
+            const fp = p ? p.frequency_penalty : 0;
+            document.getElementById('presetEditFp').value = fp;
+            document.getElementById('fpVal').textContent = fp;
+            const pp = p ? p.presence_penalty : 0;
+            document.getElementById('presetEditPp').value = pp;
+            document.getElementById('ppVal').textContent = pp;
+            const stream = p ? p.stream : false;
+            selectStream(stream);
+            document.getElementById('presetDeleteBtn').style.display = id ? '' : 'none';
+            document.getElementById('presetEditModal').style.display = 'flex';
+        }
+
+        function closePresetEdit() {
+            document.getElementById('presetEditModal').style.display = 'none';
+            editingPresetId = null;
+        }
+
+        function savePreset() {
+            const name = document.getElementById('presetEditName').value.trim() || '未命名';
+            const systemPrompt = document.getElementById('presetEditSysPrompt').value.trim();
+            const temperature = parseFloat(document.getElementById('presetEditTemp').value) || 0.7;
+            const top_p = parseFloat(document.getElementById('presetEditTopP').value) || 1;
+            const frequency_penalty = parseFloat(document.getElementById('presetEditFp').value) || 0;
+            const presence_penalty = parseFloat(document.getElementById('presetEditPp').value) || 0;
+            const stream = document.getElementById('presetEditStream').value === 'true';
+
+            if (editingPresetId) {
+                const p = paramPresets.find(p => p.id === editingPresetId);
+                if (p) Object.assign(p, { name, systemPrompt, temperature, top_p, frequency_penalty, presence_penalty, stream });
+            } else {
+                const newId = (paramPresets.length > 0 ? Math.max(...paramPresets.map(p => p.id)) : 0) + 1;
+                paramPresets.push({ id: newId, name, systemPrompt, temperature, top_p, frequency_penalty, presence_penalty, stream });
+                if (!activePresetId) activePresetId = newId;
+            }
+            savePresets();
+            renderPresetTags();
+            closePresetEdit();
+            showToast('预设已保存');
+        }
+
+        function deletePreset() {
+            if (!editingPresetId || paramPresets.length <= 1) { showToast('至少保留一个预设'); return; }
+            paramPresets = paramPresets.filter(p => p.id !== editingPresetId);
+            if (activePresetId === editingPresetId) activePresetId = paramPresets[0]?.id || null;
+            savePresets();
+            renderPresetTags();
+            closePresetEdit();
+            showToast('预设已删除');
+        }
+
+        // --- 拖拽滑动标签行 ---
+        function initPresetDrag() {
+            const row = document.getElementById('presetTagsRow');
+            if (!row) return;
+            let isDown = false, startX, scrollLeft;
+            row.addEventListener('mousedown', (e) => {
+                if (e.target.closest('.preset-tag')) return;
+                isDown = true; row.classList.add('dragging');
+                startX = e.pageX - row.offsetLeft; scrollLeft = row.scrollLeft;
+            });
+            row.addEventListener('mouseleave', () => { isDown = false; row.classList.remove('dragging'); });
+            row.addEventListener('mouseup', () => { isDown = false; row.classList.remove('dragging'); });
+            row.addEventListener('mousemove', (e) => {
+                if (!isDown) return;
+                e.preventDefault();
+                const x = e.pageX - row.offsetLeft;
+                row.scrollLeft = scrollLeft - (x - startX) * 1.5;
+            });
+        }
+        window.addEventListener('DOMContentLoaded', initPresetDrag);
+
+        let renamingSessionId = null;
+        function openRenameModal(id, currentTitle, event) {
+            event.stopPropagation();
+            renamingSessionId = id;
+            document.getElementById('renameInput').value = currentTitle;
+            document.getElementById('renameModal').style.display = 'flex';
+        }
+        function closeRenameModal() { document.getElementById('renameModal').style.display = 'none'; }
+        function saveRename() {
+            const newTitle = document.getElementById('renameInput').value.trim();
+            if (newTitle && renamingSessionId !== null) {
+                const session = sessions.find(s => s.id === renamingSessionId);
+                if (session) { session.title = newTitle; renderSidebar(); saveSessionsToStorage(); showToast('已重命名'); }
+            }
+            closeRenameModal();
+        }
+
+        // --- 聊天状态管理 ---
+        let sessions = []; 
+        let currentSessionId = null; 
+
+        function saveSessionsToStorage() {
+            try { localStorage.setItem('chatSessions', JSON.stringify({ sessions, currentSessionId })); } catch(e) {}
+        }
+
+        function loadSessionsFromStorage() {
+            try {
+                const saved = localStorage.getItem('chatSessions');
+                if (saved) {
+                    const data = JSON.parse(saved);
+                    sessions = data.sessions || [];
+                    currentSessionId = data.currentSessionId || null;
+                }
+            } catch(e) {}
+            if (sessions.length === 0) {
+                const newId = Date.now();
+                sessions = [{ id: newId, title: "新会话", messages: [], presetId: activePresetId, pinned: false }];
+                currentSessionId = newId;
+            }
+            if (!sessions.find(s => s.id === currentSessionId)) {
+                currentSessionId = sessions[0]?.id || null;
+            }
+        }
+
+        function createNewChat() {
+            const newId = Date.now();
+            sessions.unshift({ id: newId, title: "新会话", messages: [], presetId: activePresetId, pinned: false });
+            switchChat(newId);
+            saveSessionsToStorage();
+        }
+
+        function deleteChat(id, event) {
+            event.stopPropagation(); 
+            sessions = sessions.filter(s => s.id !== id);
+            if (sessions.length === 0) createNewChat();
+            else if (currentSessionId === id) switchChat(sessions[0].id);
+            else renderSidebar();
+            saveSessionsToStorage();
+            showToast('会话已删除');
+        }
+
+        function togglePin(id, event) {
+            event.stopPropagation();
+            const session = sessions.find(s => s.id === id);
+            if (!session) return;
+            session.pinned = !session.pinned;
+            saveSessionsToStorage();
+            renderSidebar();
+            showToast(session.pinned ? '已置顶' : '已取消置顶');
+        }
+
+        function switchChat(id) {
+            currentSessionId = id;
+            // 同步该会话的预设
+            const s = sessions.find(s => s.id === id);
+            if (s && s.presetId != null && paramPresets.find(p => p.id === s.presetId)) {
+                activePresetId = s.presetId;
+                savePresets();
+                renderPresetTags();
+            }
+            renderSidebar();
+            renderChatArea();
+        }
+
+        function renderSidebar() {
+            const list = document.getElementById('chatList');
+            list.innerHTML = '';
+            const sortedSessions = [...sessions].sort((a, b) => {
+                if (a.pinned && !b.pinned) return -1;
+                if (!a.pinned && b.pinned) return 1;
+                return 0;
+            });
+            sortedSessions.forEach(session => {
+                const item = document.createElement('div');
+                item.className = `chat-history-item ${session.id === currentSessionId ? 'active' : ''}`;
+                item.onclick = () => switchChat(session.id);
+
+                const title = document.createElement('span');
+                title.className = 'chat-title';
+                title.textContent = session.title;
+
+                const actionsDiv = document.createElement('div');
+                actionsDiv.className = 'chat-history-icons';
+                
+                const pinIcon = document.createElement('div');
+                const isPinned = session.pinned;
+                pinIcon.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" style="color:${isPinned?'#d4a017':'inherit'}"><path d="M16 3v5c0 .8.3 1.6.9 2.2l1.1 1.1V13H6v-1.7l1.1-1.1c.6-.6.9-1.3.9-2.2V3h8z"></path><line x1="12" y1="13" x2="12" y2="21"></line><line x1="8" y1="21" x2="16" y2="21"></line></svg>`;
+                pinIcon.style.cursor = 'pointer';
+                pinIcon.title = isPinned ? '取消置顶' : '置顶';
+                pinIcon.onclick = (e) => togglePin(session.id, e);
+
+                const editIcon = document.createElement('div');
+                editIcon.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>';
+                editIcon.onclick = (e) => openRenameModal(session.id, session.title, e);
+
+                const delIcon = document.createElement('div');
+                delIcon.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>';
+                delIcon.onclick = (e) => deleteChat(session.id, e);
+
+                actionsDiv.appendChild(pinIcon);
+                actionsDiv.appendChild(editIcon);
+                actionsDiv.appendChild(delIcon);
+                item.appendChild(title);
+                item.appendChild(actionsDiv);
+                list.appendChild(item);
+            });
+        }
+
+        // --- 核心渲染与请求 ---
+        const chatContainer = document.getElementById('chatContainer');
+        const chatInner = document.getElementById('chatInner');
+        const welcomeScreen = document.getElementById('welcomeScreen');
+
+        function renderChatArea() {
+            const session = sessions.find(s => s.id === currentSessionId);
+            
+            // 清空除了 welcomeScreen 以外的所有消息块
+            Array.from(chatInner.children).forEach(child => {
+                if(child.id !== 'welcomeScreen') child.remove();
+            });
+
+            if (session.messages.length === 0) {
+                welcomeScreen.style.display = 'block';
+            } else {
+                welcomeScreen.style.display = 'none';
+                session.messages.forEach(msg => {
+                    let displayContent, imageUrl;
+                    if (Array.isArray(msg.content)) {
+                        const textPart = msg.content.find(c => c.type === 'text');
+                        displayContent = textPart ? textPart.text : '';
+                        const imgPart = msg.content.find(c => c.type === 'image_url');
+                        imageUrl = imgPart ? imgPart.image_url.url : null;
+                    } else {
+                        displayContent = msg.content;
+                    }
+                    appendMessageDOM(msg.role, displayContent, msg.thought, imageUrl, msg.model);
+                });
+            }
+        }
+
+        function regenerateMessage(btn) {
+            const block = btn.closest('.message-block');
+            const allBlocks = Array.from(chatInner.querySelectorAll('.message-block'));
+            const index = allBlocks.indexOf(block);
+            if (index === -1) return;
+
+            const currentSession = sessions.find(s => s.id === currentSessionId);
+            currentSession.messages = currentSession.messages.slice(0, index); 
+            saveSessionsToStorage();
+            renderChatArea();
+            fetchAIResponse();
+        }
+
+        function appendMessageDOM(role, content, thought = null, imageUrl = null, msgModel = null) {
+            welcomeScreen.style.display = 'none';
+            
+            const blockDiv = document.createElement('div');
+            blockDiv.className = `message-block ${role}-block`;
+
+            if (role === 'assistant' && thought) {
+                const thoughtDiv = document.createElement('details');
+                thoughtDiv.className = 'thought-process';
+                thoughtDiv.innerHTML = `
+                    <summary class="thought-summary">
+                        <span>思考过程</span>
+                        <svg width="12" height="12" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    </summary>
+                    <div class="thought-content">${thought}</div>
+                `;
+                blockDiv.appendChild(thoughtDiv);
+            }
+
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `message ${role}`;
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+            if (role === 'assistant' && content) {
+                contentDiv.innerHTML = marked.parse(content).trim();
+            } else {
+                contentDiv.textContent = content;
+            }
+            msgDiv.appendChild(contentDiv);
+            if (imageUrl) {
+                const img = document.createElement('img');
+                img.src = imageUrl;
+                img.className = 'user-image';
+                img.onclick = () => window.open(imageUrl, '_blank');
+                msgDiv.appendChild(img);
+            }
+            blockDiv.appendChild(msgDiv);
+
+            const actionsDiv = document.createElement('div');
+            actionsDiv.className = 'message-actions';
+            if (role === 'user') {
+                actionsDiv.innerHTML = `
+                    <svg onclick="alert('编辑功能待完善')" width="14" height="14" viewBox="0 0 24 24"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                    <svg onclick="copyMessageText(this)" width="14" height="14" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                `;
+            } else {
+                const presetName = getActivePreset()?.name || '';
+                const presetTagHtml = presetName ? `<span class="msg-preset-tag">${escapeHtml(presetName)}</span>` : '';
+                const msgLogo = getActiveLogo();
+                const msgLogoHtml = msgLogo
+                    ? `<img class="model-logo" src="${msgLogo}" alt="" onerror="this.style.display='none'" style="width:14px;height:14px;border-radius:3px;">`
+                    : '';
+                actionsDiv.innerHTML = `
+                    <svg onclick="regenerateMessage(this)" width="14" height="14" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                    <svg onclick="copyMessageText(this)" width="14" height="14" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                    <span class="msg-model-tag" onclick="event.stopPropagation(); retryWithDropdown(this.closest('.message-block'))">${msgLogoHtml}${escapeHtml(msgModel || activeModel)}</span>
+                    ${presetTagHtml}
+                `;
+            }
+            blockDiv.appendChild(actionsDiv);
+
+            chatInner.appendChild(blockDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+            return contentDiv; 
+        }
+
+        let pendingFile = null;
+        function handleFileSelected(input) {
+            if (input.files && input.files[0]) {
+                const file = input.files[0];
+                if (!file.type.startsWith('image/')) { showToast('仅支持图片文件'); input.value = ''; return; }
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    pendingFile = { base64: e.target.result, name: file.name };
+                    document.getElementById('imagePreviewThumb').src = e.target.result;
+                    document.getElementById('imagePreviewName').textContent = file.name;
+                    document.getElementById('imagePreviewArea').style.display = 'flex';
+                };
+                reader.readAsDataURL(file);
+                input.value = '';
+            }
+        }
+
+        function clearImagePreview() {
+            pendingFile = null;
+            document.getElementById('imagePreviewArea').style.display = 'none';
+            document.getElementById('imagePreviewThumb').src = '';
+        }
+
+        const userInput = document.getElementById('userInput');
+        const sendBtn = document.getElementById('sendBtn');
+
+        userInput.addEventListener('input', function() {
+            this.style.height = '24px';
+            let scrollHeight = this.scrollHeight;
+            this.style.height = (scrollHeight > 150 ? 150 : scrollHeight) + 'px';
+            if(scrollHeight > 150) this.style.overflowY = 'auto';
+            else this.style.overflowY = 'hidden';
+        });
+
+        userInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+        });
+
+        async function readSSEStream(body, el) {
+            el.style.whiteSpace = 'pre-wrap';
+            const reader = body.getReader();
+            const decoder = new TextDecoder();
+            let full = '', buf = '';
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                buf += decoder.decode(value, { stream: true });
+                const lines = buf.split('\n');
+                buf = lines.pop() || '';
+                for (const line of lines) {
+                    if (!line.startsWith('data: ')) continue;
+                    const payload = line.slice(6).trim();
+                    if (!payload || payload === '[DONE]') continue;
+                    try {
+                        const delta = JSON.parse(payload).choices?.[0]?.delta?.content;
+                        if (delta) { full += delta; el.textContent = full; }
+                    } catch(e) {}
+                }
+            }
+            return full;
+        }
+
+        async function fetchAIResponse() {
+            const provider = getActiveProvider();
+            if (!provider) { sendBtn.disabled = false; return; }
+
+            const currentSession = sessions.find(s => s.id === currentSessionId);
+            sendBtn.disabled = true;
+
+            const preset = getActivePreset();
+            const fakeThought = "Thinking about your request...";
+            const aiMessageElement = appendMessageDOM('assistant', '正在思考...', fakeThought);
+
+            try {
+                let messages = [...currentSession.messages];
+                if (preset && preset.systemPrompt) {
+                    messages = [{ role: 'system', content: preset.systemPrompt }, ...messages];
+                }
+                const useStream = preset ? preset.stream : false;
+                const body = {
+                    model: activeModel,
+                    messages: messages,
+                    stream: useStream,
+                    temperature: preset ? preset.temperature : 0.7,
+                    top_p: preset ? preset.top_p : 1,
+                    frequency_penalty: preset ? preset.frequency_penalty : 0,
+                    presence_penalty: preset ? preset.presence_penalty : 0
+                };
+                const response = await fetch(normalizeApiUrl(provider.apiUrl), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${provider.apiKey}` },
+                    body: JSON.stringify(body)
+                });
+
+                if (!response.ok) {
+                    const errText = await response.text();
+                    let errMsg = `HTTP 状态码 ${response.status}`;
+                    try { errMsg = JSON.parse(errText).error?.message || errMsg; } catch(e) {}
+                    throw new Error(errMsg);
+                }
+
+                let aiReply;
+                if (useStream && response.body) {
+                    aiReply = await readSSEStream(response.body, aiMessageElement);
+                } else {
+                    const data = await response.json();
+                    aiReply = data.choices[0].message.content;
+                }
+                aiMessageElement.textContent = aiReply;
+                currentSession.messages.push({ role: "assistant", content: aiReply, thought: fakeThought, model: activeModel });
+                saveSessionsToStorage();
+                aiMessageElement.innerHTML = marked.parse(aiReply).trim();
+                aiMessageElement.style.whiteSpace = '';
+
+            } catch (error) {
+                const msg = error.message || '';
+                if (msg.toLowerCase().includes('image') || msg.includes('图片')) {
+                    // 尝试过滤图片内容后重试
+                    let filtered = false;
+                    currentSession.messages.forEach(m => {
+                        if (m.role === 'user' && Array.isArray(m.content)) {
+                            const textOnly = m.content.filter(c => c.type === 'text');
+                            if (textOnly.length === 1) m.content = textOnly[0].text;
+                            else if (textOnly.length === 0) m.content = '';
+                            else m.content = textOnly;
+                            filtered = true;
+                        }
+                    });
+                    if (filtered) {
+                        saveSessionsToStorage();
+                        aiMessageElement.closest('.message-block')?.remove();
+                        // 插入提示
+                        const tipEl = appendMessageDOM('assistant', '⚠️ 该模型不支持图片输入，已自动转为纯文字发送', null);
+                        if (tipEl) tipEl.style.color = '#b0882a';
+                        currentSession.messages.push({ role: "assistant", content: '⚠️ 该模型不支持图片输入，已自动转为纯文字发送' });
+                        saveSessionsToStorage();
+                        setTimeout(() => fetchAIResponse(), 100);
+                    } else {
+                        aiMessageElement.textContent = '该模型不支持图片输入，请移除图片或切换到支持多模态的模型后重试。';
+                        aiMessageElement.style.color = "#ff4d4f";
+                        currentSession.messages.push({ role: "assistant", content: '该模型不支持图片输入，请移除图片或切换到支持多模态的模型后重试。' });
+                        saveSessionsToStorage();
+                    }
+                } else {
+                    aiMessageElement.textContent = `请求失败: ${msg}`;
+                    aiMessageElement.style.color = "#ff4d4f";
+                    currentSession.messages.push({ role: "assistant", content: `请求失败: ${msg}` });
+                    saveSessionsToStorage();
+                }
+            } finally {
+                sendBtn.disabled = false;
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            }
+        }
+
+        function sendMessage() {
+            const text = userInput.value.trim();
+            const hasImage = pendingFile != null;
+            if (!text && !hasImage) return;
+
+            const provider = getActiveProvider();
+            if (!provider || !provider.apiUrl || !provider.apiKey || !activeModel) {
+                showToast('请配置 API 参数！');
+                openSettings();
+                return;
+            }
+
+            const currentSession = sessions.find(s => s.id === currentSessionId);
+            if (currentSession.messages.length === 0) {
+                currentSession.title = text.length > 12 ? text.substring(0, 12) + '...' : text || '图片消息';
+                renderSidebar();
+            }
+
+            let content, displayText, imageForDisplay = null;
+            if (hasImage) {
+                const imageContent = { type: 'image_url', image_url: { url: pendingFile.base64 } };
+                content = text ? [{ type: 'text', text: text }, imageContent] : [imageContent];
+                displayText = text || '图片';
+                imageForDisplay = pendingFile.base64;
+            } else {
+                content = text;
+                displayText = text;
+            }
+
+            appendMessageDOM('user', displayText, null, imageForDisplay);
+            currentSession.messages.push({ role: "user", content: content });
+            currentSession.presetId = activePresetId;
+            saveSessionsToStorage();
+            
+            clearImagePreview();
+            userInput.value = '';
+            userInput.style.height = '24px';
+            
+            fetchAIResponse();
+        }
+    </script>
+</body>
+</html>
