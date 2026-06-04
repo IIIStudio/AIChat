@@ -81,6 +81,11 @@
         .sidebar-actions svg:hover { opacity: 1; }
 
         .chat-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
+        .chat-list::-webkit-scrollbar { width: 4px; }
+        .chat-list::-webkit-scrollbar-track { background: transparent; }
+        .chat-list::-webkit-scrollbar-thumb { background: transparent; border-radius: 4px; }
+        .chat-list:hover::-webkit-scrollbar-thumb { background: #d0d0d0; }
+        .chat-list::-webkit-scrollbar-thumb:hover { background: #b0b0b0; }
         .chat-history-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; border-radius: 8px; font-size: 14px; cursor: pointer; color: var(--text-muted); transition: all 0.2s; white-space: nowrap; }
         .chat-history-item:hover { background-color: var(--bg-hover); color: var(--text-main); }
         .chat-history-item.active { background-color: var(--bg-active-chat); color: var(--text-main); }
@@ -135,6 +140,11 @@
             padding: 20px 20px;
             scroll-behavior: smooth;
         }
+        .chat-container::-webkit-scrollbar { width: 4px; }
+        .chat-container::-webkit-scrollbar-track { background: transparent; }
+        .chat-container::-webkit-scrollbar-thumb { background: transparent; border-radius: 4px; }
+        .chat-container:hover::-webkit-scrollbar-thumb { background: #d0d0d0; }
+        .chat-container::-webkit-scrollbar-thumb:hover { background: #b0b0b0; }
 
         .chat-inner {
             width: 100%;
@@ -289,12 +299,14 @@
         .preset-edit-row textarea { min-height: 60px; resize: vertical; }
 
         /* 滑动条参数区 */
-        .preset-slider-group { margin: 2px 0; display: flex; align-items: center; gap: 8px; }
-        .preset-slider-group .slider-label { font-size: 12px; color: var(--text-muted); white-space: nowrap; min-width: 72px; }
-        .preset-slider-group .slider-val { font-size: 11px; font-weight: 600; color: var(--text-main); background: var(--bg-gray); padding: 1px 7px; border-radius: 8px; min-width: 34px; text-align: center; }
-        .preset-slider { flex: 1; -webkit-appearance: none; appearance: none; height: 4px; border-radius: 2px; background: #e5e5e5; outline: none; }
-        .preset-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 14px; height: 14px; border-radius: 50%; background: var(--text-main); cursor: pointer; border: 2px solid white; box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
-        .preset-slider::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: var(--text-main); cursor: pointer; border: 2px solid white; box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
+        .preset-slider-group { margin: 1px 0; display: flex; align-items: center; gap: 6px; }
+        .preset-slider-group .slider-label { font-size: 11px; color: var(--text-muted); white-space: nowrap; min-width: 64px; }
+        .preset-slider-group .slider-val { font-size: 10px; font-weight: 500; color: var(--text-muted); background: transparent; padding: 0; border-radius: 0; min-width: 28px; text-align: right; }
+        .preset-slider { flex: 1; -webkit-appearance: none; appearance: none; height: 2px; border-radius: 1px; background: #e8e8e8; outline: none; transition: background 0.15s; }
+        .preset-slider:hover { background: #d0d0d0; }
+        .preset-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 12px; height: 12px; border-radius: 50%; background: var(--text-main); cursor: pointer; border: none; box-shadow: 0 0 0 2px rgba(0,0,0,0.06); transition: transform 0.15s, box-shadow 0.15s; }
+        .preset-slider::-webkit-slider-thumb:hover { transform: scale(1.25); box-shadow: 0 0 0 4px rgba(0,0,0,0.08); }
+        .preset-slider::-moz-range-thumb { width: 12px; height: 12px; border-radius: 50%; background: var(--text-main); cursor: pointer; border: none; box-shadow: 0 0 0 2px rgba(0,0,0,0.06); }
         .preset-stream-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; }
         .preset-stream-row .stream-label { font-size: 13px; font-weight: 500; }
         .preset-stream-opt { font-size: 12px; padding: 5px 16px; border-radius: 16px; border: 1px solid var(--border-color); cursor: pointer; background: white; color: var(--text-muted); transition: all 0.15s; }
@@ -387,6 +399,10 @@
         .settings-left { width: 180px; flex-shrink: 0; background: #fafafa; border-right: 1px solid var(--border-color); display: flex; flex-direction: column; }
         .settings-left-header { padding: 12px 14px; font-size: 12px; color: var(--text-muted); font-weight: 500; border-bottom: 1px solid var(--border-color); }
         .settings-left-list { flex: 1; overflow-y: auto; }
+        .settings-left-list::-webkit-scrollbar { width: 4px; }
+        .settings-left-list::-webkit-scrollbar-track { background: transparent; }
+        .settings-left-list::-webkit-scrollbar-thumb { background: transparent; border-radius: 4px; }
+        .settings-left-list:hover::-webkit-scrollbar-thumb { background: #d0d0d0; }
         .provider-nav-item { padding: 10px 14px; font-size: 13px; cursor: pointer; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center; transition: background 0.15s; }
         .provider-nav-item:hover { background: var(--bg-hover); }
         .provider-nav-item.selected { background: var(--bg-active-chat); color: var(--text-main); font-weight: 500; }
@@ -397,6 +413,10 @@
         .settings-left-footer button:hover { border-color: var(--text-main); color: var(--text-main); }
 
         .settings-right { flex: 1; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; background: white; }
+        .settings-right::-webkit-scrollbar { width: 4px; }
+        .settings-right::-webkit-scrollbar-track { background: transparent; }
+        .settings-right::-webkit-scrollbar-thumb { background: transparent; border-radius: 4px; }
+        .settings-right:hover::-webkit-scrollbar-thumb { background: #d0d0d0; }
         .settings-right label { font-size: 12px; color: var(--text-muted); font-weight: 500; }
         .settings-right input:not(.model-input) { width: 100%; padding: 7px 10px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 13px; outline: none; }
         .settings-right input:focus { border-color: var(--black-btn); }
@@ -1439,26 +1459,8 @@
             fetchAIResponse();
         }
 
-        // --- 消息折叠状态管理（持久化到 localStorage，刷新不丢失） ---
+        // --- 消息折叠（仅对 user 长消息生效，默认折叠，不持久化） ---
         const COLLAPSE_THRESHOLD = 300; // 内容超过此字符数时自动折叠
-
-        function getCollapsedStates() {
-            try {
-                return JSON.parse(localStorage.getItem('chatCollapsedStates')) || {};
-            } catch(e) { return {}; }
-        }
-
-        function setCollapsedState(sessionId, msgIndex, collapsed) {
-            const states = getCollapsedStates();
-            if (!states[sessionId]) states[sessionId] = {};
-            states[sessionId][msgIndex] = collapsed;
-            try { localStorage.setItem('chatCollapsedStates', JSON.stringify(states)); } catch(e) {}
-        }
-
-        function isMessageCollapsed(sessionId, msgIndex) {
-            const states = getCollapsedStates();
-            return !!(states[sessionId] && states[sessionId][msgIndex]);
-        }
 
         function appendMessageDOM(role, content, thought = null, imageUrl = null, msgModel = null, msgIndex = null) {
             welcomeScreen.style.display = 'none';
@@ -1492,12 +1494,10 @@
                 contentDiv.textContent = content;
             }
 
-            // 长内容自动折叠（展开/收起状态持久化到 localStorage，刷新不丢失）
-            if (content && content.length > COLLAPSE_THRESHOLD && msgIndex != null) {
+            // 长内容自动折叠（仅对 user 消息生效，默认折叠，不持久化）
+            if (role === 'user' && content && content.length > COLLAPSE_THRESHOLD && msgIndex != null) {
                 const wrapper = document.createElement('div');
-                wrapper.className = 'collapse-wrapper';
-                const collapsed = isMessageCollapsed(currentSessionId, msgIndex);
-                if (collapsed) wrapper.classList.add('collapsed');
+                wrapper.className = 'collapse-wrapper collapsed';
                 wrapper.appendChild(contentDiv);
                 
                 const toggleBtn = document.createElement('span');
@@ -1508,8 +1508,6 @@
                 updateToggleLabel();
                 toggleBtn.onclick = () => {
                     wrapper.classList.toggle('collapsed');
-                    const nowCollapsed = wrapper.classList.contains('collapsed');
-                    setCollapsedState(currentSessionId, msgIndex, nowCollapsed);
                     updateToggleLabel();
                 };
                 
