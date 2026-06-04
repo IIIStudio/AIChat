@@ -466,6 +466,109 @@
         .model-logo-fallback { width: 18px; height: 18px; border-radius: 4px; flex-shrink: 0; background: #e8e8e8; display: inline-flex; align-items: center; justify-content: center; font-size: 9px; color: var(--text-muted); }
         .model-dropdown-item .dropdown-left { display: flex; align-items: center; gap: 8px; }
         .msg-model-tag { display: inline-flex; align-items: center; gap: 5px; }
+
+        /* --- 消息锚点导航 --- */
+        .message-anchors {
+            position: absolute;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            z-index: 5;
+            padding: 12px 14px;
+            border-radius: 12px;
+            transition: opacity 0.2s;
+            max-height: calc(100vh - 200px);
+            overflow-y: auto;
+            scrollbar-width: none;
+        }
+        .message-anchors::-webkit-scrollbar { display: none; }
+        .message-anchors.hidden { opacity: 0; pointer-events: none; }
+        .message-anchors { pointer-events: auto; }
+        .anchor-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #d5d5d5;
+            cursor: pointer;
+            pointer-events: auto;
+            transition: all 0.15s;
+            flex-shrink: 0;
+        }
+        .anchor-dot.assistant {
+            width: 7px;
+            height: 7px;
+            background: #b8b8b8;
+        }
+        .anchor-dot:hover {
+            background: #888;
+            transform: scale(1.5);
+        }
+        .anchor-dot.active {
+            background: #555;
+            transform: scale(1.4);
+        }
+        .anchor-dot.assistant.active {
+            background: var(--text-main);
+            transform: scale(1.5);
+        }
+
+        /* 锚点悬浮提示 */
+        .anchor-tooltip {
+            position: fixed;
+            min-width: 180px;
+            max-width: 320px;
+            max-height: 400px;
+            overflow-y: auto;
+            background: #fff;
+            color: var(--text-main);
+            font-size: 12px;
+            line-height: 1.5;
+            padding: 8px 0;
+            border-radius: 8px;
+            pointer-events: auto;
+            opacity: 0;
+            transform: translateX(10px);
+            transition: opacity 0.15s, transform 0.15s;
+            z-index: 999;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+            border: 1px solid var(--border-color);
+            scrollbar-width: none;
+        }
+        .anchor-tooltip::-webkit-scrollbar { display: none; }
+        .anchor-tooltip.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+        .anchor-tooltip-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 4px 12px;
+            cursor: pointer;
+            transition: background 0.1s;
+        }
+        .anchor-tooltip-item:hover {
+            background: #f0f4ff;
+        }
+        .anchor-tooltip-item .anchor-text {
+            color: #3b82f6;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .anchor-tooltip-item .anchor-dash {
+            color: var(--text-muted);
+            margin-left: 10px;
+            flex-shrink: 0;
+        }
+        .anchor-tooltip-item.current .anchor-text {
+            font-weight: 600;
+            color: #2563eb;
+        }
     </style>
 </head>
 <body>
@@ -498,6 +601,9 @@
             </div>
             <button class="settings-btn" onclick="openSettings()">配置 API</button>
         </div>
+
+        <div class="message-anchors hidden" id="messageAnchors"></div>
+        <div class="anchor-tooltip" id="anchorTooltip"></div>
 
         <div class="chat-container" id="chatContainer">
             <div class="chat-inner" id="chatInner">
@@ -1465,6 +1571,147 @@
             });
         }
 
+        // --- 消息锚点导航 ---
+        const messageAnchors = document.getElementById('messageAnchors');
+        const anchorTooltip = document.getElementById('anchorTooltip');
+        let anchorObserver = null;
+        let anchorTexts = [];
+
+        let hideTooltipTimeout = null;
+
+        function bindTooltipClicks() {
+            anchorTooltip.querySelectorAll('.anchor-tooltip-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    const idx = parseInt(item.getAttribute('data-idx'));
+                    const blocks = chatInner.querySelectorAll('.user-block');
+                    if (blocks[idx]) {
+                        blocks[idx].scrollIntoView({ block: 'start' });
+                    }
+                });
+            });
+        }
+
+        function buildTooltipHTML(currentIndex) {
+            if (anchorTexts.length === 0) return '';
+            let html = '';
+            anchorTexts.forEach((text, i) => {
+                const cls = i === currentIndex ? ' anchor-tooltip-item current' : 'anchor-tooltip-item';
+                html += `<div class="${cls}" data-idx="${i}"><span class="anchor-text">${escapeHtml(text)}</span><span class="anchor-dash">—</span></div>`;
+            });
+            return html;
+        }
+
+        function positionTooltip(refRect) {
+            if (!anchorTooltip) return;
+            let left = refRect.left - anchorTooltip.offsetWidth - 14;
+            let top = refRect.top + refRect.height / 2 - anchorTooltip.offsetHeight / 2;
+            if (left < 8) left = 8;
+            if (top < 8) top = 8;
+            if (top + anchorTooltip.offsetHeight > window.innerHeight - 8) {
+                top = window.innerHeight - anchorTooltip.offsetHeight - 8;
+            }
+            anchorTooltip.style.left = left + 'px';
+            anchorTooltip.style.top = top + 'px';
+        }
+
+        function showAnchorTooltipAt(refRect, currentIndex) {
+            if (!anchorTooltip || anchorTexts.length === 0) return;
+            anchorTooltip.innerHTML = buildTooltipHTML(currentIndex);
+            anchorTooltip.classList.add('show');
+            positionTooltip(refRect);
+            bindTooltipClicks();
+        }
+
+        function hideAnchorTooltip(delayed) {
+            if (!anchorTooltip) return;
+            if (delayed) {
+                clearTimeout(hideTooltipTimeout);
+                hideTooltipTimeout = setTimeout(() => {
+                    anchorTooltip.classList.remove('show');
+                }, 150);
+            } else {
+                clearTimeout(hideTooltipTimeout);
+                anchorTooltip.classList.remove('show');
+            }
+        }
+
+        // 整个锚点条带和 tooltip 区域协同显示/隐藏
+        if (messageAnchors) {
+            messageAnchors.addEventListener('mouseenter', () => {
+                clearTimeout(hideTooltipTimeout);
+                showAnchorTooltipAt(messageAnchors.getBoundingClientRect(), -1);
+            });
+            messageAnchors.addEventListener('mouseleave', () => hideAnchorTooltip(true));
+        }
+        if (anchorTooltip) {
+            anchorTooltip.addEventListener('mouseenter', () => {
+                clearTimeout(hideTooltipTimeout);
+                anchorTooltip.classList.add('show');
+            });
+            anchorTooltip.addEventListener('mouseleave', () => hideAnchorTooltip(true));
+        }
+
+        function updateMessageAnchors() {
+            if (!messageAnchors) return;
+            hideAnchorTooltip();
+            const allBlocks = chatInner.querySelectorAll('.message-block');
+            const blocks = Array.from(allBlocks).filter(b => b.classList.contains('user-block'));
+            messageAnchors.innerHTML = '';
+
+            // 收集所有用户消息文本
+            anchorTexts = blocks.map(block => {
+                const contentEl = block.querySelector('.message-content');
+                return contentEl ? (contentEl.textContent || contentEl.getAttribute('data-raw') || '').substring(0, 20).trim() : '';
+            });
+
+            // 每次更新时清空 tooltip 内容
+            if (anchorTooltip) anchorTooltip.innerHTML = '';
+
+            if (blocks.length === 0) {
+                messageAnchors.classList.add('hidden');
+                if (anchorObserver) anchorObserver.disconnect();
+                return;
+            }
+            messageAnchors.classList.remove('hidden');
+
+            blocks.forEach((block, i) => {
+                block.setAttribute('data-anchor-index', i);
+                const dot = document.createElement('div');
+                dot.className = 'anchor-dot';
+                dot.title = '你的消息';
+                // 悬停时更新当前高亮项
+                dot.addEventListener('mouseenter', () => {
+                    if (anchorTooltip && anchorTooltip.classList.contains('show')) {
+                        anchorTooltip.innerHTML = buildTooltipHTML(i);
+                        bindTooltipClicks();
+                    }
+                });
+                dot.addEventListener('click', () => {
+                    block.scrollIntoView({ block: 'start' });
+                });
+                messageAnchors.appendChild(dot);
+            });
+
+            // 重建 observer
+            if (anchorObserver) anchorObserver.disconnect();
+            anchorObserver = new IntersectionObserver((entries) => {
+                let bestIdx = -1, bestRatio = 0;
+                entries.forEach(e => {
+                    if (e.intersectionRatio > bestRatio && e.isIntersecting) {
+                        bestRatio = e.intersectionRatio;
+                        bestIdx = parseInt(e.target.getAttribute('data-anchor-index'));
+                    }
+                });
+                const dots = messageAnchors.querySelectorAll('.anchor-dot');
+                dots.forEach(d => d.classList.remove('active'));
+                if (bestIdx >= 0 && dots[bestIdx]) {
+                    dots[bestIdx].classList.add('active');
+                }
+            }, { root: chatContainer, threshold: [0, 0.25, 0.5, 0.75, 1] });
+
+            blocks.forEach(b => anchorObserver.observe(b));
+        }
+
         // --- 核心渲染与请求 ---
         const chatContainer = document.getElementById('chatContainer');
         const chatInner = document.getElementById('chatInner');
@@ -1480,6 +1727,7 @@
 
             if (session.messages.length === 0) {
                 welcomeScreen.style.display = 'block';
+                updateMessageAnchors();
             } else {
                 welcomeScreen.style.display = 'none';
                 session.messages.forEach((msg, idx) => {
@@ -1495,6 +1743,7 @@
                     appendMessageDOM(msg.role, displayContent, msg.thought, imageUrl, msg.model, idx);
                 });
             }
+            updateMessageAnchors();
         }
 
         function regenerateMessage(btn) {
@@ -1603,6 +1852,7 @@
             chatInner.appendChild(blockDiv);
             // 添加新消息后自动滚动到底部
             requestAnimationFrame(() => { chatContainer.scrollTop = chatContainer.scrollHeight; });
+            updateMessageAnchors();
             return contentDiv; 
         }
 
