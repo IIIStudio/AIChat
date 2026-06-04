@@ -319,6 +319,34 @@
         .message-content th { background: #f5f5f5; }
         .message-content ul, .message-content ol { padding-left: 20px; }
 
+        /* --- 消息折叠 --- */
+        .collapse-wrapper { position: relative; }
+        .collapse-wrapper.collapsed { max-height: 180px; overflow: hidden; }
+        .collapse-wrapper.collapsed::after {
+            content: '';
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            height: 48px;
+            background: linear-gradient(transparent, rgba(255,255,255,0.95));
+            pointer-events: none;
+        }
+        .collapse-toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 12px;
+            color: var(--text-muted);
+            cursor: pointer;
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 3px 12px;
+            background: white;
+            transition: all 0.15s;
+            margin-top: 4px;
+            user-select: none;
+        }
+        .collapse-toggle:hover { border-color: var(--text-main); color: var(--text-main); }
+
         /* --- 弹窗 Modal --- */
         .modal-overlay {
             position: fixed;
@@ -1410,6 +1438,27 @@
             fetchAIResponse();
         }
 
+        // --- 消息折叠状态管理（持久化到 localStorage，刷新不丢失） ---
+        const COLLAPSE_THRESHOLD = 300; // 内容超过此字符数时自动折叠
+
+        function getCollapsedStates() {
+            try {
+                return JSON.parse(localStorage.getItem('chatCollapsedStates')) || {};
+            } catch(e) { return {}; }
+        }
+
+        function setCollapsedState(sessionId, msgIndex, collapsed) {
+            const states = getCollapsedStates();
+            if (!states[sessionId]) states[sessionId] = {};
+            states[sessionId][msgIndex] = collapsed;
+            try { localStorage.setItem('chatCollapsedStates', JSON.stringify(states)); } catch(e) {}
+        }
+
+        function isMessageCollapsed(sessionId, msgIndex) {
+            const states = getCollapsedStates();
+            return !!(states[sessionId] && states[sessionId][msgIndex]);
+        }
+
         function appendMessageDOM(role, content, thought = null, imageUrl = null, msgModel = null, msgIndex = null) {
             welcomeScreen.style.display = 'none';
             
@@ -1441,7 +1490,33 @@
             } else {
                 contentDiv.textContent = content;
             }
-            msgDiv.appendChild(contentDiv);
+
+            // 长内容自动折叠（展开/收起状态持久化到 localStorage，刷新不丢失）
+            if (content && content.length > COLLAPSE_THRESHOLD && msgIndex != null) {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'collapse-wrapper';
+                const collapsed = isMessageCollapsed(currentSessionId, msgIndex);
+                if (collapsed) wrapper.classList.add('collapsed');
+                wrapper.appendChild(contentDiv);
+                
+                const toggleBtn = document.createElement('span');
+                toggleBtn.className = 'collapse-toggle';
+                const updateToggleLabel = () => {
+                    toggleBtn.textContent = wrapper.classList.contains('collapsed') ? '展开全文 ▼' : '收起 ▲';
+                };
+                updateToggleLabel();
+                toggleBtn.onclick = () => {
+                    wrapper.classList.toggle('collapsed');
+                    const nowCollapsed = wrapper.classList.contains('collapsed');
+                    setCollapsedState(currentSessionId, msgIndex, nowCollapsed);
+                    updateToggleLabel();
+                };
+                
+                msgDiv.appendChild(wrapper);
+                msgDiv.appendChild(toggleBtn);
+            } else {
+                msgDiv.appendChild(contentDiv);
+            }
             if (imageUrl) {
                 const img = document.createElement('img');
                 img.src = imageUrl;
@@ -1475,7 +1550,8 @@
             blockDiv.appendChild(actionsDiv);
 
             chatInner.appendChild(blockDiv);
-            chatContainer.scrollTop = chatContainer.scrollHeight;
+            // 添加新消息后自动滚动到底部
+            // chatContainer.scrollTop = chatContainer.scrollHeight;
             return contentDiv; 
         }
 
@@ -1637,7 +1713,8 @@
                 }
             } finally {
                 sendBtn.disabled = false;
-                chatContainer.scrollTop = chatContainer.scrollHeight;
+                // 请求完成后自动滚动到底部
+                // chatContainer.scrollTop = chatContainer.scrollHeight;
             }
         }
 
