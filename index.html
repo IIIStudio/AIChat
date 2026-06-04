@@ -1360,6 +1360,7 @@
 
         function switchChat(id) {
             currentSessionId = id;
+            saveSessionsToStorage();
             // 同步该会话的预设
             const s = sessions.find(s => s.id === id);
             if (s && s.presetId != null && paramPresets.find(p => p.id === s.presetId)) {
