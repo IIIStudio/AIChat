@@ -1732,7 +1732,23 @@
                 welcomeScreen.style.display = 'none';
                 session.messages.forEach((msg, idx) => {
                     let displayContent, imageUrl;
-                    if (Array.isArray(msg.content)) {
+                    let displayModel = msg.model;
+                    let displayThought = msg.thought;
+                    // 如果有版本历史且正在查看旧版本，使用旧版本内容
+                    if (msg.role === 'assistant' && msg.versions && msg.versions.length > 0) {
+                        const dv = msg.displayVersionIdx || 0;
+                        if (dv > 0 && msg.versions[dv - 1]) {
+                            const ver = msg.versions[dv - 1];
+                            displayContent = ver.content;
+                            displayModel = ver.model || msg.model;
+                            displayThought = ver.thought || msg.thought;
+                        } else if (Array.isArray(msg.content)) {
+                            const textPart = msg.content.find(c => c.type === 'text');
+                            displayContent = textPart ? textPart.text : '';
+                        } else {
+                            displayContent = msg.content;
+                        }
+                    } else if (Array.isArray(msg.content)) {
                         const textPart = msg.content.find(c => c.type === 'text');
                         displayContent = textPart ? textPart.text : '';
                         const imgPart = msg.content.find(c => c.type === 'image_url');
@@ -1740,7 +1756,7 @@
                     } else {
                         displayContent = msg.content;
                     }
-                    appendMessageDOM(msg.role, displayContent, msg.thought, imageUrl, msg.model, idx);
+                    appendMessageDOM(msg.role, displayContent, displayThought, imageUrl, displayModel, idx);
                 });
             }
             updateMessageAnchors();
@@ -1753,6 +1769,12 @@
             if (index === -1) return;
 
             const currentSession = sessions.find(s => s.id === currentSessionId);
+            const msg = currentSession.messages[index];
+            // 保存当前回复到版本历史
+            if (msg && msg.role === 'assistant') {
+                pendingVersions = (msg.versions || []).slice();
+                pendingVersions.push({ content: msg.content, thought: msg.thought, model: msg.model });
+            }
             currentSession.messages = currentSession.messages.slice(0, index); 
             saveSessionsToStorage();
             renderChatArea();
@@ -1761,6 +1783,7 @@
 
         // --- 消息编辑与删除 ---
         let editingMessageIndex = null;
+        let pendingVersions = null;
 
         function editMessage(btnEl) {
             const block = btnEl.closest('.message-block');
@@ -1838,6 +1861,13 @@
                 msg.content = newText;
             }
             
+            // 保存原助手回复到版本历史
+            const oldAsIdx = editingMessageIndex + 1;
+            const oldAs = session.messages[oldAsIdx];
+            if (oldAs && oldAs.role === 'assistant') {
+                pendingVersions = (oldAs.versions || []).slice();
+                pendingVersions.push({ content: oldAs.content, thought: oldAs.thought, model: oldAs.model });
+            }
             // 截断消息列表，仅保留到当前编辑的用户消息及之前的消息
             session.messages = session.messages.slice(0, editingMessageIndex + 1);
             
@@ -1862,7 +1892,32 @@
                 const removeCount = (idx + 1 < session.messages.length && session.messages[idx + 1].role === 'assistant') ? 2 : 1;
                 session.messages.splice(idx, removeCount);
             } else {
-                // 仅删除助手消息
+                const msg = session.messages[idx];
+                // 有版本历史时，仅删除当前正在查看的版本
+                if (msg && msg.versions && msg.versions.length > 0) {
+                    const dv = msg.displayVersionIdx || 0;
+                    if (dv === 0) {
+                        // 删除当前最新版本，用上一个版本替换
+                        const last = msg.versions.pop();
+                        msg.content = last.content;
+                        msg.thought = last.thought;
+                        msg.model = last.model;
+                        msg.displayVersionIdx = 0;
+                        if (msg.versions.length === 0) delete msg.versions;
+                        if (msg.displayVersionIdx === 0) delete msg.displayVersionIdx;
+                    } else {
+                        // 删除旧版本
+                        msg.versions.splice(dv - 1, 1);
+                        msg.displayVersionIdx = Math.min(msg.displayVersionIdx, msg.versions.length);
+                        if (msg.versions.length === 0) delete msg.versions;
+                        if (msg.displayVersionIdx === 0) delete msg.displayVersionIdx;
+                    }
+                    saveSessionsToStorage();
+                    renderChatArea();
+                    showToast('版本已删除');
+                    return;
+                }
+                // 无版本历史，删除整条助手消息
                 session.messages.splice(idx, 1);
             }
             
@@ -1873,6 +1928,23 @@
             saveSessionsToStorage();
             renderChatArea();
             showToast('消息已删除');
+        }
+
+        function switchVersion(spanEl, direction) {
+            const nav = spanEl.closest('.version-nav');
+            const idx = parseInt(nav.getAttribute('data-msg-idx'));
+            if (isNaN(idx)) return;
+            const session = sessions.find(s => s.id === currentSessionId);
+            if (!session) return;
+            const msg = session.messages[idx];
+            if (!msg || !msg.versions) return;
+            if (msg.displayVersionIdx == null) msg.displayVersionIdx = 0;
+            msg.displayVersionIdx += direction;
+            const maxIdx = msg.versions.length;
+            if (msg.displayVersionIdx < 0) msg.displayVersionIdx = 0;
+            if (msg.displayVersionIdx > maxIdx) msg.displayVersionIdx = maxIdx;
+            saveSessionsToStorage();
+            renderChatArea();
         }
 
         // --- 消息折叠（仅对 user 长消息生效，默认折叠，不持久化） ---
@@ -1957,10 +2029,27 @@
                 const msgLogoHtml = msgLogo
                     ? `<img class="model-logo" src="${msgLogo}" alt="" onerror="this.style.display='none'" style="width:14px;height:14px;border-radius:3px;">`
                     : '';
+                // 版本切换导航
+                const session = sessions.find(s => s.id === currentSessionId);
+                const msg = (session && msgIndex != null) ? session.messages[msgIndex] : null;
+                const versions = (msg && msg.versions) ? msg.versions : [];
+                const dv = (msg && msg.displayVersionIdx != null) ? msg.displayVersionIdx : 0;
+                const totalVersions = versions.length + 1;
+                let versionNavHtml = '';
+                if (totalVersions > 1) {
+                    const currentVer = totalVersions - dv;
+                    versionNavHtml = `<span class="version-nav" data-msg-idx="${msgIndex}" style="display:inline-flex;align-items:center;gap:3px;user-select:none;flex-shrink:0;">
+                        <span onclick="event.stopPropagation();switchVersion(this,1)" style="cursor:pointer;opacity:0.4;font-size:16px;transition:opacity 0.15s;line-height:1;font-weight:600;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='0.4'">◂</span>
+                        <span style="font-size:12px;color:var(--text-muted);">${currentVer}/${totalVersions}</span>
+                        <span onclick="event.stopPropagation();switchVersion(this,-1)" style="cursor:pointer;opacity:0.4;font-size:16px;transition:opacity 0.15s;line-height:1;font-weight:600;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='0.4'">▸</span>
+                    </span>`;
+                }
+                const delTitle = totalVersions > 1 ? '删除此版本' : '删除此回复';
                 actionsDiv.innerHTML = `
                     <svg onclick="regenerateMessage(this)" width="14" height="14" viewBox="0 0 24 24" title="重新生成"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
                     <svg onclick="copyMessageText(this)" width="14" height="14" viewBox="0 0 24 24" title="复制"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-                    <svg onclick="deleteMessage(this)" width="14" height="14" viewBox="0 0 24 24" title="删除此回复"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                    <svg onclick="deleteMessage(this)" width="14" height="14" viewBox="0 0 24 24" title="${delTitle}"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                    ${versionNavHtml}
                     <span class="msg-model-tag" onclick="event.stopPropagation(); retryWithDropdown(this.closest('.message-block'))">${msgLogoHtml}${escapeHtml(displayModel)}</span>
                     ${presetTagHtml}
                 `;
@@ -2085,12 +2174,13 @@
                     const data = await response.json();
                     aiReply = data.choices[0].message.content;
                 }
-                aiMessageElement.textContent = aiReply;
-                aiMessageElement.setAttribute('data-raw', aiReply);
                 currentSession.messages.push({ role: "assistant", content: aiReply, thought: fakeThought, model: activeModel });
+                if (pendingVersions !== null) {
+                    currentSession.messages[currentSession.messages.length - 1].versions = pendingVersions;
+                    pendingVersions = null;
+                }
                 saveSessionsToStorage();
-                aiMessageElement.innerHTML = marked.parse(aiReply).trim();
-                aiMessageElement.style.whiteSpace = '';
+                renderChatArea();
 
             } catch (error) {
                 const msg = error.message || '';
@@ -2108,29 +2198,25 @@
                     });
                     if (filtered) {
                         saveSessionsToStorage();
-                        aiMessageElement.closest('.message-block')?.remove();
                         // 插入提示
                         const tipMsg = '⚠️ 该模型不支持图片输入，已自动转为纯文字发送';
-                        const tipEl = appendMessageDOM('assistant', tipMsg, null, null, null, currentSession.messages.length);
-                        if (tipEl) tipEl.style.color = '#b0882a';
                         currentSession.messages.push({ role: "assistant", content: tipMsg });
                         saveSessionsToStorage();
+                        renderChatArea();
                         setTimeout(() => fetchAIResponse(), 100);
                     } else {
                         const errMsg = '该模型不支持图片输入，请移除图片或切换到支持多模态的模型后重试。';
-                        aiMessageElement.textContent = errMsg;
-                        aiMessageElement.setAttribute('data-raw', errMsg);
-                        aiMessageElement.style.color = "#ff4d4f";
                         currentSession.messages.push({ role: "assistant", content: errMsg });
+                        pendingVersions = null;
                         saveSessionsToStorage();
+                        renderChatArea();
                     }
                 } else {
                     const errFull = `请求失败: ${msg}`;
-                    aiMessageElement.textContent = errFull;
-                    aiMessageElement.setAttribute('data-raw', errFull);
-                    aiMessageElement.style.color = "#ff4d4f";
                     currentSession.messages.push({ role: "assistant", content: errFull });
+                    pendingVersions = null;
                     saveSessionsToStorage();
+                    renderChatArea();
                 }
             } finally {
                 sendBtn.disabled = false;
