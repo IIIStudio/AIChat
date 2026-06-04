@@ -924,7 +924,10 @@
                 <input type="text" id="editPurl" value="${escapeHtml(p.apiUrl || '')}" placeholder="API 端点地址">
                 <label>API Key</label>
                 <input type="password" id="editPkey" value="${escapeHtml(p.apiKey || '')}" placeholder="sk-...">
-                <label>模型列表</label>
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <label style="margin:0;">模型列表</label>
+                    <button class="set-active-from-modal" onclick="fetchModels()" style="font-size:11px;padding:2px 10px;">获取模型</button>
+                </div>
                 <div class="models-section">
                     <div class="models-list" id="editModelsList">
                         ${modelsHtml}
@@ -985,6 +988,44 @@
                 if (p) { if (!p.models) p.models = []; p.models.push(val); }
             }
             renderSettingsRight();
+        }
+
+        async function fetchModels() {
+            flushEditingProvider();
+            const p = providers.find(p => p.id === editingProviderId);
+            if (!p) { showToast('请先选择一个运营商'); return; }
+            let baseUrl = (p.apiUrl || '').trim().replace(/\/+$/, '');
+            // 去掉 /chat/completions 后缀，得到 base URL
+            if (baseUrl.endsWith('/chat/completions')) {
+                baseUrl = baseUrl.slice(0, -'/chat/completions'.length);
+            }
+            const modelsUrl = baseUrl + '/models';
+            try {
+                const res = await fetch(modelsUrl, {
+                    headers: { 'Authorization': `Bearer ${p.apiKey || ''}` }
+                });
+                if (!res.ok) {
+                    const errText = await res.text().catch(() => '');
+                    throw new Error(`HTTP ${res.status}${errText ? ': ' + errText.slice(0, 100) : ''}`);
+                }
+                const data = await res.json();
+                // 兼容 OpenAI 格式: { data: [{ id: '...' }, ...] }
+                // 也兼容直接返回数组的格式
+                let modelIds = [];
+                if (Array.isArray(data.data)) {
+                    modelIds = data.data.map(item => item.id).filter(Boolean);
+                } else if (Array.isArray(data)) {
+                    modelIds = data.map(item => item.id || item).filter(Boolean);
+                }
+                if (modelIds.length === 0) { showToast('未获取到模型列表'); return; }
+                // 去重并保留原有手动添加但不在返回列表中的模型
+                const existing = (p.models || []).filter(m => !modelIds.includes(m));
+                p.models = [...modelIds, ...existing];
+                renderSettingsRight();
+                showToast(`已获取 ${modelIds.length} 个模型`);
+            } catch (err) {
+                showToast('获取失败: ' + (err.message || '未知错误'));
+            }
         }
 
         function setActiveFromModal() {
