@@ -863,6 +863,15 @@
             return null;
         }
 
+        function getLogoForModel(modelName) {
+            for (const p of providers) {
+                if (p.models && p.models.includes(modelName)) {
+                    return getModelDevLogo(p.name, p.apiUrl, modelName);
+                }
+            }
+            return null;
+        }
+
         function getActiveLogo() {
             const p = getActiveProvider();
             if (!p) return null;
@@ -1578,14 +1587,15 @@
             } else {
                 const presetName = getActivePreset()?.name || '';
                 const presetTagHtml = presetName ? `<span class="msg-preset-tag">${escapeHtml(presetName)}</span>` : '';
-                const msgLogo = getActiveLogo();
+                const displayModel = msgModel || activeModel;
+                const msgLogo = msgModel ? getLogoForModel(msgModel) : getActiveLogo();
                 const msgLogoHtml = msgLogo
                     ? `<img class="model-logo" src="${msgLogo}" alt="" onerror="this.style.display='none'" style="width:14px;height:14px;border-radius:3px;">`
                     : '';
                 actionsDiv.innerHTML = `
                     <svg onclick="regenerateMessage(this)" width="14" height="14" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
                     <svg onclick="copyMessageText(this)" width="14" height="14" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-                    <span class="msg-model-tag" onclick="event.stopPropagation(); retryWithDropdown(this.closest('.message-block'))">${msgLogoHtml}${escapeHtml(msgModel || activeModel)}</span>
+                    <span class="msg-model-tag" onclick="event.stopPropagation(); retryWithDropdown(this.closest('.message-block'))">${msgLogoHtml}${escapeHtml(displayModel)}</span>
                     ${presetTagHtml}
                 `;
             }
