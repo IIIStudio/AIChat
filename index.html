@@ -1197,7 +1197,7 @@
 
         function saveSettings() {
             flushEditingProvider();
-            // Update activeModel if current provider was edited and no longer has it
+            // 如果当前运营商编辑后不再包含原有激活模型，自动切换为第一个模型
             const ap = providers.find(p => p.id === activeProviderId);
             if (ap && ap.models && ap.models.length > 0 && !ap.models.includes(activeModel)) {
                 activeModel = ap.models[0];
@@ -1759,6 +1759,122 @@
             fetchAIResponse();
         }
 
+        // --- 消息编辑与删除 ---
+        let editingMessageIndex = null;
+
+        function editMessage(btnEl) {
+            const block = btnEl.closest('.message-block');
+            const contentEl = block.querySelector('.message-content');
+            const idx = parseInt(contentEl.getAttribute('data-index'));
+            if (isNaN(idx)) return;
+            
+            editingMessageIndex = idx;
+            const session = sessions.find(s => s.id === currentSessionId);
+            if (!session) return;
+            const msg = session.messages[idx];
+            if (!msg) return;
+            
+            const originalContent = Array.isArray(msg.content)
+                ? msg.content.filter(c => c.type === 'text').map(c => c.text).join('\n')
+                : (msg.content || '');
+            
+            // 将内容替换为文本框进行内联编辑
+            const textarea = document.createElement('textarea');
+            textarea.id = 'editingTextarea';
+            textarea.value = originalContent;
+            Object.assign(textarea.style, {
+                width: '100%', minHeight: '60px', padding: '10px 14px',
+                border: '2px solid #111', borderRadius: '10px', fontSize: '14px',
+                resize: 'vertical', fontFamily: 'inherit', outline: 'none',
+                background: '#fafafa', lineHeight: '1.5'
+            });
+            textarea.onkeydown = (e) => {
+                if (e.key === 'Escape') { e.preventDefault(); cancelEdit(); }
+            };
+            
+            const wrapper = contentEl.closest('.collapse-wrapper');
+            const targetParent = wrapper || contentEl.parentElement;
+            if (wrapper) {
+                wrapper.classList.remove('collapsed');
+                const toggleBtn = wrapper.parentElement.querySelector('.collapse-toggle');
+                if (toggleBtn) toggleBtn.style.display = 'none';
+            }
+            targetParent.replaceChild(textarea, contentEl);
+            textarea.focus();
+            textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+            
+            const actionsDiv = block.querySelector('.message-actions');
+            actionsDiv.setAttribute('data-original-html', actionsDiv.innerHTML);
+            actionsDiv.innerHTML = `
+                <span onclick="cancelEdit()" style="cursor:pointer;font-size:12px;color:var(--text-muted);border:1px solid var(--border-color);border-radius:12px;padding:3px 10px;user-select:none;transition:all 0.15s;" onmouseover="this.style.borderColor='#111';this.style.color='#111'" onmouseout="this.style.borderColor='';this.style.color=''">取消</span>
+                <span onclick="saveEdit()" style="cursor:pointer;font-size:12px;background:#111;color:white;border-radius:12px;padding:3px 12px;user-select:none;transition:all 0.15s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">保存并重新生成</span>
+            `;
+        }
+
+        function cancelEdit() {
+            editingMessageIndex = null;
+            renderChatArea();
+        }
+
+        function saveEdit() {
+            if (editingMessageIndex === null) return;
+            const textarea = document.getElementById('editingTextarea');
+            if (!textarea) return;
+            const newText = textarea.value.trim();
+            if (!newText) { showToast('内容不能为空'); return; }
+            
+            const session = sessions.find(s => s.id === currentSessionId);
+            if (!session) return;
+            const msg = session.messages[editingMessageIndex];
+            if (!msg) return;
+            
+            // 如果原消息包含图片，保留图片部分
+            if (Array.isArray(msg.content)) {
+                const imgParts = msg.content.filter(c => c.type === 'image_url');
+                msg.content = imgParts.length > 0
+                    ? [{ type: 'text', text: newText }, ...imgParts]
+                    : newText;
+            } else {
+                msg.content = newText;
+            }
+            
+            // 截断消息列表，仅保留到当前编辑的用户消息及之前的消息
+            session.messages = session.messages.slice(0, editingMessageIndex + 1);
+            
+            editingMessageIndex = null;
+            saveSessionsToStorage();
+            renderChatArea();
+            showToast('已保存，正在重新生成...');
+            fetchAIResponse();
+        }
+
+        function deleteMessage(btnEl) {
+            const block = btnEl.closest('.message-block');
+            const contentEl = block.querySelector('.message-content');
+            const idx = parseInt(contentEl.getAttribute('data-index'));
+            if (isNaN(idx)) return;
+            
+            const session = sessions.find(s => s.id === currentSessionId);
+            if (!session) return;
+            
+            if (block.classList.contains('user-block')) {
+                // 删除用户消息及其后的助手回复
+                const removeCount = (idx + 1 < session.messages.length && session.messages[idx + 1].role === 'assistant') ? 2 : 1;
+                session.messages.splice(idx, removeCount);
+            } else {
+                // 仅删除助手消息
+                session.messages.splice(idx, 1);
+            }
+            
+            if (session.messages.length === 0) {
+                session.title = '新会话';
+            }
+            
+            saveSessionsToStorage();
+            renderChatArea();
+            showToast('消息已删除');
+        }
+
         // --- 消息折叠（仅对 user 长消息生效，默认折叠，不持久化） ---
         const COLLAPSE_THRESHOLD = 300; // 内容超过此字符数时自动折叠
 
@@ -1829,8 +1945,9 @@
             actionsDiv.className = 'message-actions';
             if (role === 'user') {
                 actionsDiv.innerHTML = `
-                    <svg onclick="alert('编辑功能待完善')" width="14" height="14" viewBox="0 0 24 24"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
-                    <svg onclick="copyMessageText(this)" width="14" height="14" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                    <svg onclick="editMessage(this)" width="14" height="14" viewBox="0 0 24 24" title="编辑"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                    <svg onclick="copyMessageText(this)" width="14" height="14" viewBox="0 0 24 24" title="复制"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                    <svg onclick="deleteMessage(this)" width="14" height="14" viewBox="0 0 24 24" title="删除"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                 `;
             } else {
                 const presetName = getActivePreset()?.name || '';
@@ -1841,8 +1958,9 @@
                     ? `<img class="model-logo" src="${msgLogo}" alt="" onerror="this.style.display='none'" style="width:14px;height:14px;border-radius:3px;">`
                     : '';
                 actionsDiv.innerHTML = `
-                    <svg onclick="regenerateMessage(this)" width="14" height="14" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
-                    <svg onclick="copyMessageText(this)" width="14" height="14" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                    <svg onclick="regenerateMessage(this)" width="14" height="14" viewBox="0 0 24 24" title="重新生成"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                    <svg onclick="copyMessageText(this)" width="14" height="14" viewBox="0 0 24 24" title="复制"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                    <svg onclick="deleteMessage(this)" width="14" height="14" viewBox="0 0 24 24" title="删除此回复"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                     <span class="msg-model-tag" onclick="event.stopPropagation(); retryWithDropdown(this.closest('.message-block'))">${msgLogoHtml}${escapeHtml(displayModel)}</span>
                     ${presetTagHtml}
                 `;
