@@ -656,11 +656,318 @@
             font-size: 11px;
         }
         #searchStats .stats-close:hover { color: #555; border-color: #bbb; }
+
+        /* ========== 移动端响应式 ========== */
+        @media (max-width: 768px) {
+            :root {
+                --chat-max-width: 100%;
+            }
+
+            body {
+                flex-direction: column;
+            }
+
+            /* 侧边栏：移动端默认隐藏，滑出覆盖 */
+            .sidebar {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 280px;
+                max-width: 85vw;
+                height: 100vh;
+                z-index: 200;
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+                box-shadow: 2px 0 20px rgba(0,0,0,0.15);
+                border-right: 1px solid var(--border-color);
+            }
+            .sidebar:not(.hidden) {
+                transform: translateX(0);
+            }
+            .sidebar.hidden {
+                transform: translateX(-100%);
+                width: 280px;
+                max-width: 85vw;
+                padding: 24px 16px;
+                opacity: 1;
+            }
+
+            /* 侧边栏遮罩 */
+            .sidebar-mobile-overlay {
+                position: fixed;
+                top: 0; left: 0; right: 0; bottom: 0;
+                background: rgba(0,0,0,0.35);
+                z-index: 199;
+                display: none;
+            }
+            .sidebar-mobile-overlay.show {
+                display: block;
+            }
+
+            /* 主内容区 */
+            .main-content {
+                width: 100%;
+                flex: 1;
+                height: 100vh;
+                display: flex;
+                flex-direction: column;
+            }
+
+            .top-nav {
+                padding: 10px 14px;
+                min-height: 50px;
+            }
+            .sidebar-toggle-btn {
+                display: block;
+                opacity: 0.7;
+            }
+
+            /* 欢迎页面 */
+            .welcome-screen {
+                margin-top: 15vh;
+            }
+            .welcome-screen h1 {
+                font-size: 26px;
+            }
+            .welcome-screen p {
+                font-size: 13px;
+            }
+
+            /* 聊天区域 */
+            .chat-container {
+                padding: 12px 12px;
+            }
+            .chat-inner {
+                max-width: 100%;
+            }
+
+            /* 消息 */
+            .message.user {
+                max-width: 90%;
+            }
+            .message.user .message-content {
+                padding: 10px 16px;
+                font-size: 14px;
+            }
+            .message.assistant .message-content {
+                font-size: 14px;
+            }
+
+            /* 思考过程 */
+            .thought-process {
+                font-size: 12px;
+            }
+
+            /* 消息锚点：移动端隐藏 */
+            .message-anchors {
+                display: none !important;
+            }
+
+            /* 输入区域 */
+            .input-area {
+                padding: 8px 10px 16px 10px;
+            }
+            .input-pill {
+                max-width: 100%;
+                padding: 8px 10px 8px 14px;
+                gap: 8px;
+                border-radius: 24px;
+            }
+            .input-pill textarea {
+                font-size: 15px;
+            }
+            .model-info {
+                font-size: 12px;
+            }
+            .send-btn {
+                width: 30px;
+                height: 30px;
+            }
+
+            /* 预设标签 */
+            .preset-tags-area {
+                padding: 0 10px;
+            }
+            .preset-tags-row {
+                max-width: 100%;
+                gap: 6px;
+            }
+            .preset-tag {
+                padding: 4px 10px;
+                font-size: 12px;
+            }
+
+            /* 图片预览 */
+            .image-preview-area {
+                padding: 0 10px 6px 10px;
+            }
+            .image-preview-inner {
+                max-width: 100%;
+            }
+            .user-image {
+                max-width: 150px;
+                max-height: 150px;
+            }
+
+            /* Modal 弹窗 */
+            .modal {
+                width: 94vw;
+                max-width: 94vw;
+                padding: 18px;
+                border-radius: 14px;
+                gap: 12px;
+                margin: 0 3vw;
+            }
+            .modal h2 {
+                font-size: 16px;
+            }
+            .modal input {
+                font-size: 16px;
+                padding: 10px;
+            }
+            .modal-actions {
+                flex-wrap: wrap;
+            }
+            .modal-btn {
+                font-size: 14px;
+                padding: 8px 18px;
+            }
+
+            /* 设置面板：垂直堆叠 */
+            .settings-panels {
+                flex-direction: column;
+                min-height: auto;
+                max-height: 50vh;
+            }
+            .settings-left {
+                width: 100%;
+                flex-shrink: 0;
+                max-height: 140px;
+                border-right: none;
+                border-bottom: 1px solid var(--border-color);
+            }
+            .settings-right {
+                padding: 12px;
+                max-height: 200px;
+            }
+            .settings-right label {
+                font-size: 12px;
+            }
+            .settings-right input:not(.model-input) {
+                font-size: 14px;
+                padding: 8px 10px;
+            }
+
+            /* 设置 - 模型标签 */
+            .model-tag {
+                font-size: 12px;
+                padding: 4px 9px;
+            }
+
+            /* 设置导出导入按钮 */
+            .export-import-btns {
+                flex-wrap: wrap;
+                gap: 6px;
+            }
+            .modal-header-row {
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+
+            /* 模型下拉 */
+            .model-dropdown {
+                min-width: 200px;
+                right: -10px;
+            }
+
+            /* Toast */
+            .toast {
+                top: 16px;
+                padding: 8px 18px;
+                font-size: 13px;
+                max-width: 90vw;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+            /* 消息操作按钮 */
+            .message-actions svg {
+                width: 16px;
+                height: 16px;
+            }
+            .msg-model-tag, .msg-preset-tag {
+                font-size: 10px;
+                padding: 1px 6px;
+            }
+
+            /* Markdown 代码块 */
+            .message-content pre {
+                padding: 10px 12px;
+                font-size: 12px;
+            }
+
+            /* 搜索弹窗 */
+            #searchModal .modal {
+                max-width: 94vw;
+                margin-top: 20px;
+            }
+            #searchResults {
+                max-height: 50vh;
+            }
+
+            /* 参数预设编辑 */
+            .preset-edit-row {
+                flex-wrap: wrap;
+                gap: 6px;
+            }
+            .preset-edit-row label {
+                min-width: 60px;
+                font-size: 11px;
+            }
+            .preset-edit-row input,
+            .preset-edit-row textarea,
+            .preset-edit-row select {
+                font-size: 14px;
+            }
+            .preset-slider-group .slider-label {
+                font-size: 10px;
+                min-width: 52px;
+            }
+
+            /* 折叠按钮 */
+            .collapse-toggle {
+                font-size: 11px;
+                padding: 3px 10px;
+            }
+        }
+
+        /* 平板中等屏幕 */
+        @media (min-width: 769px) and (max-width: 1024px) {
+            :root {
+                --chat-max-width: 640px;
+            }
+            .sidebar {
+                width: 220px;
+                padding: 18px 12px;
+            }
+            .sidebar.hidden {
+                width: 0;
+                padding-left: 0;
+                padding-right: 0;
+            }
+            .welcome-screen h1 {
+                font-size: 28px;
+            }
+        }
     </style>
 </head>
 <body>
 
     <div id="toast" class="toast">操作成功</div>
+
+    <!-- 移动端侧边栏遮罩 -->
+    <div class="sidebar-mobile-overlay" id="sidebarMobileOverlay" onclick="toggleSidebar()"></div>
 
     <div class="sidebar" id="sidebar">
         <div class="sidebar-brand">
@@ -778,8 +1085,8 @@
         </div>
     </div>
 
-    <div class="modal-overlay" id="searchModal" style="align-items:flex-start;">
-        <div class="modal" style="max-width:560px;margin-top:50px;padding:0;gap:0;overflow:hidden;border-radius:12px;">
+    <div class="modal-overlay" id="searchModal" style="align-items:flex-start;" onclick="closeSearchModal()">
+        <div class="modal" style="max-width:560px;margin-top:50px;padding:0;gap:0;overflow:hidden;border-radius:12px;" onclick="event.stopPropagation()">
             <div style="padding:16px 20px;border-bottom:1px solid #eee;">
                 <div style="position:relative;">
                     <svg width="17" height="17" viewBox="0 0 24 24" style="position:absolute;left:13px;top:50%;transform:translateY(-50%);opacity:0.3;pointer-events:none;color:#333;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
@@ -856,15 +1163,44 @@
         const sidebar = document.getElementById('sidebar');
         const showSidebarBtn = document.getElementById('showSidebarBtn');
         function toggleSidebar() {
+            const isMobile = window.innerWidth <= 768;
             sidebar.classList.toggle('hidden');
-            if (sidebar.classList.contains('hidden')) {
-                showSidebarBtn.style.display = 'block';
-                setTimeout(() => showSidebarBtn.style.opacity = '1', 50);
+            const mobileOverlay = document.getElementById('sidebarMobileOverlay');
+            
+            if (isMobile) {
+                // 移动端用 transform 滑出/滑入
+                if (sidebar.classList.contains('hidden')) {
+                    if (mobileOverlay) mobileOverlay.classList.remove('show');
+                } else {
+                    if (mobileOverlay) mobileOverlay.classList.add('show');
+                }
             } else {
-                showSidebarBtn.style.opacity = '0';
-                setTimeout(() => showSidebarBtn.style.display = 'none', 200);
+                // 桌面端原有逻辑
+                if (sidebar.classList.contains('hidden')) {
+                    showSidebarBtn.style.display = 'block';
+                    setTimeout(() => showSidebarBtn.style.opacity = '1', 50);
+                } else {
+                    showSidebarBtn.style.opacity = '0';
+                    setTimeout(() => showSidebarBtn.style.display = 'none', 200);
+                }
+                // 确保桌面端 overlay 不显示
+                if (mobileOverlay) mobileOverlay.classList.remove('show');
             }
         }
+
+        // 窗口大小变化时处理响应式切换
+        window.addEventListener('resize', () => {
+            const mobileOverlay = document.getElementById('sidebarMobileOverlay');
+            if (window.innerWidth > 768) {
+                // 切换到桌面端，隐藏 overlay
+                if (mobileOverlay) mobileOverlay.classList.remove('show');
+                // 确保桌面端侧边栏正常显示
+                if (!sidebar.classList.contains('hidden')) {
+                    showSidebarBtn.style.opacity = '0';
+                    showSidebarBtn.style.display = 'none';
+                }
+            }
+        });
 
         function copyMessageText(btnElement) {
             const block = btnElement.closest('.message-block');
@@ -1734,6 +2070,7 @@
             sessions.unshift({ id: newId, title: "新会话", messages: [], presetId: activePresetId, pinned: false });
             switchChat(newId);
             saveSessionsToStorage();
+            closeSidebarOnMobile();
         }
 
         function deleteChat(id, event) {
@@ -1768,6 +2105,19 @@
             }
             renderSidebar();
             renderChatArea();
+            // 移动端选择会话后自动收起侧边栏
+            closeSidebarOnMobile();
+        }
+
+        function closeSidebarOnMobile() {
+            if (window.innerWidth <= 768) {
+                const sidebar = document.getElementById('sidebar');
+                const mobileOverlay = document.getElementById('sidebarMobileOverlay');
+                if (!sidebar.classList.contains('hidden')) {
+                    sidebar.classList.add('hidden');
+                }
+                if (mobileOverlay) mobileOverlay.classList.remove('show');
+            }
         }
 
         function renderSidebar() {
