@@ -725,7 +725,7 @@
         .model-info { cursor: pointer; padding: 4px 8px; border-radius: 6px; transition: background 0.2s; user-select: none; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; }
         .model-info:hover { background: rgba(128,128,128,0.1); }
         .model-info::after { content: ' ▾'; font-size: 10px; opacity: 0.5; line-height: 1; }
-        .model-dropdown { position: absolute; bottom: 100%; right: 0; margin-bottom: 8px; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 10px; box-shadow: 0 4px 16px rgba(0,0,0,0.12); min-width: 240px; z-index: 100; display: none; }
+        .model-dropdown { position: fixed; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 10px; box-shadow: 0 4px 16px rgba(0,0,0,0.12); min-width: 240px; z-index: 99999; display: none; }
         .model-dropdown.show { display: block; }
         .model-dropdown-item { padding: 10px 14px; font-size: 13px; cursor: pointer; white-space: nowrap; border-bottom: 1px solid var(--border-light); display: flex; justify-content: space-between; align-items: center; gap: 8px; transition: background 0.15s; }
         .model-dropdown-item:last-child { border-bottom: none; }
@@ -1794,7 +1794,7 @@
                     }
                 });
             });
-            if (filtered.length <= 1) return;
+            if (filtered.length === 0) return;
             filtered.forEach(item => {
                 const isActive = item.pid === activeProviderId && item.model === activeModel;
                 const div = document.createElement('div');
@@ -1829,18 +1829,47 @@
         }
 
         function toggleModelDropdown() {
-            const total = providers.reduce((s, p) => s + (p.models || []).length, 0);
-            if (total <= 1) { showToast('请先在设置中添加更多模型'); return; }
+            // 按当前模式统计可用模型数
+            let total = 0;
+            providers.forEach(p => {
+                (p.models || []).forEach(m => {
+                    if (imageGenMode ? isGenModel(m) : !isGenModel(m)) total++;
+                });
+            });
+            if (total === 0) { showToast('当前模式无可用的模型'); return; }
             modelDropdown.classList.toggle('show');
-            if (modelDropdown.classList.contains('show')) renderModelDropdown();
+            if (modelDropdown.classList.contains('show')) {
+                // 移到 body 下，脱离所有父级 stacking context
+                document.body.appendChild(modelDropdown);
+                renderModelDropdown();
+                // 固定定位：对齐模型按钮右下角，向上弹出
+                const btn = document.querySelector('.model-info');
+                if (btn) {
+                    const r = btn.getBoundingClientRect();
+                    modelDropdown.style.right = (window.innerWidth - r.right) + 'px';
+                    modelDropdown.style.bottom = (window.innerHeight - r.top + 8) + 'px';
+                }
+            } else {
+                // 收回到原始位置
+                const switcher = document.querySelector('.model-switcher');
+                if (switcher) switcher.appendChild(modelDropdown);
+                modelDropdown.style.right = '';
+                modelDropdown.style.bottom = '';
+            }
         }
 
         function closeModelDropdown() {
-            if (modelDropdown) modelDropdown.classList.remove('show');
+            if (!modelDropdown || !modelDropdown.classList.contains('show')) return;
+            modelDropdown.classList.remove('show');
+            modelDropdown.style.right = '';
+            modelDropdown.style.bottom = '';
+            // 移回原始位置
+            const switcher = document.querySelector('.model-switcher');
+            if (switcher) switcher.appendChild(modelDropdown);
         }
 
         document.addEventListener('click', (e) => {
-            if (!e.target.closest('.model-switcher')) closeModelDropdown();
+            if (!e.target.closest('.model-switcher') && !e.target.closest('.model-dropdown')) closeModelDropdown();
         });
 
         // ============================================================
@@ -2522,9 +2551,19 @@
 
         function navigateToSession(id) {
             closeSearchModal();
-            // session.id 是数字，onclick 传过来是字符串，需要转换类型
             const numId = Number(id);
-            switchChat(numId);
+            const s = sessions.find(s => s.id === numId);
+            if (!s) return;
+            // 如果目标会话模式与当前不同，先设置对应模式 ID，再切换到该模式
+            if (s.type === 'gen' && !imageGenMode) {
+                currentGenSessionId = numId;
+                setMode('gen');
+            } else if (s.type === 'chat' && imageGenMode) {
+                currentChatSessionId = numId;
+                setMode('chat');
+            } else {
+                switchChat(numId);
+            }
         }
 
         // ============================================================
