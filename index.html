@@ -2935,11 +2935,19 @@
             // 保存当前回复到版本历史
             if (msg && msg.role === 'assistant') {
                 pendingVersions = (msg.versions || []).slice();
-                pendingVersions.push({ content: msg.content, thought: msg.thought, model: msg.model, presetId: msg.presetId });
+                pendingVersions.push({ content: msg.content, thought: msg.thought, model: msg.model, presetId: msg.presetId, isHtml: msg.isHtml, images: msg.images });
             }
-            currentSession.messages = currentSession.messages.slice(0, index); 
+            currentSession.messages = currentSession.messages.slice(0, index);
             saveSessionsToStorage();
             renderChatArea();
+
+            // 生图模式：找到用户提示词重新生成
+            if (imageGenMode) {
+                const userMsg = currentSession.messages[index - 1];
+                const prompt = (userMsg && userMsg.role === 'user') ? (typeof userMsg.content === 'string' ? userMsg.content : '') : '';
+                if (prompt) sendImageGeneration(prompt);
+                return;
+            }
             fetchAIResponse();
         }
 
@@ -3030,7 +3038,7 @@
             const oldAs = session.messages[oldAsIdx];
             if (oldAs && oldAs.role === 'assistant') {
                 pendingVersions = (oldAs.versions || []).slice();
-                pendingVersions.push({ content: oldAs.content, thought: oldAs.thought, model: oldAs.model, presetId: oldAs.presetId });
+                pendingVersions.push({ content: oldAs.content, thought: oldAs.thought, model: oldAs.model, presetId: oldAs.presetId, isHtml: oldAs.isHtml, images: oldAs.images });
             }
             // 截断消息列表，仅保留到当前编辑的用户消息及之前的消息
             session.messages = session.messages.slice(0, editingMessageIndex + 1);
@@ -3039,6 +3047,11 @@
             saveSessionsToStorage();
             renderChatArea();
             showToast('已保存，正在重新生成...');
+            // 生图模式走生图接口
+            if (imageGenMode) {
+                sendImageGeneration(newText);
+                return;
+            }
             fetchAIResponse();
         }
 
