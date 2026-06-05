@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-mode="chat">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -345,8 +345,221 @@
         }
         .send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
+        /* --- 模式切换 --- */
+        .mode-toggle-wrap { display: flex; align-items: center; gap: 0; }
+        .mode-toggle-btn {
+            padding: 6px 16px;
+            font-size: 13px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-surface);
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.15s;
+            white-space: nowrap;
+            font-weight: 400;
+        }
+        .mode-toggle-btn:first-child { border-radius: 8px 0 0 8px; }
+        .mode-toggle-btn:last-child { border-radius: 0 8px 8px 0; }
+        .mode-toggle-btn.active {
+            background: var(--text-main);
+            color: var(--text-on-dark);
+            border-color: var(--text-main);
+            font-weight: 500;
+        }
+        .mode-toggle-btn:hover:not(.active) { border-color: var(--text-muted); color: var(--text-main); }
+
+        /* --- 生图控制面板 --- */
+        .gen-controls-panel {
+            display: none;
+            padding: 0 20px 8px 20px;
+            justify-content: center;
+        }
+        .gen-controls-panel.show { display: flex; }
+        .gen-controls-inner {
+            width: 100%;
+            max-width: var(--chat-max-width);
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 14px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .gen-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .gen-row label {
+            font-size: 12px;
+            color: var(--text-muted);
+            white-space: nowrap;
+            min-width: 42px;
+            flex-shrink: 0;
+        }
+        .gen-row input[type="text"],
+        .gen-row input[type="number"],
+        .gen-row select {
+            flex: 1;
+            min-width: 80px;
+            padding: 6px 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 13px;
+            outline: none;
+            background: var(--bg-surface);
+            color: var(--text-main);
+        }
+        .gen-row input:focus,
+        .gen-row select:focus { border-color: var(--black-btn); }
+        .gen-row input[type="range"] {
+            flex: 2;
+            accent-color: var(--text-main);
+        }
+        .gen-row .val-tag {
+            font-size: 11px;
+            color: var(--text-muted);
+            min-width: 28px;
+            text-align: right;
+        }
+        .gen-control-toggle {
+            font-size: 12px;
+            color: var(--text-muted);
+            cursor: pointer;
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 4px 12px;
+            background: var(--bg-surface);
+            transition: all 0.15s;
+            user-select: none;
+            white-space: nowrap;
+        }
+        .gen-control-toggle:hover { border-color: var(--text-main); color: var(--text-main); }
+        .gen-control-upload {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 12px;
+            color: var(--text-muted);
+            cursor: pointer;
+            border: 1px dashed var(--border-color);
+            border-radius: 8px;
+            padding: 6px 14px;
+            background: var(--bg-surface);
+            transition: all 0.15s;
+            white-space: nowrap;
+        }
+        .gen-control-upload:hover { border-color: var(--text-main); color: var(--text-main); }
+        .gen-control-preview {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 4px 0;
+        }
+        .gen-control-preview img {
+            width: 40px;
+            height: 40px;
+            border-radius: 6px;
+            object-fit: cover;
+            border: 1px solid var(--border-color);
+        }
+        .gen-control-preview .gen-ctrl-name {
+            font-size: 11px;
+            color: var(--text-muted);
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .gen-control-preview .gen-ctrl-remove {
+            font-size: 11px;
+            cursor: pointer;
+            color: var(--text-muted);
+            padding: 2px 8px;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+            transition: all 0.15s;
+        }
+        .gen-control-preview .gen-ctrl-remove:hover { color: #cc4444; border-color: #cc4444; }
+
+        /* --- 生成图片展示 --- */
+        .generated-images {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 8px;
+        }
+        .generated-images img {
+            max-width: 280px;
+            max-height: 280px;
+            border-radius: 12px;
+            cursor: pointer;
+            border: 1px solid var(--border-color);
+            transition: transform 0.15s;
+            object-fit: contain;
+        }
+        .generated-images img:hover { transform: scale(1.02); }
+        .gen-download-btn {
+            font-size: 12px;
+            padding: 4px 12px;
+            border-radius: 14px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-surface);
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.15s;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .gen-download-btn:hover { border-color: var(--text-main); color: var(--text-main); }
+
+        /* --- 图片放大预览 --- */
+        .img-lightbox {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.85);
+            z-index: 200;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: zoom-out;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+        }
+        .img-lightbox.show { opacity: 1; pointer-events: auto; }
+        .img-lightbox img {
+            max-width: 90vw;
+            max-height: 90vh;
+            border-radius: 8px;
+            box-shadow: 0 4px 30px rgba(0,0,0,0.5);
+            object-fit: contain;
+        }
+        .img-lightbox-close {
+            position: absolute;
+            top: 16px;
+            right: 24px;
+            font-size: 28px;
+            color: #fff;
+            cursor: pointer;
+            z-index: 201;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: background 0.15s;
+        }
+        .img-lightbox-close:hover { background: rgba(255,255,255,0.15); }
+
         /* --- 参数预设标签行 --- */
         .preset-tags-area { padding: 0 20px; display: flex; justify-content: center; }
+        [data-mode="gen"] .preset-tags-area { display: none !important; }
+        [data-mode="gen"] .upload-icon { visibility: hidden !important; }
         .preset-tags-row { display: flex; gap: 8px; overflow-x: auto; padding: 4px 0 10px 0; max-width: var(--chat-max-width); width: 100%; cursor: grab; user-select: none; scrollbar-width: none; }
         .preset-tags-row::-webkit-scrollbar { display: none; }
         .preset-tags-row.dragging { cursor: grabbing; scroll-behavior: auto; }
@@ -512,7 +725,7 @@
         .model-info { cursor: pointer; padding: 4px 8px; border-radius: 6px; transition: background 0.2s; user-select: none; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; }
         .model-info:hover { background: rgba(128,128,128,0.1); }
         .model-info::after { content: ' ▾'; font-size: 10px; opacity: 0.5; line-height: 1; }
-        .model-dropdown { position: absolute; bottom: 100%; right: 0; margin-bottom: 8px; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 10px; box-shadow: 0 4px 16px rgba(0,0,0,0.12); min-width: 240px; z-index: 50; display: none; }
+        .model-dropdown { position: absolute; bottom: 100%; right: 0; margin-bottom: 8px; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 10px; box-shadow: 0 4px 16px rgba(0,0,0,0.12); min-width: 240px; z-index: 100; display: none; }
         .model-dropdown.show { display: block; }
         .model-dropdown-item { padding: 10px 14px; font-size: 13px; cursor: pointer; white-space: nowrap; border-bottom: 1px solid var(--border-light); display: flex; justify-content: space-between; align-items: center; gap: 8px; transition: background 0.15s; }
         .model-dropdown-item:last-child { border-bottom: none; }
@@ -578,6 +791,7 @@
 
         /* 锚点悬浮提示 */
         .anchor-tooltip {
+            display: none;
             position: fixed;
             min-width: 180px;
             max-width: 320px;
@@ -590,17 +804,14 @@
             padding: 8px 0;
             border-radius: 8px;
             pointer-events: auto;
-            opacity: 0;
-            transform: translateX(10px);
-            transition: opacity 0.15s, transform 0.15s;
-            z-index: 999;
+            z-index: 99;
             box-shadow: 0 4px 16px rgba(0,0,0,0.12);
             border: 1px solid var(--border-color);
             scrollbar-width: none;
         }
         .anchor-tooltip::-webkit-scrollbar { display: none; }
         .anchor-tooltip.show {
-            opacity: 1;
+            display: block;
             transform: translateX(0);
         }
         .anchor-tooltip-item {
@@ -998,6 +1209,38 @@
                 font-size: 11px;
                 padding: 3px 10px;
             }
+
+            /* 模式切换 */
+            .mode-toggle-btn {
+                padding: 4px 10px;
+                font-size: 12px;
+            }
+
+            /* 生图控制面板 */
+            .gen-controls-panel {
+                padding: 0 10px 6px 10px;
+            }
+            .gen-controls-inner {
+                padding: 10px 12px;
+                gap: 8px;
+            }
+            .gen-row {
+                gap: 6px;
+            }
+            .gen-row label {
+                font-size: 11px;
+                min-width: 36px;
+            }
+            .gen-row input[type="text"],
+            .gen-row input[type="number"],
+            .gen-row select {
+                font-size: 12px;
+                padding: 5px 8px;
+            }
+            .generated-images img {
+                max-width: 150px;
+                max-height: 150px;
+            }
         }
 
         /* 平板中等屏幕 */
@@ -1051,6 +1294,10 @@
         <div class="top-nav">
             <div class="nav-left-actions">
                 <svg class="sidebar-toggle-btn" id="showSidebarBtn" onclick="toggleSidebar()" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line></svg>
+                <div class="mode-toggle-wrap" id="modeToggleWrap">
+                    <button class="mode-toggle-btn active" id="modeBtnChat" onclick="setMode('chat')">对话</button>
+                    <button class="mode-toggle-btn" id="modeBtnGen" onclick="setMode('gen')">生图</button>
+                </div>
             </div>
             <div class="nav-right-actions">
                 <button class="dark-mode-btn" onclick="toggleDarkMode()" title="切换深色模式">
@@ -1083,6 +1330,71 @@
                 <img class="image-preview-thumb" id="imagePreviewThumb" src="">
                 <span class="image-preview-name" id="imagePreviewName"></span>
                 <button class="image-preview-remove" onclick="clearImagePreview()">✕ 移除</button>
+            </div>
+        </div>
+
+        <div class="gen-controls-panel" id="genControlsPanel">
+            <div class="gen-controls-inner">
+                <div class="gen-row">
+                    <label>反向词</label>
+                    <input type="text" id="genNegativePrompt" placeholder="blurry ugly bad" maxlength="500">
+                </div>
+                <div class="gen-row">
+                    <label>步数</label>
+                    <input type="range" id="genSteps" min="1" max="50" value="9" oninput="document.getElementById('genStepsVal').textContent=this.value">
+                    <span class="val-tag" id="genStepsVal">9</span>
+                    <label>张数</label>
+                    <input type="number" id="genNumImages" value="1" min="1" max="4" style="width:50px;flex:none;">
+                    <label>种子</label>
+                    <input type="number" id="genSeed" value="0" min="0" max="4294967295" style="width:80px;flex:none;">
+                </div>
+                <div class="gen-row">
+                    <label>引导</label>
+                    <input type="range" id="genGuidanceScale" min="0" max="20" step="0.1" value="1" oninput="document.getElementById('genGuidanceScaleVal').textContent=this.value">
+                    <span class="val-tag" id="genGuidanceScaleVal">1</span>
+                    <label>图尺度</label>
+                    <input type="range" id="genImageScale" min="0" max="1" step="0.05" value="1" oninput="document.getElementById('genImageScaleVal').textContent=this.value">
+                    <span class="val-tag" id="genImageScaleVal">1</span>
+                </div>
+                <div class="gen-row">
+                    <label>尺寸</label>
+                    <select id="genSizePreset" onchange="onGenSizeChange()" style="width:110px;flex:none;">
+                        <option value="1024x1024">1:1 (1024)</option>
+                        <option value="1024x768">4:3</option>
+                        <option value="768x1024">3:4</option>
+                        <option value="1024x576">16:9</option>
+                        <option value="576x1024">9:16</option>
+                        <option value="custom">自定义</option>
+                    </select>
+                    <span id="genCustomSize" style="display:none;gap:4px;align-items:center;">
+                        <input type="number" id="genWidth" value="1024" min="64" max="2048" style="width:62px;flex:none;">
+                        <span style="font-size:12px;color:var(--text-muted);">×</span>
+                        <input type="number" id="genHeight" value="1024" min="64" max="2048" style="width:62px;flex:none;">
+                    </span>
+                </div>
+                <div class="gen-row">
+                    <label>控制</label>
+                    <select id="genControlMode" style="width:100px;flex:none;">
+                        <option value="">无</option>
+                        <option value="HED">HED</option>
+                        <option value="Canny">Canny</option>
+                        <option value="Depth">Depth</option>
+                        <option value="Pose">Pose</option>
+                    </select>
+                    <label style="margin-left:8px;">强度</label>
+                    <input type="range" id="genControlScale" min="0" max="1" step="0.05" value="0.75" oninput="document.getElementById('genControlScaleVal').textContent=this.value" style="flex:1;">
+                    <span class="val-tag" id="genControlScaleVal">0.75</span>
+                </div>
+                <div class="gen-row" id="genControlUploadRow" style="display:none;">
+                    <label>参考图</label>
+                    <span class="gen-control-upload" onclick="document.getElementById('genControlFileInput').click()">📁 上传</span>
+                    <input type="file" id="genControlFileInput" style="display:none;" accept="image/*" onchange="handleGenControlFile(this)">
+                    <div class="gen-control-preview" id="genControlPreview" style="display:none;">
+                        <img id="genControlPreviewImg" src="">
+                        <span class="gen-ctrl-name" id="genControlPreviewName"></span>
+                        <span class="gen-ctrl-remove" onclick="clearGenControlImage()">✕ 移除</span>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -1216,6 +1528,80 @@
 
     <script>
         // ============================================================
+        //  同步初始化：防止刷新时闪烁（先于任何 DOM 渲染）
+        // ============================================================
+        let imageGenMode = false;
+        (function initModeSync() {
+            try {
+                if (localStorage.getItem('chatGenMode') === 'gen') {
+                    imageGenMode = true;
+                    document.documentElement.setAttribute('data-mode', 'gen');
+                    const btnChat = document.getElementById('modeBtnChat');
+                    const btnGen = document.getElementById('modeBtnGen');
+                    const panel = document.getElementById('genControlsPanel');
+                    const input = document.getElementById('userInput');
+                    if (btnChat) btnChat.classList.remove('active');
+                    if (btnGen) btnGen.classList.add('active');
+                    if (panel) panel.classList.add('show');
+                    if (input) input.placeholder = '输入图片描述词，Enter 发送';
+                }
+            } catch(e) {}
+        })();
+
+        // ============================================================
+        //  IndexedDB 存储（替代 localStorage，支持更大容量）
+        // ============================================================
+        const DB_NAME = 'AIChatDB';
+        const DB_VERSION = 1;
+        const STORE_NAME = 'data';
+        let db = null;
+
+        function openDB() {
+            return new Promise((resolve, reject) => {
+                if (db) return resolve(db);
+                const req = indexedDB.open(DB_NAME, DB_VERSION);
+                req.onupgradeneeded = (e) => {
+                    const d = e.target.result;
+                    if (!d.objectStoreNames.contains(STORE_NAME)) {
+                        d.createObjectStore(STORE_NAME);
+                    }
+                };
+                req.onsuccess = (e) => { db = e.target.result; resolve(db); };
+                req.onerror = (e) => reject(e.target.error);
+            });
+        }
+
+        async function dbGet(key) {
+            const d = await openDB();
+            return new Promise((resolve, reject) => {
+                const tx = d.transaction(STORE_NAME, 'readonly');
+                const req = tx.objectStore(STORE_NAME).get(key);
+                req.onsuccess = () => resolve(req.result);
+                req.onerror = () => reject(req.error);
+            });
+        }
+
+        async function dbSet(key, value) {
+            const d = await openDB();
+            return new Promise((resolve, reject) => {
+                const tx = d.transaction(STORE_NAME, 'readwrite');
+                const req = tx.objectStore(STORE_NAME).put(value, key);
+                req.onsuccess = () => resolve();
+                req.onerror = () => reject(req.error);
+            });
+        }
+
+        async function dbDelete(key) {
+            const d = await openDB();
+            return new Promise((resolve, reject) => {
+                const tx = d.transaction(STORE_NAME, 'readwrite');
+                const req = tx.objectStore(STORE_NAME).delete(key);
+                req.onsuccess = () => resolve();
+                req.onerror = () => reject(req.error);
+            });
+        }
+
+        // ============================================================
         //  Toast 提示
         // ============================================================
         let toastTimeout;
@@ -1284,7 +1670,7 @@
                 // 回退：从 data-index 获取消息内容
                 const idx = parseInt(contentEl.getAttribute('data-index'));
                 if (!isNaN(idx)) {
-                    const session = sessions.find(s => s.id === currentSessionId);
+                    const session = sessions.find(s => s.id === getCurrentId());
                     if (session && session.messages[idx]) {
                         const msg = session.messages[idx];
                         content = Array.isArray(msg.content) 
@@ -1338,14 +1724,13 @@
         let retryBlockEl = null;
         const modelDropdown = document.getElementById('modelDropdown');
 
-        function loadProviders() {
+        async function loadProviders() {
             try {
-                const saved = localStorage.getItem('chatProviders');
+                const saved = await dbGet('providers');
                 if (saved) {
-                    const data = JSON.parse(saved);
-                    providers = data.providers || [];
-                    activeProviderId = data.activeProviderId || null;
-                    activeModel = data.activeModel || '';
+                    providers = saved.providers || [];
+                    activeProviderId = saved.activeProviderId || null;
+                    activeModel = saved.activeModel || '';
                     providers = providers.map(p => {
                         if (p.model && !p.models) { p.models = [p.model]; delete p.model; }
                         if (!p.models) p.models = [];
@@ -1356,6 +1741,7 @@
             if (providers.length === 0) {
                 const defaultId = Date.now();
                 providers.push({ id: defaultId, name: '默认', apiUrl: 'https://token-plan-cn.xiaomimimo.com/v1', apiKey: '', models: ['mimo-v2.5-pro', 'mimo-v2.5'] });
+                providers.push({ id: defaultId + 1, name: 'Gitee AI', apiUrl: 'https://ai.gitee.com/v1', apiKey: '', models: ['z-image-turbo'] });
                 activeProviderId = defaultId;
                 activeModel = 'mimo-v2.5-pro';
             } else {
@@ -1371,12 +1757,18 @@
             saveProvidersToStorage();
         }
 
-        function saveProvidersToStorage() {
-            try { localStorage.setItem('chatProviders', JSON.stringify({ providers, activeProviderId, activeModel })); } catch(e) {}
+        async function saveProvidersToStorage() {
+            try { await dbSet('providers', { providers, activeProviderId, activeModel }); } catch(e) {}
         }
 
         function getActiveProvider() {
             return providers.find(p => p.id === activeProviderId) || providers[0] || null;
+        }
+
+        // 生图专用模型（仅生图模式显示，对话模式隐藏）
+        const GEN_ONLY_MODELS = ['z-image-turbo'];
+        function isGenModel(name) {
+            return GEN_ONLY_MODELS.includes(name);
         }
 
         function updateModelDisplay() {
@@ -1391,15 +1783,19 @@
             if (!modelDropdown) return;
             const dropdown = modelDropdown;
             dropdown.innerHTML = '';
-            const allItems = [];
+            // 按当前模式过滤：生图模式只显示生图模型，对话模式只显示非生图模型
+            const filtered = [];
             providers.forEach(p => {
                 (p.models || []).forEach(m => {
-                    const logo = getModelDevLogo(p.name, p.apiUrl, m);
-                    allItems.push({ pid: p.id, pname: p.name, model: m, logo });
+                    const isGen = isGenModel(m);
+                    if (imageGenMode ? isGen : !isGen) {
+                        const logo = getModelDevLogo(p.name, p.apiUrl, m);
+                        filtered.push({ pid: p.id, pname: p.name, model: m, logo });
+                    }
                 });
             });
-            if (allItems.length <= 1) return;
-            allItems.forEach(item => {
+            if (filtered.length <= 1) return;
+            filtered.forEach(item => {
                 const isActive = item.pid === activeProviderId && item.model === activeModel;
                 const div = document.createElement('div');
                 div.className = 'model-dropdown-item' + (isActive ? ' active' : '');
@@ -1742,7 +2138,7 @@
         function exportProviders() {
             flushEditingProvider();
             const exportSessions = deepClone(sessions);
-            const data = { providers, activeProviderId, activeModel, paramPresets, activePresetId, sessions: exportSessions, currentSessionId, exportedAt: new Date().toISOString() };
+            const data = { providers, activeProviderId, activeModel, paramPresets, activePresetId, sessions: exportSessions, currentChatSessionId, currentGenSessionId, exportedAt: new Date().toISOString() };
             const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -1791,10 +2187,16 @@
                     // 恢复会话
                     if (data.sessions && Array.isArray(data.sessions)) {
                         sessions = data.sessions;
-                        currentSessionId = data.currentSessionId || sessions[0]?.id || null;
-                        if (!sessions.find(s => s.id === currentSessionId)) currentSessionId = sessions[0]?.id || null;
+                        currentChatSessionId = data.currentChatSessionId || sessions[0]?.id || null;
+                        currentGenSessionId = data.currentGenSessionId || null;
+                        if (!sessions.find(s => s.id === currentChatSessionId)) {
+                            currentChatSessionId = sessions.find(s => s.type === 'chat')?.id || sessions[0]?.id || null;
+                        }
+                        if (!sessions.find(s => s.id === currentGenSessionId)) {
+                            currentGenSessionId = sessions.find(s => s.type === 'gen')?.id || null;
+                        }
                         saveSessionsToStorage();
-                        switchChat(currentSessionId);
+                        switchChat(getCurrentId());
                     }
                     showToast(`已导入 (${providers.length}个运营商, ${sessions.length}个会话)`);
                 } catch(err) {
@@ -1808,14 +2210,15 @@
         // ============================================================
         //  初始化入口
         // ============================================================
-        window.addEventListener('DOMContentLoaded', () => {
-            loadProviders();
+        window.addEventListener('DOMContentLoaded', async () => {
+            await loadProviders();
             updateModelDisplay();
             renderModelDropdown();
-            loadPresets();
+            await loadPresets();
             renderPresetTags();
-            loadSessionsFromStorage();
-            switchChat(currentSessionId);
+            await loadSessionsFromStorage();
+            loadImageGenMode();  // 恢复生图模式状态（UI 已在 initModeSync 中同步）
+            switchChat(getCurrentId());
         });
 
         // ============================================================
@@ -1825,13 +2228,12 @@
         let activePresetId = null;
         let editingPresetId = null;
 
-        function loadPresets() {
+        async function loadPresets() {
             try {
-                const saved = localStorage.getItem('chatPresets');
+                const saved = await dbGet('presets');
                 if (saved) {
-                    const data = JSON.parse(saved);
-                    paramPresets = data.presets || [];
-                    activePresetId = data.activePresetId || null;
+                    paramPresets = saved.presets || [];
+                    activePresetId = saved.activePresetId || null;
                 }
             } catch(e) {}
             if (paramPresets.length === 0) {
@@ -1850,8 +2252,8 @@
             savePresets();
         }
 
-        function savePresets() {
-            try { localStorage.setItem('chatPresets', JSON.stringify({ presets: paramPresets, activePresetId })); } catch(e) {}
+        async function savePresets() {
+            try { await dbSet('presets', { presets: paramPresets, activePresetId }); } catch(e) {}
         }
 
         function getActivePreset() {
@@ -1862,6 +2264,7 @@
         //  参数预设 — UI 渲染 & 交互
         // ============================================================
         function renderPresetTags() {
+            if (imageGenMode) return; // 生图模式不显示预设
             const row = document.getElementById('presetTagsRow');
             if (!row) return;
             row.innerHTML = '';
@@ -1882,8 +2285,9 @@
         }
 
         function selectPreset(id) {
+            if (imageGenMode) return; // 生图模式不操作预设
             activePresetId = id;
-            const sess = sessions.find(s => s.id === currentSessionId);
+            const sess = sessions.find(s => s.id === getCurrentId());
             if (sess) sess.presetId = id;
             savePresets();
             saveSessionsToStorage();
@@ -2127,54 +2531,54 @@
         //  聊天会话管理 (CRUD)
         // ============================================================
         let sessions = [];
-        let currentSessionId = null; 
+        let currentChatSessionId = null;
+        let currentGenSessionId = null;
 
-        function saveSessionsToStorage() {
-            try { localStorage.setItem('chatSessions', JSON.stringify({ sessions, currentSessionId })); } catch(e) {}
+        function getCurrentId() {
+            return imageGenMode ? currentGenSessionId : currentChatSessionId;
         }
 
-        function loadSessionsFromStorage() {
-            let migrated = false;
+        async function saveSessionsToStorage() {
             try {
-                const saved = localStorage.getItem('chatSessions');
+                await dbSet('sessions', { sessions, currentChatSessionId, currentGenSessionId });
+            } catch(e) {}
+        }
+
+        async function loadSessionsFromStorage() {
+            try {
+                const saved = await dbGet('sessions');
                 if (saved) {
-                    const data = JSON.parse(saved);
-                    sessions = data.sessions || [];
-                    currentSessionId = data.currentSessionId || null;
-                    // 迁移：给没有 presetId 的消息和版本历史补上会话的 presetId
-                    sessions.forEach(s => {
-                        if (!s.presetId) s.presetId = activePresetId;
-                        s.messages.forEach(msg => {
-                            if (msg.role === 'assistant' && msg.presetId == null) {
-                                msg.presetId = s.presetId;
-                                migrated = true;
-                            }
-                            if (msg.versions && Array.isArray(msg.versions)) {
-                                msg.versions.forEach(ver => {
-                                    if (ver.presetId == null) {
-                                        ver.presetId = msg.presetId || s.presetId;
-                                        migrated = true;
-                                    }
-                                });
-                            }
-                        });
-                    });
+                    sessions = saved.sessions || [];
+                    currentChatSessionId = saved.currentChatSessionId || null;
+                    currentGenSessionId = saved.currentGenSessionId || null;
                 }
             } catch(e) {}
-            if (sessions.length === 0) {
-                const newId = Date.now();
-                sessions = [{ id: newId, title: "新会话", messages: [], presetId: activePresetId, pinned: false }];
-                currentSessionId = newId;
+            // 确保每种模式至少有一个会话
+            const hasChat = sessions.some(s => s.type === 'chat');
+            const hasGen = sessions.some(s => s.type === 'gen');
+            if (!hasChat) {
+                const id = Date.now();
+                sessions.unshift({ id, title: "新会话", messages: [], presetId: activePresetId, pinned: false, type: 'chat' });
+                currentChatSessionId = id;
             }
-            if (!sessions.find(s => s.id === currentSessionId)) {
-                currentSessionId = sessions[0]?.id || null;
+            if (!hasGen) {
+                const id = Date.now() + 1;
+                sessions.unshift({ id, title: "新会话", messages: [], presetId: null, pinned: false, type: 'gen' });
+                currentGenSessionId = id;
             }
-            if (migrated) saveSessionsToStorage();
+            // 校验当前 ID 存在
+            if (!sessions.find(s => s.id === currentChatSessionId)) {
+                currentChatSessionId = sessions.find(s => s.type === 'chat')?.id || null;
+            }
+            if (!sessions.find(s => s.id === currentGenSessionId)) {
+                currentGenSessionId = sessions.find(s => s.type === 'gen')?.id || null;
+            }
         }
 
         function createNewChat() {
             const newId = Date.now();
-            sessions.unshift({ id: newId, title: "新会话", messages: [], presetId: activePresetId, pinned: false });
+            const sType = imageGenMode ? 'gen' : 'chat';
+            sessions.unshift({ id: newId, title: "新会话", messages: [], presetId: sType === 'chat' ? activePresetId : null, pinned: false, type: sType });
             switchChat(newId);
             saveSessionsToStorage();
             closeSidebarOnMobile();
@@ -2182,9 +2586,11 @@
 
         function deleteChat(id, event) {
             event.stopPropagation(); 
+            const deletedType = sessions.find(s => s.id === id)?.type;
             sessions = sessions.filter(s => s.id !== id);
-            if (sessions.length === 0) createNewChat();
-            else if (currentSessionId === id) switchChat(sessions[0].id);
+            const modeSessions = sessions.filter(s => s.type === (imageGenMode ? 'gen' : 'chat'));
+            if (modeSessions.length === 0) createNewChat();
+            else if (getCurrentId() === id) switchChat(modeSessions[0].id);
             else renderSidebar();
             saveSessionsToStorage();
             showToast('会话已删除');
@@ -2201,10 +2607,13 @@
         }
 
         function switchChat(id) {
-            currentSessionId = id;
+            const s = sessions.find(s => s.id === id);
+            if (s) {
+                if (s.type === 'gen') currentGenSessionId = id;
+                else currentChatSessionId = id;
+            }
             saveSessionsToStorage();
             // 同步该会话的预设
-            const s = sessions.find(s => s.id === id);
             if (s && s.presetId != null && paramPresets.find(p => p.id === s.presetId)) {
                 activePresetId = s.presetId;
                 savePresets();
@@ -2232,14 +2641,16 @@
         function renderSidebar() {
             const list = document.getElementById('chatList');
             list.innerHTML = '';
-            const sortedSessions = [...sessions].sort((a, b) => {
+            const modeType = imageGenMode ? 'gen' : 'chat';
+            const modeSessions = sessions.filter(s => s.type === modeType);
+            const sortedSessions = [...modeSessions].sort((a, b) => {
                 if (a.pinned && !b.pinned) return -1;
                 if (!a.pinned && b.pinned) return 1;
                 return 0;
             });
             sortedSessions.forEach(session => {
                 const item = document.createElement('div');
-                item.className = `chat-history-item ${session.id === currentSessionId ? 'active' : ''}`;
+                item.className = `chat-history-item ${session.id === getCurrentId() ? 'active' : ''}`;
                 item.onclick = () => switchChat(session.id);
 
                 const title = document.createElement('span');
@@ -2424,7 +2835,7 @@
         const welcomeScreen = document.getElementById('welcomeScreen');
 
         function renderChatArea() {
-            const session = sessions.find(s => s.id === currentSessionId);
+            const session = sessions.find(s => s.id === getCurrentId());
             
             // 清空除了 welcomeScreen 以外的所有消息块
             Array.from(chatInner.children).forEach(child => {
@@ -2441,7 +2852,9 @@
                     let displayModel = msg.model;
                     let displayThought = msg.thought;
                     let displayPresetId = msg.presetId;
+                    let displayGenImages = msg.images || null;
                     // 如果有版本历史且正在查看旧版本，使用旧版本内容
+                    let displayIsHtml = msg.isHtml || false;
                     if (msg.role === 'assistant' && msg.versions && msg.versions.length > 0) {
                         const dv = msg.displayVersionIdx || 0;
                         if (dv > 0 && msg.versions[dv - 1]) {
@@ -2450,6 +2863,8 @@
                             displayModel = ver.model || msg.model;
                             displayThought = ver.thought || msg.thought;
                             displayPresetId = ver.presetId != null ? ver.presetId : msg.presetId;
+                            displayIsHtml = ver.isHtml != null ? ver.isHtml : displayIsHtml;
+                            displayGenImages = ver.images || displayGenImages;
                         } else if (Array.isArray(msg.content)) {
                             const textPart = msg.content.find(c => c.type === 'text');
                             displayContent = textPart ? textPart.text : '';
@@ -2464,7 +2879,7 @@
                     } else {
                         displayContent = msg.content;
                     }
-                    appendMessageDOM(msg.role, displayContent, displayThought, imageUrl, displayModel, idx, displayPresetId);
+                    appendMessageDOM(msg.role, displayContent, displayThought, imageUrl, displayModel, idx, displayPresetId, displayIsHtml, displayGenImages);
                 });
             }
             updateMessageAnchors();
@@ -2476,7 +2891,7 @@
             const index = allBlocks.indexOf(block);
             if (index === -1) return;
 
-            const currentSession = sessions.find(s => s.id === currentSessionId);
+            const currentSession = sessions.find(s => s.id === getCurrentId());
             const msg = currentSession.messages[index];
             // 保存当前回复到版本历史
             if (msg && msg.role === 'assistant') {
@@ -2502,7 +2917,7 @@
             if (isNaN(idx)) return;
             
             editingMessageIndex = idx;
-            const session = sessions.find(s => s.id === currentSessionId);
+            const session = sessions.find(s => s.id === getCurrentId());
             if (!session) return;
             const msg = session.messages[idx];
             if (!msg) return;
@@ -2556,7 +2971,7 @@
             const newText = textarea.value.trim();
             if (!newText) { showToast('内容不能为空'); return; }
             
-            const session = sessions.find(s => s.id === currentSessionId);
+            const session = sessions.find(s => s.id === getCurrentId());
             if (!session) return;
             const msg = session.messages[editingMessageIndex];
             if (!msg) return;
@@ -2594,7 +3009,7 @@
             const idx = parseInt(contentEl.getAttribute('data-index'));
             if (isNaN(idx)) return;
             
-            const session = sessions.find(s => s.id === currentSessionId);
+            const session = sessions.find(s => s.id === getCurrentId());
             if (!session) return;
             
             if (block.classList.contains('user-block')) {
@@ -2644,7 +3059,7 @@
             const nav = spanEl.closest('.version-nav');
             const idx = parseInt(nav.getAttribute('data-msg-idx'));
             if (isNaN(idx)) return;
-            const session = sessions.find(s => s.id === currentSessionId);
+            const session = sessions.find(s => s.id === getCurrentId());
             if (!session) return;
             const msg = session.messages[idx];
             if (!msg || !msg.versions) return;
@@ -2662,7 +3077,7 @@
         // ============================================================
         const COLLAPSE_THRESHOLD = 300; // 内容超过此字符数时自动折叠
 
-        function appendMessageDOM(role, content, thought = null, imageUrl = null, msgModel = null, msgIndex = null, msgPresetId = null) {
+        function appendMessageDOM(role, content, thought = null, imageUrl = null, msgModel = null, msgIndex = null, msgPresetId = null, isHtml = false, genImages = null) {
             welcomeScreen.style.display = 'none';
             
             const blockDiv = document.createElement('div');
@@ -2689,7 +3104,16 @@
             contentDiv.setAttribute('data-raw', content);
             if (msgIndex != null) contentDiv.setAttribute('data-index', msgIndex);
             if (role === 'assistant' && content) {
-                contentDiv.innerHTML = marked.parse(content).trim();
+                let displayHtml = isHtml ? content : marked.parse(content).trim();
+                // 生图占位符替换：data-gen-idx="N" → src="data:image/png;base64,..."
+                if (isHtml && genImages && genImages.length > 0) {
+                    genImages.forEach((img, i) => {
+                        const dataUrl = 'data:' + (img.type || 'image/png') + ';base64,' + img.b64;
+                        displayHtml = displayHtml.split(' data-gen-src="" data-gen-idx="' + i + '"').join(' src="' + dataUrl + '"');
+                        displayHtml = displayHtml.split('src="" data-gen-idx="' + i + '"').join('src="' + dataUrl + '"');
+                    });
+                }
+                contentDiv.innerHTML = displayHtml;
             } else {
                 contentDiv.textContent = content;
             }
@@ -2734,10 +3158,10 @@
                     <svg onclick="deleteMessage(this)" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" title="删除"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                 `;
             } else {
-                const session = sessions.find(s => s.id === currentSessionId);
+                const session = sessions.find(s => s.id === getCurrentId());
                 const fallbackPresetId = (msgPresetId != null) ? msgPresetId : (session?.presetId);
                 const msgPreset = (fallbackPresetId != null) ? paramPresets.find(p => p.id === fallbackPresetId) : getActivePreset();
-                const presetName = msgPreset?.name || '';
+                const presetName = (!imageGenMode && msgPreset?.name) || '';
                 const presetTagHtml = presetName ? `<span class="msg-preset-tag">${escapeHtml(presetName)}</span>` : '';
                 const displayModel = msgModel || activeModel;
                 const msgLogo = msgModel ? getLogoForModel(msgModel) : getActiveLogo();
@@ -2802,6 +3226,139 @@
         }
 
         // ============================================================
+        //  生图模式
+        // ============================================================
+        let genControlImage = null; // { base64, name }
+
+        function handleGenControlFile(input) {
+            if (input.files && input.files[0]) {
+                const file = input.files[0];
+                if (!file.type.startsWith('image/')) { showToast('仅支持图片文件'); input.value = ''; return; }
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    genControlImage = { base64: e.target.result, name: file.name };
+                    document.getElementById('genControlPreviewImg').src = e.target.result;
+                    document.getElementById('genControlPreviewName').textContent = file.name;
+                    document.getElementById('genControlPreview').style.display = 'flex';
+                };
+                reader.readAsDataURL(file);
+                input.value = '';
+            }
+        }
+
+        function clearGenControlImage() {
+            genControlImage = null;
+            document.getElementById('genControlPreview').style.display = 'none';
+            document.getElementById('genControlPreviewImg').src = '';
+            document.getElementById('genControlFileInput').value = '';
+        }
+
+        function setMode(mode) {
+            imageGenMode = (mode === 'gen');
+            document.documentElement.setAttribute('data-mode', mode);
+            const btnChat = document.getElementById('modeBtnChat');
+            const btnGen = document.getElementById('modeBtnGen');
+            const panel = document.getElementById('genControlsPanel');
+
+            if (imageGenMode) {
+                btnChat.classList.remove('active');
+                btnGen.classList.add('active');
+                panel.classList.add('show');
+                updateGenControlUploadVisibility();
+                userInput.placeholder = '输入图片描述词，Enter 发送';
+                clearImagePreview();
+                if (!isGenModel(activeModel)) autoSelectGenModel();
+            } else {
+                btnChat.classList.add('active');
+                btnGen.classList.remove('active');
+                panel.classList.remove('show');
+                userInput.placeholder = '输入你的问题，Enter 发送，Shift+Enter 换行';
+                clearGenControlImage();
+                if (isGenModel(activeModel)) autoSelectChatModel();
+            }
+            renderModelDropdown();
+            updateModelDisplay();
+            try { localStorage.setItem('chatGenMode', mode); } catch(e) {}
+            // 切换到当前模式的会话（switchChat 内部会 renderSidebar + renderChatArea）
+            switchChat(getCurrentId());
+        }
+
+        // 在 providers 中查找第一个匹配类型（gen/chat）的模型并切换
+        function findFirstModelByType(isGen) {
+            for (const p of providers) {
+                for (const m of (p.models || [])) {
+                    if (isGenModel(m) === isGen) return { pid: p.id, model: m };
+                }
+            }
+            return null;
+        }
+
+        function autoSelectGenModel() {
+            const found = findFirstModelByType(true);
+            if (found) { activeProviderId = found.pid; activeModel = found.model; saveProvidersToStorage(); }
+        }
+
+        function autoSelectChatModel() {
+            const found = findFirstModelByType(false);
+            if (found) { activeProviderId = found.pid; activeModel = found.model; saveProvidersToStorage(); }
+        }
+
+        function loadImageGenMode() {
+            try {
+                const mode = localStorage.getItem('chatGenMode');
+                if (mode === 'gen') {
+                    imageGenMode = true;
+                    document.documentElement.setAttribute('data-mode', 'gen');
+                    document.getElementById('modeBtnChat').classList.remove('active');
+                    document.getElementById('modeBtnGen').classList.add('active');
+                    document.getElementById('genControlsPanel').classList.add('show');
+                    userInput.placeholder = '输入图片描述词，Enter 发送';
+                    if (!isGenModel(activeModel)) autoSelectGenModel();
+                } else {
+                    document.documentElement.setAttribute('data-mode', 'chat');
+                    if (isGenModel(activeModel)) autoSelectChatModel();
+                }
+            } catch(e) {}
+        }
+
+        function updateGenControlUploadVisibility() {
+            const mode = document.getElementById('genControlMode').value;
+            const row = document.getElementById('genControlUploadRow');
+            if (mode) {
+                row.style.display = 'flex';
+            } else {
+                row.style.display = 'none';
+                if (genControlImage) clearGenControlImage();
+            }
+        }
+
+        function onGenSizeChange() {
+            const preset = document.getElementById('genSizePreset').value;
+            const custom = document.getElementById('genCustomSize');
+            if (preset === 'custom') {
+                custom.style.display = 'flex';
+            } else {
+                custom.style.display = 'none';
+            }
+        }
+
+        function getGenSize() {
+            const preset = document.getElementById('genSizePreset').value;
+            if (preset === 'custom') {
+                const w = document.getElementById('genWidth').value || 1024;
+                const h = document.getElementById('genHeight').value || 1024;
+                return `${w}x${h}`;
+            }
+            return preset;
+        }
+
+        // 监听控制模式变化
+        (function() {
+            const sel = document.getElementById('genControlMode');
+            if (sel) sel.addEventListener('change', updateGenControlUploadVisibility);
+        })();
+
+        // ============================================================
         //  输入框事件
         // ============================================================
         const userInput = document.getElementById('userInput');
@@ -2817,6 +3374,11 @@
 
         userInput.addEventListener('keydown', function(e) {
             if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+        });
+
+        // Escape 关闭灯箱
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') closeImgLightbox();
         });
 
         // ============================================================
@@ -2855,7 +3417,7 @@
             const provider = getActiveProvider();
             if (!provider) { sendBtn.disabled = false; return; }
 
-            const currentSession = sessions.find(s => s.id === currentSessionId);
+            const currentSession = sessions.find(s => s.id === getCurrentId());
             sendBtn.disabled = true;
 
             const preset = getActivePreset();
@@ -2954,6 +3516,14 @@
         // ============================================================
         function sendMessage() {
             const text = userInput.value.trim();
+
+            // 生图模式
+            if (imageGenMode) {
+                if (!text) return;
+                sendImageGeneration(text);
+                return;
+            }
+
             const hasImage = pendingFile != null;
             if (!text && !hasImage) return;
 
@@ -2964,7 +3534,8 @@
                 return;
             }
 
-            const currentSession = sessions.find(s => s.id === currentSessionId);
+            const currentSession = sessions.find(s => s.id === getCurrentId());
+            currentSession.type = 'chat'; // 确保类型正确
             if (currentSession.messages.length === 0) {
                 currentSession.title = text.length > 12 ? text.substring(0, 12) + '...' : text || '图片消息';
                 renderSidebar();
@@ -2990,6 +3561,185 @@
             userInput.style.height = '24px';
             
             fetchAIResponse();
+        }
+
+        // ============================================================
+        //  图片生成
+        // ============================================================
+        async function sendImageGeneration(prompt) {
+            const provider = getActiveProvider();
+            if (!provider || !provider.apiUrl || !provider.apiKey || !activeModel) {
+                showToast('请配置 API 参数！');
+                openSettings();
+                return;
+            }
+
+            const currentSession = sessions.find(s => s.id === getCurrentId());
+            currentSession.type = 'gen'; // 确保类型正确
+            if (currentSession.messages.length === 0) {
+                currentSession.title = prompt.length > 12 ? prompt.substring(0, 12) + '...' : prompt || '生图';
+                renderSidebar();
+            }
+
+            // 显示用户消息
+            appendMessageDOM('user', `🎨 ${prompt}`, null, null, null, currentSession.messages.length);
+            currentSession.messages.push({ role: "user", content: prompt });
+            saveSessionsToStorage();
+
+            userInput.value = '';
+            userInput.style.height = '24px';
+            sendBtn.disabled = true;
+
+            const msgIdx = currentSession.messages.length;
+            const aiMsgEl = appendMessageDOM('assistant', '🎨 正在生成图片...', null, null, null, msgIdx);
+
+            try {
+                let baseUrl = (provider.apiUrl || '').trim().replace(/\/+$/, '');
+                if (baseUrl.endsWith('/chat/completions')) {
+                    baseUrl = baseUrl.slice(0, -'/chat/completions'.length);
+                }
+                const genUrl = baseUrl + '/images/generations';
+
+                const body = {
+                    model: activeModel,
+                    prompt: prompt,
+                    num_images_per_prompt: parseInt(document.getElementById('genNumImages').value) || 1,
+                    negative_prompt: document.getElementById('genNegativePrompt').value.trim() || undefined,
+                    num_inference_steps: parseInt(document.getElementById('genSteps').value) || 9,
+                    seed: parseInt(document.getElementById('genSeed').value) || 0,
+                    guidance_scale: parseFloat(document.getElementById('genGuidanceScale').value) || 1,
+                    image_scale: parseFloat(document.getElementById('genImageScale').value) || 1,
+                    size: getGenSize(),
+                };
+
+                // 控制模式
+                const controlMode = document.getElementById('genControlMode').value;
+                if (controlMode) {
+                    body.control_mode = controlMode;
+                    body.control_context_scale = parseFloat(document.getElementById('genControlScale').value) || 0.75;
+                    if (genControlImage) {
+                        body.control_image = genControlImage.base64;
+                    }
+                }
+
+                const response = await fetch(genUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${provider.apiKey}` },
+                    body: JSON.stringify(body)
+                });
+
+                if (!response.ok) {
+                    const errText = await response.text();
+                    let errMsg = `HTTP ${response.status}`;
+                    try { errMsg = JSON.parse(errText).error?.message || errMsg; } catch(e) {}
+                    throw new Error(errMsg);
+                }
+
+                const data = await response.json();
+
+                // 处理生成结果
+                const genImages = [];       // 持久化：{b64, type}
+                let resultHtml = '';        // 持久化用的 HTML（占位符）
+                let resultHtmlForDom = '';  // 直接 DOM 用的 HTML（含完整 data URL）
+                if (data.data && data.data.length > 0) {
+                    for (let i = 0; i < data.data.length; i++) {
+                        const imgData = data.data[i];
+                        if (imgData.url) {
+                            const url = imgData.url;
+                            const imgHtml = `<div style="position:relative;display:inline-block;margin:4px;">
+                                <img src="${escapeHtml(url)}" onclick="previewGenImage('${escapeHtml(url)}')" 
+                                    style="max-width:280px;max-height:280px;border-radius:12px;cursor:pointer;border:1px solid var(--border-color);"
+                                    onerror="this.style.display='none';this.nextElementSibling.style.display='inline-block';">
+                                <a href="${escapeHtml(url)}" download="" class="gen-download-btn" style="margin-top:4px;display:block;text-align:center;text-decoration:none;">⬇ 下载</a>
+                            </div>`;
+                            resultHtml += imgHtml;
+                            resultHtmlForDom += imgHtml;
+                        } else if (imgData.b64_json) {
+                            const idx = genImages.length;
+                            genImages.push({ b64: imgData.b64_json, type: imgData.type || 'image/png' });
+                            // 持久化：仅存占位符（极轻量，无 base64 嵌入）
+                            resultHtml += `<div style="position:relative;display:inline-block;margin:4px;">
+                                <img src="" data-gen-idx="${idx}" data-gen-src="" onclick="previewGenImage(this.src)" 
+                                    style="max-width:280px;max-height:280px;border-radius:12px;cursor:pointer;border:1px solid var(--border-color);">
+                                <button onclick="downloadGenImageFromSrc(this.parentElement.querySelector('img').src)" class="gen-download-btn" style="margin-top:4px;">⬇ 下载</button>
+                            </div>`;
+                            // DOM 即时渲染：完整 data URL（仅用于本次显示，不入库）
+                            const dataUrl = 'data:' + (imgData.type || 'image/png') + ';base64,' + imgData.b64_json;
+                            resultHtmlForDom += `<div style="position:relative;display:inline-block;margin:4px;">
+                                <img src="${dataUrl}" onclick="previewGenImage(this.src)" 
+                                    style="max-width:280px;max-height:280px;border-radius:12px;cursor:pointer;border:1px solid var(--border-color);">
+                                <button onclick="downloadGenImageFromSrc(this.parentElement.querySelector('img').src)" class="gen-download-btn" style="margin-top:4px;">⬇ 下载</button>
+                            </div>`;
+                        }
+                    }
+                    if (resultHtmlForDom) {
+                        resultHtmlForDom = '<div class="generated-images">' + resultHtmlForDom + '</div>';
+                    } else {
+                        resultHtmlForDom = '⚠️ 已生成但无法显示图片';
+                    }
+                    if (resultHtml) {
+                        resultHtml = '<div class="generated-images">' + resultHtml + '</div>';
+                    } else {
+                        resultHtml = '⚠️ 已生成但无法显示图片';
+                    }
+                } else {
+                    resultHtml = '⚠️ 未能生成图片，请检查参数后重试';
+                    resultHtmlForDom = resultHtml;
+                }
+
+                // 更新 DOM（使用含完整 data URL 的版本）
+                const finalHtmlForDom = `<div>🎨 <strong>${escapeHtml(prompt)}</strong></div>${resultHtmlForDom}`;
+                aiMsgEl.innerHTML = finalHtmlForDom;
+
+                // 持久化（使用占位符版本，images 数组单独存储）
+                const msgData = {
+                    role: "assistant",
+                    content: `<div>🎨 <strong>${escapeHtml(prompt)}</strong></div>${resultHtml}`,
+                    model: activeModel,
+                    genPrompt: prompt,
+                    isHtml: true
+                };
+                if (genImages.length > 0) msgData.images = genImages;
+                currentSession.messages.push(msgData);
+                saveSessionsToStorage();
+
+                // 清理控制图片
+                clearGenControlImage();
+
+            } catch (error) {
+                const errFull = `生图失败: ${error.message || '未知错误'}`;
+                aiMsgEl.textContent = errFull;
+                currentSession.messages.push({ role: "assistant", content: errFull });
+                saveSessionsToStorage();
+                renderChatArea();
+            } finally {
+                sendBtn.disabled = false;
+                requestAnimationFrame(() => { chatContainer.scrollTop = chatContainer.scrollHeight; });
+            }
+        }
+
+        function previewGenImage(src) {
+            document.getElementById('imgLightboxImg').src = src;
+            document.getElementById('imgLightbox').classList.add('show');
+        }
+
+        function closeImgLightbox() {
+            document.getElementById('imgLightbox').classList.remove('show');
+            document.getElementById('imgLightboxImg').src = '';
+        }
+
+        function downloadGenImageFromSrc(src) {
+            const a = document.createElement('a');
+            a.href = src;
+            a.download = 'generated-image.png';
+            a.click();
+        }
+
+        function downloadGenImage(b64Data, index) {
+            const a = document.createElement('a');
+            a.href = 'data:image/png;base64,' + b64Data;
+            a.download = `generated-image-${index}.png`;
+            a.click();
         }
 
         // ============================================================
@@ -3026,5 +3776,9 @@
             }
         })();
     </script>
+    <div class="img-lightbox" id="imgLightbox" onclick="closeImgLightbox()">
+        <span class="img-lightbox-close" onclick="event.stopPropagation();closeImgLightbox()">✕</span>
+        <img id="imgLightboxImg" src="">
+    </div>
 </body>
 </html>
