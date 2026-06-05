@@ -1215,7 +1215,9 @@
     </div>
 
     <script>
-        // --- UI 与弹窗逻辑 ---
+        // ============================================================
+        //  Toast 提示
+        // ============================================================
         let toastTimeout;
         function showToast(msg) {
             const toast = document.getElementById('toast');
@@ -1225,6 +1227,9 @@
             toastTimeout = setTimeout(() => { toast.classList.remove('show'); }, 2500);
         }
 
+        // ============================================================
+        //  侧边栏 & 响应式布局
+        // ============================================================
         const sidebar = document.getElementById('sidebar');
         const showSidebarBtn = document.getElementById('showSidebarBtn');
         function toggleSidebar() {
@@ -1267,6 +1272,9 @@
             }
         });
 
+        // ============================================================
+        //  复制消息
+        // ============================================================
         function copyMessageText(btnElement) {
             const block = btnElement.closest('.message-block');
             const contentEl = block.querySelector('.message-content');
@@ -1293,7 +1301,35 @@
             .catch(() => { showToast('复制失败，请重试'); });
         }
 
-        // --- Providers 与模型切换 ---
+        // ============================================================
+        //  工具函数
+        // ============================================================
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str || '';
+            return div.innerHTML;
+        }
+
+        function normalizeApiUrl(url) {
+            if (!url) return url;
+            url = url.trim().replace(/\/+$/, '');
+            if (!url.endsWith('/chat/completions')) {
+                url = url + '/chat/completions';
+            }
+            return url;
+        }
+
+        function deepClone(obj) { return JSON.parse(JSON.stringify(obj)); }
+
+        function renderLogoHtml(logo, sizeSmall = false) {
+            if (!logo) return sizeSmall ? '' : '<span class="model-logo-fallback">AI</span>';
+            const s = sizeSmall ? ' style="width:14px;height:14px;border-radius:3px;"' : '';
+            return `<img class="model-logo" src="${logo}" alt="" onerror="this.style.display='none'"${s}>`;
+        }
+
+        // ============================================================
+        //  Providers 数据管理 & 模型切换
+        // ============================================================
         let providers = [];
         let activeProviderId = null;
         let activeModel = '';
@@ -1411,31 +1447,9 @@
             if (!e.target.closest('.model-switcher')) closeModelDropdown();
         });
 
-        function escapeHtml(str) {
-            const div = document.createElement('div');
-            div.textContent = str || '';
-            return div.innerHTML;
-        }
-
-        function normalizeApiUrl(url) {
-            if (!url) return url;
-            url = url.trim().replace(/\/+$/, '');
-            if (!url.endsWith('/chat/completions')) {
-                url = url + '/chat/completions';
-            }
-            return url;
-        }
-
-        function deepClone(obj) { return JSON.parse(JSON.stringify(obj)); }
-
-        function renderLogoHtml(logo, sizeSmall = false) {
-            if (!logo) return sizeSmall ? '' : '<span class="model-logo-fallback">AI</span>';
-            const s = sizeSmall ? ' style="width:14px;height:14px;border-radius:3px;"' : '';
-            return `<img class="model-logo" src="${logo}" alt="" onerror="this.style.display='none'"${s}>`;
-        }
-
-        // --- models.dev Logo 匹配 ---
-        // 试图从模型名、提供商名和 API URL 推断 models.dev 上的 provider ID
+        // ============================================================
+        //  models.dev Logo 匹配
+        // ============================================================
         function getModelDevLogo(providerName, apiUrl, modelName) {
             const k = (providerName || '').toLowerCase() + '|' + (apiUrl || '').toLowerCase() + '|' + (modelName || '').toLowerCase();
             const candidates = [
@@ -1492,7 +1506,9 @@
             return getModelDevLogo(p.name, p.apiUrl, activeModel);
         }
 
-        // --- 设置面板渲染 ---
+        // ============================================================
+        //  设置面板 — 运营商编辑
+        // ============================================================
         function flushEditingProvider() {
             const p = providers.find(p => p.id === editingProviderId);
             if (!p) return;
@@ -1681,6 +1697,9 @@
             renderSettingsRight();
         }
 
+        // ============================================================
+        //  设置面板 — 打开/关闭/保存
+        // ============================================================
         function openSettings() {
             providersBackup = deepClone({ providers, activeProviderId, activeModel });
             editingProviderId = activeProviderId || providers[0]?.id || null;
@@ -1717,7 +1736,9 @@
             showToast('配置已保存');
         }
 
-        // --- 导入导出 ---
+        // ============================================================
+        //  导入导出
+        // ============================================================
         function exportProviders() {
             flushEditingProvider();
             const exportSessions = deepClone(sessions);
@@ -1784,6 +1805,9 @@
             input.value = '';
         }
 
+        // ============================================================
+        //  初始化入口
+        // ============================================================
         window.addEventListener('DOMContentLoaded', () => {
             loadProviders();
             updateModelDisplay();
@@ -1794,7 +1818,9 @@
             switchChat(currentSessionId);
         });
 
-        // --- 参数预设管理 ---
+        // ============================================================
+        //  参数预设 — 数据管理
+        // ============================================================
         let paramPresets = [];
         let activePresetId = null;
         let editingPresetId = null;
@@ -1832,6 +1858,9 @@
             return paramPresets.find(p => p.id === activePresetId) || null;
         }
 
+        // ============================================================
+        //  参数预设 — UI 渲染 & 交互
+        // ============================================================
         function renderPresetTags() {
             const row = document.getElementById('presetTagsRow');
             if (!row) return;
@@ -1869,6 +1898,9 @@
             document.getElementById('streamNo').classList.toggle('active', !v);
         }
 
+        // ============================================================
+        //  参数预设 — 编辑器弹窗
+        // ============================================================
         function openPresetEdit(id) {
             editingPresetId = id;
             const p = id ? paramPresets.find(p => p.id === id) : null;
@@ -1931,7 +1963,9 @@
             showToast('预设已删除');
         }
 
-        // --- 拖拽滑动标签行 ---
+        // ============================================================
+        //  预设标签行拖拽滚动
+        // ============================================================
         function initPresetDrag() {
             const row = document.getElementById('presetTagsRow');
             if (!row) return;
@@ -1952,6 +1986,9 @@
         }
         window.addEventListener('DOMContentLoaded', initPresetDrag);
 
+        // ============================================================
+        //  会话重命名
+        // ============================================================
         let renamingSessionId = null;
         function openRenameModal(id, currentTitle, event) {
             event.stopPropagation();
@@ -1969,7 +2006,9 @@
             closeRenameModal();
         }
 
-        // --- 搜索功能 ---
+        // ============================================================
+        //  搜索会话
+        // ============================================================
         function openSearchModal() {
             document.getElementById('searchModal').style.display = 'flex';
             document.getElementById('searchInput').value = '';
@@ -2084,8 +2123,10 @@
             switchChat(numId);
         }
 
-        // --- 聊天状态管理 ---
-        let sessions = []; 
+        // ============================================================
+        //  聊天会话管理 (CRUD)
+        // ============================================================
+        let sessions = [];
         let currentSessionId = null; 
 
         function saveSessionsToStorage() {
@@ -2177,7 +2218,6 @@
 
         function closeSidebarOnMobile() {
             if (window.innerWidth <= 768) {
-                const sidebar = document.getElementById('sidebar');
                 const mobileOverlay = document.getElementById('sidebarMobileOverlay');
                 if (!sidebar.classList.contains('hidden')) {
                     sidebar.classList.add('hidden');
@@ -2186,6 +2226,9 @@
             }
         }
 
+        // ============================================================
+        //  侧边栏渲染
+        // ============================================================
         function renderSidebar() {
             const list = document.getElementById('chatList');
             list.innerHTML = '';
@@ -2230,7 +2273,9 @@
             });
         }
 
-        // --- 消息锚点导航 ---
+        // ============================================================
+        //  消息锚点导航条
+        // ============================================================
         const messageAnchors = document.getElementById('messageAnchors');
         const anchorTooltip = document.getElementById('anchorTooltip');
         let anchorObserver = null;
@@ -2371,7 +2416,9 @@
             blocks.forEach(b => anchorObserver.observe(b));
         }
 
-        // --- 核心渲染与请求 ---
+        // ============================================================
+        //  聊天区域渲染
+        // ============================================================
         const chatContainer = document.getElementById('chatContainer');
         const chatInner = document.getElementById('chatInner');
         const welcomeScreen = document.getElementById('welcomeScreen');
@@ -2442,7 +2489,9 @@
             fetchAIResponse();
         }
 
-        // --- 消息编辑与删除 ---
+        // ============================================================
+        //  消息编辑 (inline) / 删除 / 版本切换
+        // ============================================================
         let editingMessageIndex = null;
         let pendingVersions = null;
 
@@ -2608,7 +2657,9 @@
             renderChatArea();
         }
 
-        // --- 消息折叠（仅对 user 长消息生效，默认折叠，不持久化） ---
+        // ============================================================
+        //  消息 DOM 构建 & 长内容折叠
+        // ============================================================
         const COLLAPSE_THRESHOLD = 300; // 内容超过此字符数时自动折叠
 
         function appendMessageDOM(role, content, thought = null, imageUrl = null, msgModel = null, msgIndex = null, msgPresetId = null) {
@@ -2724,6 +2775,9 @@
             return contentDiv; 
         }
 
+        // ============================================================
+        //  文件上传 (图片)
+        // ============================================================
         let pendingFile = null;
         function handleFileSelected(input) {
             if (input.files && input.files[0]) {
@@ -2747,6 +2801,9 @@
             document.getElementById('imagePreviewThumb').src = '';
         }
 
+        // ============================================================
+        //  输入框事件
+        // ============================================================
         const userInput = document.getElementById('userInput');
         const sendBtn = document.getElementById('sendBtn');
 
@@ -2762,6 +2819,9 @@
             if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
         });
 
+        // ============================================================
+        //  SSE 流式读取
+        // ============================================================
         async function readSSEStream(body, el) {
             el.style.whiteSpace = 'pre-wrap';
             const reader = body.getReader();
@@ -2788,6 +2848,9 @@
             return full;
         }
 
+        // ============================================================
+        //  API 请求 & AI 响应处理
+        // ============================================================
         async function fetchAIResponse() {
             const provider = getActiveProvider();
             if (!provider) { sendBtn.disabled = false; return; }
@@ -2886,6 +2949,9 @@
             }
         }
 
+        // ============================================================
+        //  发送消息
+        // ============================================================
         function sendMessage() {
             const text = userInput.value.trim();
             const hasImage = pendingFile != null;
@@ -2926,6 +2992,9 @@
             fetchAIResponse();
         }
 
+        // ============================================================
+        //  暗色模式
+        // ============================================================
         const sunIcon = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>';
         const moonIcon = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>';
 
