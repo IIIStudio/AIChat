@@ -1673,9 +1673,14 @@
                     const session = sessions.find(s => s.id === getCurrentId());
                     if (session && session.messages[idx]) {
                         const msg = session.messages[idx];
-                        content = Array.isArray(msg.content) 
-                            ? msg.content.filter(c => c.type === 'text').map(c => c.text).join('\n')
-                            : msg.content;
+                        // 生图消息：复制提示词而非 HTML
+                        if (msg.isHtml && msg.genPrompt) {
+                            content = msg.genPrompt;
+                        } else if (Array.isArray(msg.content)) {
+                            content = msg.content.filter(c => c.type === 'text').map(c => c.text).join('\n');
+                        } else {
+                            content = msg.content;
+                        }
                     }
                 }
                 if (!content) {
@@ -2937,17 +2942,23 @@
                 pendingVersions = (msg.versions || []).slice();
                 pendingVersions.push({ content: msg.content, thought: msg.thought, model: msg.model, presetId: msg.presetId, isHtml: msg.isHtml, images: msg.images });
             }
+            // 生图模式：保留当前用户消息作为提示词，不额外添加用户消息
+            if (imageGenMode) {
+                const userMsg = currentSession.messages[index - 1];
+                if (userMsg && userMsg.role === 'user') {
+                    const prompt = typeof userMsg.content === 'string' ? userMsg.content : '';
+                    if (prompt) {
+                        currentSession.messages = currentSession.messages.slice(0, index);
+                        saveSessionsToStorage();
+                        renderChatArea();
+                        sendImageGeneration(prompt, true);
+                        return;
+                    }
+                }
+            }
             currentSession.messages = currentSession.messages.slice(0, index);
             saveSessionsToStorage();
             renderChatArea();
-
-            // 生图模式：找到用户提示词重新生成
-            if (imageGenMode) {
-                const userMsg = currentSession.messages[index - 1];
-                const prompt = (userMsg && userMsg.role === 'user') ? (typeof userMsg.content === 'string' ? userMsg.content : '') : '';
-                if (prompt) sendImageGeneration(prompt);
-                return;
-            }
             fetchAIResponse();
         }
 
@@ -3047,9 +3058,9 @@
             saveSessionsToStorage();
             renderChatArea();
             showToast('已保存，正在重新生成...');
-            // 生图模式走生图接口
+            // 生图模式走生图接口（用户消息已编辑好，无需再添加）
             if (imageGenMode) {
-                sendImageGeneration(newText);
+                sendImageGeneration(newText, true);
                 return;
             }
             fetchAIResponse();
@@ -3157,12 +3168,11 @@
             if (msgIndex != null) contentDiv.setAttribute('data-index', msgIndex);
             if (role === 'assistant' && content) {
                 let displayHtml = isHtml ? content : marked.parse(content).trim();
-                // 生图占位符替换：data-gen-idx="N" → src="data:image/png;base64,..."
+                // 生图占位符替换：src="" data-gen-idx="N" data-gen-src="" → src="data:..."
                 if (isHtml && genImages && genImages.length > 0) {
                     genImages.forEach((img, i) => {
                         const dataUrl = 'data:' + (img.type || 'image/png') + ';base64,' + img.b64;
-                        displayHtml = displayHtml.split(' data-gen-src="" data-gen-idx="' + i + '"').join(' src="' + dataUrl + '"');
-                        displayHtml = displayHtml.split('src="" data-gen-idx="' + i + '"').join('src="' + dataUrl + '"');
+                        displayHtml = displayHtml.split('src="" data-gen-idx="' + i + '" data-gen-src=""').join('src="' + dataUrl + '"');
                     });
                 }
                 contentDiv.innerHTML = displayHtml;
@@ -3233,9 +3243,11 @@
                     </span>`;
                 }
                 const delTitle = totalVersions > 1 ? '删除此版本' : '删除此回复';
+                // 生图消息不显示复制按钮（HTML 内容无意义）
+                const copyBtn = isHtml ? '' : `<svg onclick="copyMessageText(this)" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" title="复制"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
                 actionsDiv.innerHTML = `
                     <svg onclick="regenerateMessage(this)" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" title="重新生成"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
-                    <svg onclick="copyMessageText(this)" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" title="复制"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                    ${copyBtn}
                     <svg onclick="deleteMessage(this)" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" title="${delTitle}"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                     ${versionNavHtml}
                     <span class="msg-model-tag" onclick="event.stopPropagation(); retryWithDropdown(this.closest('.message-block'))">${msgLogoHtml}${escapeHtml(displayModel)}</span>
@@ -3317,10 +3329,12 @@
                 btnGen.classList.add('active');
                 panel.classList.add('show');
                 updateGenControlUploadVisibility();
+                loadGenSettings();
                 userInput.placeholder = '输入图片描述词，Enter 发送';
                 clearImagePreview();
                 if (!isGenModel(activeModel)) autoSelectGenModel();
             } else {
+                saveGenSettings(); // 离开生图时保存设置
                 btnChat.classList.add('active');
                 btnGen.classList.remove('active');
                 panel.classList.remove('show');
@@ -3365,6 +3379,7 @@
                     document.getElementById('modeBtnGen').classList.add('active');
                     document.getElementById('genControlsPanel').classList.add('show');
                     userInput.placeholder = '输入图片描述词，Enter 发送';
+                    loadGenSettings();
                     if (!isGenModel(activeModel)) autoSelectGenModel();
                 } else {
                     document.documentElement.setAttribute('data-mode', 'chat');
@@ -3404,11 +3419,62 @@
             return preset;
         }
 
-        // 监听控制模式变化
+        // 生图面板所有控件改变时自动持久化
         (function() {
-            const sel = document.getElementById('genControlMode');
-            if (sel) sel.addEventListener('change', updateGenControlUploadVisibility);
+            const ids = ['genNegativePrompt','genSteps','genNumImages','genSeed',
+                'genGuidanceScale','genImageScale','genSizePreset','genWidth','genHeight',
+                'genControlMode','genControlScale'];
+            ids.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.addEventListener('input', saveGenSettings);
+                    el.addEventListener('change', () => {
+                        saveGenSettings();
+                        if (id === 'genSizePreset') onGenSizeChange();
+                        if (id === 'genControlMode') updateGenControlUploadVisibility();
+                    });
+                }
+            });
         })();
+
+        // 持久化生图设置
+        function saveGenSettings() {
+            try {
+                const s = {
+                    np: document.getElementById('genNegativePrompt').value,
+                    steps: document.getElementById('genSteps').value,
+                    num: document.getElementById('genNumImages').value,
+                    seed: document.getElementById('genSeed').value,
+                    guidance: document.getElementById('genGuidanceScale').value,
+                    imgScale: document.getElementById('genImageScale').value,
+                    size: document.getElementById('genSizePreset').value,
+                    w: document.getElementById('genWidth').value,
+                    h: document.getElementById('genHeight').value,
+                    ctrl: document.getElementById('genControlMode').value,
+                    ctrlScale: document.getElementById('genControlScale').value,
+                };
+                localStorage.setItem('chatGenSettings', JSON.stringify(s));
+            } catch(e) {}
+        }
+
+        function loadGenSettings() {
+            try {
+                const raw = localStorage.getItem('chatGenSettings');
+                if (!raw) return;
+                const s = JSON.parse(raw);
+                if (s.np !== undefined) document.getElementById('genNegativePrompt').value = s.np;
+                if (s.steps) { document.getElementById('genSteps').value = s.steps; document.getElementById('genStepsVal').textContent = s.steps; }
+                if (s.num) document.getElementById('genNumImages').value = s.num;
+                if (s.seed) document.getElementById('genSeed').value = s.seed;
+                if (s.guidance) { document.getElementById('genGuidanceScale').value = s.guidance; document.getElementById('genGuidanceScaleVal').textContent = s.guidance; }
+                if (s.imgScale) { document.getElementById('genImageScale').value = s.imgScale; document.getElementById('genImageScaleVal').textContent = s.imgScale; }
+                if (s.size) { document.getElementById('genSizePreset').value = s.size; onGenSizeChange(); }
+                if (s.w) document.getElementById('genWidth').value = s.w;
+                if (s.h) document.getElementById('genHeight').value = s.h;
+                if (s.ctrl) { document.getElementById('genControlMode').value = s.ctrl; updateGenControlUploadVisibility(); }
+                if (s.ctrlScale) { document.getElementById('genControlScale').value = s.ctrlScale; document.getElementById('genControlScaleVal').textContent = s.ctrlScale; }
+            } catch(e) {}
+        }
 
         // ============================================================
         //  输入框事件
@@ -3618,7 +3684,8 @@
         // ============================================================
         //  图片生成
         // ============================================================
-        async function sendImageGeneration(prompt) {
+        async function sendImageGeneration(prompt, skipUserMsg = false) {
+            saveGenSettings(); // 每次生图前保存设置
             const provider = getActiveProvider();
             if (!provider || !provider.apiUrl || !provider.apiKey || !activeModel) {
                 showToast('请配置 API 参数！');
@@ -3628,15 +3695,17 @@
 
             const currentSession = sessions.find(s => s.id === getCurrentId());
             currentSession.type = 'gen'; // 确保类型正确
-            if (currentSession.messages.length === 0) {
+            if (!skipUserMsg && currentSession.messages.length === 0) {
                 currentSession.title = prompt.length > 12 ? prompt.substring(0, 12) + '...' : prompt || '生图';
                 renderSidebar();
             }
 
-            // 显示用户消息
-            appendMessageDOM('user', `🎨 ${prompt}`, null, null, null, currentSession.messages.length);
-            currentSession.messages.push({ role: "user", content: prompt });
-            saveSessionsToStorage();
+            if (!skipUserMsg) {
+                // 显示用户消息
+                appendMessageDOM('user', `🎨 ${prompt}`, null, null, null, currentSession.messages.length);
+                currentSession.messages.push({ role: "user", content: prompt });
+                saveSessionsToStorage();
+            }
 
             userInput.value = '';
             userInput.style.height = '24px';
@@ -3739,10 +3808,6 @@
                     resultHtmlForDom = resultHtml;
                 }
 
-                // 更新 DOM（使用含完整 data URL 的版本）
-                const finalHtmlForDom = `<div>🎨 <strong>${escapeHtml(prompt)}</strong></div>${resultHtmlForDom}`;
-                aiMsgEl.innerHTML = finalHtmlForDom;
-
                 // 持久化（使用占位符版本，images 数组单独存储）
                 const msgData = {
                     role: "assistant",
@@ -3753,7 +3818,12 @@
                 };
                 if (genImages.length > 0) msgData.images = genImages;
                 currentSession.messages.push(msgData);
+                if (pendingVersions !== null) {
+                    currentSession.messages[currentSession.messages.length - 1].versions = pendingVersions;
+                    pendingVersions = null;
+                }
                 saveSessionsToStorage();
+                renderChatArea(); // 用 renderChatArea 重建，正确显示版本导航 ◂ ▸
 
                 // 清理控制图片
                 clearGenControlImage();
