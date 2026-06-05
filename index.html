@@ -1300,6 +1300,7 @@
         let providersBackup = null;
         let editingProviderId = null;
         let retryBlockEl = null;
+        const modelDropdown = document.getElementById('modelDropdown');
 
         function loadProviders() {
             try {
@@ -1346,15 +1347,13 @@
             const el = document.getElementById('displayModelName');
             if (!el) return;
             const logo = getActiveLogo();
-            const logoHtml = logo
-                ? `<img class="model-logo" src="${logo}" alt="" onerror="this.style.display='none'">`
-                : '<span class="model-logo-fallback">AI</span>';
+            const logoHtml = renderLogoHtml(logo);
             el.innerHTML = `${logoHtml}<span class="model-info-text">${escapeHtml(activeModel || (getActiveProvider()?.models?.[0]) || '未配置')}</span>`;
         }
 
         function renderModelDropdown() {
-            const dropdown = document.getElementById('modelDropdown');
-            if (!dropdown) return;
+            if (!modelDropdown) return;
+            const dropdown = modelDropdown;
             dropdown.innerHTML = '';
             const allItems = [];
             providers.forEach(p => {
@@ -1368,9 +1367,7 @@
                 const isActive = item.pid === activeProviderId && item.model === activeModel;
                 const div = document.createElement('div');
                 div.className = 'model-dropdown-item' + (isActive ? ' active' : '');
-                const logoHtml = item.logo
-                    ? `<img class="model-logo" src="${item.logo}" alt="" onerror="this.style.display='none'">`
-                    : '<span class="model-logo-fallback">AI</span>';
+                const logoHtml = renderLogoHtml(item.logo);
                 div.innerHTML = `<div class="dropdown-left">${logoHtml}<span>${escapeHtml(item.model)}</span></div><span class="provider-name">${escapeHtml(item.pname)}</span>`;
                 div.onclick = (e) => { e.stopPropagation(); switchModel(item.pid, item.model); };
                 dropdown.appendChild(div);
@@ -1402,14 +1399,12 @@
         function toggleModelDropdown() {
             const total = providers.reduce((s, p) => s + (p.models || []).length, 0);
             if (total <= 1) { showToast('请先在设置中添加更多模型'); return; }
-            const d = document.getElementById('modelDropdown');
-            d.classList.toggle('show');
-            if (d.classList.contains('show')) renderModelDropdown();
+            modelDropdown.classList.toggle('show');
+            if (modelDropdown.classList.contains('show')) renderModelDropdown();
         }
 
         function closeModelDropdown() {
-            const d = document.getElementById('modelDropdown');
-            if (d) d.classList.remove('show');
+            if (modelDropdown) modelDropdown.classList.remove('show');
         }
 
         document.addEventListener('click', (e) => {
@@ -1429,6 +1424,14 @@
                 url = url + '/chat/completions';
             }
             return url;
+        }
+
+        function deepClone(obj) { return JSON.parse(JSON.stringify(obj)); }
+
+        function renderLogoHtml(logo, sizeSmall = false) {
+            if (!logo) return sizeSmall ? '' : '<span class="model-logo-fallback">AI</span>';
+            const s = sizeSmall ? ' style="width:14px;height:14px;border-radius:3px;"' : '';
+            return `<img class="model-logo" src="${logo}" alt="" onerror="this.style.display='none'"${s}>`;
         }
 
         // --- models.dev Logo 匹配 ---
@@ -1528,9 +1531,7 @@
             const isActive = p.id === activeProviderId;
             const modelsHtml = (p.models || []).map((m, i) => {
                 const mLogo = getModelDevLogo(p.name, p.apiUrl, m);
-                const mLogoHtml = mLogo
-                    ? `<img class="model-logo" src="${mLogo}" alt="" onerror="this.style.display='none'" style="width:14px;height:14px;border-radius:3px;">`
-                    : '';
+                const mLogoHtml = renderLogoHtml(mLogo, true);
                 return `<span class="model-tag">${mLogoHtml}${escapeHtml(m)}<span class="tag-x" onclick="removeModelFromEditing(${i})">×</span></span>`;
             }).join('');
 
@@ -1681,7 +1682,7 @@
         }
 
         function openSettings() {
-            providersBackup = JSON.parse(JSON.stringify({ providers, activeProviderId, activeModel }));
+            providersBackup = deepClone({ providers, activeProviderId, activeModel });
             editingProviderId = activeProviderId || providers[0]?.id || null;
             renderSettingsLeft();
             renderSettingsRight();
@@ -1690,7 +1691,7 @@
 
         function closeSettings() {
             if (providersBackup) {
-                const restored = JSON.parse(JSON.stringify(providersBackup));
+                const restored = deepClone(providersBackup);
                 providers = restored.providers;
                 activeProviderId = restored.activeProviderId;
                 activeModel = restored.activeModel;
@@ -1719,7 +1720,7 @@
         // --- 导入导出 ---
         function exportProviders() {
             flushEditingProvider();
-            const exportSessions = JSON.parse(JSON.stringify(sessions));
+            const exportSessions = deepClone(sessions);
             const data = { providers, activeProviderId, activeModel, paramPresets, activePresetId, sessions: exportSessions, currentSessionId, exportedAt: new Date().toISOString() };
             const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
@@ -1752,7 +1753,7 @@
                         activeModel = (providers[0]?.models && providers[0].models[0]) || '';
                     }
                     editingProviderId = activeProviderId;
-                    providersBackup = JSON.parse(JSON.stringify({ providers, activeProviderId, activeModel }));
+                    providersBackup = deepClone({ providers, activeProviderId, activeModel });
                     renderSettingsLeft();
                     renderSettingsRight();
                     updateModelDisplay();
@@ -2689,9 +2690,7 @@
                 const presetTagHtml = presetName ? `<span class="msg-preset-tag">${escapeHtml(presetName)}</span>` : '';
                 const displayModel = msgModel || activeModel;
                 const msgLogo = msgModel ? getLogoForModel(msgModel) : getActiveLogo();
-                const msgLogoHtml = msgLogo
-                    ? `<img class="model-logo" src="${msgLogo}" alt="" onerror="this.style.display='none'" style="width:14px;height:14px;border-radius:3px;">`
-                    : '';
+                const msgLogoHtml = renderLogoHtml(msgLogo, true);
                 // 版本切换导航
                 const msg = (session && msgIndex != null) ? session.messages[msgIndex] : null;
                 const versions = (msg && msg.versions) ? msg.versions : [];
@@ -2927,11 +2926,12 @@
             fetchAIResponse();
         }
 
+        const sunIcon = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>';
+        const moonIcon = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>';
+
         function toggleDarkMode() {
             const html = document.documentElement;
             const btn = document.querySelector('.dark-mode-btn');
-            const sunIcon = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>';
-            const moonIcon = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>';
             
             const currentTheme = html.getAttribute('data-theme');
             if (currentTheme === 'dark') {
@@ -2952,7 +2952,7 @@
             if (localStorage.getItem('theme') === 'dark') {
                 document.documentElement.setAttribute('data-theme', 'dark');
                 const btn = document.querySelector('.dark-mode-btn');
-                btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>';
+                btn.innerHTML = sunIcon;
                 btn.title = '切换浅色模式';
             }
         })();
