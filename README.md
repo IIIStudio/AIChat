@@ -1,6 +1,6 @@
 # 一个简单的 AI 聊天 HTML
 
-这是一个简单的 AI 聊天 HTML 页面，纯前端单文件，打开即用。
+这是一个简单的 AI 聊天 HTML 页面，纯前端单文件，打开即用。注：只支持 OpenAI 格式的 API。
 
 兼容 OpenAI Chat Completions API 格式，支持多模型切换、流式输出和 Markdown 渲染。
 
