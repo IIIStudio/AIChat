@@ -1343,10 +1343,8 @@
                     <label>步数</label>
                     <input type="range" id="genSteps" min="1" max="50" value="9" oninput="document.getElementById('genStepsVal').textContent=this.value">
                     <span class="val-tag" id="genStepsVal">9</span>
-                    <label>张数</label>
-                    <input type="number" id="genNumImages" value="1" min="1" max="4" style="width:50px;flex:none;">
                     <label>种子</label>
-                    <input type="number" id="genSeed" value="0" min="0" max="4294967295" style="width:80px;flex:none;">
+                    <input type="number" id="genSeed" value="" min="0" max="4294967295" placeholder="随机" style="width:80px;flex:none;">
                 </div>
                 <div class="gen-row">
                     <label>引导</label>
@@ -3421,7 +3419,7 @@
 
         // 生图面板所有控件改变时自动持久化
         (function() {
-            const ids = ['genNegativePrompt','genSteps','genNumImages','genSeed',
+            const ids = ['genNegativePrompt','genSteps','genSeed',
                 'genGuidanceScale','genImageScale','genSizePreset','genWidth','genHeight',
                 'genControlMode','genControlScale'];
             ids.forEach(id => {
@@ -3443,7 +3441,6 @@
                 const s = {
                     np: document.getElementById('genNegativePrompt').value,
                     steps: document.getElementById('genSteps').value,
-                    num: document.getElementById('genNumImages').value,
                     seed: document.getElementById('genSeed').value,
                     guidance: document.getElementById('genGuidanceScale').value,
                     imgScale: document.getElementById('genImageScale').value,
@@ -3464,7 +3461,6 @@
                 const s = JSON.parse(raw);
                 if (s.np !== undefined) document.getElementById('genNegativePrompt').value = s.np;
                 if (s.steps) { document.getElementById('genSteps').value = s.steps; document.getElementById('genStepsVal').textContent = s.steps; }
-                if (s.num) document.getElementById('genNumImages').value = s.num;
                 if (s.seed) document.getElementById('genSeed').value = s.seed;
                 if (s.guidance) { document.getElementById('genGuidanceScale').value = s.guidance; document.getElementById('genGuidanceScaleVal').textContent = s.guidance; }
                 if (s.imgScale) { document.getElementById('genImageScale').value = s.imgScale; document.getElementById('genImageScaleVal').textContent = s.imgScale; }
@@ -3721,17 +3717,18 @@
                 }
                 const genUrl = baseUrl + '/images/generations';
 
+                const seedVal = parseInt(document.getElementById('genSeed').value) || 0;
                 const body = {
                     model: activeModel,
                     prompt: prompt,
-                    num_images_per_prompt: parseInt(document.getElementById('genNumImages').value) || 1,
+                    num_images_per_prompt: 1,
                     negative_prompt: document.getElementById('genNegativePrompt').value.trim() || undefined,
                     num_inference_steps: parseInt(document.getElementById('genSteps').value) || 9,
-                    seed: parseInt(document.getElementById('genSeed').value) || 0,
                     guidance_scale: parseFloat(document.getElementById('genGuidanceScale').value) || 1,
                     image_scale: parseFloat(document.getElementById('genImageScale').value) || 1,
                     size: getGenSize(),
                 };
+                if (seedVal !== 0) body.seed = seedVal; // 0=随机，不传
 
                 // 控制模式
                 const controlMode = document.getElementById('genControlMode').value;
@@ -3761,20 +3758,17 @@
                 // 处理生成结果
                 const genImages = [];       // 持久化：{b64, type}
                 let resultHtml = '';        // 持久化用的 HTML（占位符）
-                let resultHtmlForDom = '';  // 直接 DOM 用的 HTML（含完整 data URL）
                 if (data.data && data.data.length > 0) {
                     for (let i = 0; i < data.data.length; i++) {
                         const imgData = data.data[i];
                         if (imgData.url) {
                             const url = imgData.url;
-                            const imgHtml = `<div style="position:relative;display:inline-block;margin:4px;">
+                            resultHtml += `<div style="position:relative;display:inline-block;margin:4px;">
                                 <img src="${escapeHtml(url)}" onclick="previewGenImage('${escapeHtml(url)}')" 
                                     style="max-width:280px;max-height:280px;border-radius:12px;cursor:pointer;border:1px solid var(--border-color);"
                                     onerror="this.style.display='none';this.nextElementSibling.style.display='inline-block';">
                                 <a href="${escapeHtml(url)}" download="" class="gen-download-btn" style="margin-top:4px;display:block;text-align:center;text-decoration:none;">⬇ 下载</a>
                             </div>`;
-                            resultHtml += imgHtml;
-                            resultHtmlForDom += imgHtml;
                         } else if (imgData.b64_json) {
                             const idx = genImages.length;
                             genImages.push({ b64: imgData.b64_json, type: imgData.type || 'image/png' });
@@ -3784,19 +3778,7 @@
                                     style="max-width:280px;max-height:280px;border-radius:12px;cursor:pointer;border:1px solid var(--border-color);">
                                 <button onclick="downloadGenImageFromSrc(this.parentElement.querySelector('img').src)" class="gen-download-btn" style="margin-top:4px;">⬇ 下载</button>
                             </div>`;
-                            // DOM 即时渲染：完整 data URL（仅用于本次显示，不入库）
-                            const dataUrl = 'data:' + (imgData.type || 'image/png') + ';base64,' + imgData.b64_json;
-                            resultHtmlForDom += `<div style="position:relative;display:inline-block;margin:4px;">
-                                <img src="${dataUrl}" onclick="previewGenImage(this.src)" 
-                                    style="max-width:280px;max-height:280px;border-radius:12px;cursor:pointer;border:1px solid var(--border-color);">
-                                <button onclick="downloadGenImageFromSrc(this.parentElement.querySelector('img').src)" class="gen-download-btn" style="margin-top:4px;">⬇ 下载</button>
-                            </div>`;
                         }
-                    }
-                    if (resultHtmlForDom) {
-                        resultHtmlForDom = '<div class="generated-images">' + resultHtmlForDom + '</div>';
-                    } else {
-                        resultHtmlForDom = '⚠️ 已生成但无法显示图片';
                     }
                     if (resultHtml) {
                         resultHtml = '<div class="generated-images">' + resultHtml + '</div>';
@@ -3805,7 +3787,6 @@
                     }
                 } else {
                     resultHtml = '⚠️ 未能生成图片，请检查参数后重试';
-                    resultHtmlForDom = resultHtml;
                 }
 
                 // 持久化（使用占位符版本，images 数组单独存储）
