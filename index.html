@@ -1347,7 +1347,10 @@
 
         function selectPreset(id) {
             activePresetId = id;
+            const sess = sessions.find(s => s.id === currentSessionId);
+            if (sess) sess.presetId = id;
             savePresets();
+            saveSessionsToStorage();
             renderPresetTags();
             const p = getActivePreset();
             if (p) showToast(`已选择预设: ${p.name}`);
@@ -1468,12 +1471,31 @@
         }
 
         function loadSessionsFromStorage() {
+            let migrated = false;
             try {
                 const saved = localStorage.getItem('chatSessions');
                 if (saved) {
                     const data = JSON.parse(saved);
                     sessions = data.sessions || [];
                     currentSessionId = data.currentSessionId || null;
+                    // 迁移：给没有 presetId 的消息和版本历史补上会话的 presetId
+                    sessions.forEach(s => {
+                        if (!s.presetId) s.presetId = activePresetId;
+                        s.messages.forEach(msg => {
+                            if (msg.role === 'assistant' && msg.presetId == null) {
+                                msg.presetId = s.presetId;
+                                migrated = true;
+                            }
+                            if (msg.versions && Array.isArray(msg.versions)) {
+                                msg.versions.forEach(ver => {
+                                    if (ver.presetId == null) {
+                                        ver.presetId = msg.presetId || s.presetId;
+                                        migrated = true;
+                                    }
+                                });
+                            }
+                        });
+                    });
                 }
             } catch(e) {}
             if (sessions.length === 0) {
@@ -1484,6 +1506,7 @@
             if (!sessions.find(s => s.id === currentSessionId)) {
                 currentSessionId = sessions[0]?.id || null;
             }
+            if (migrated) saveSessionsToStorage();
         }
 
         function createNewChat() {
@@ -1734,6 +1757,7 @@
                     let displayContent, imageUrl;
                     let displayModel = msg.model;
                     let displayThought = msg.thought;
+                    let displayPresetId = msg.presetId;
                     // 如果有版本历史且正在查看旧版本，使用旧版本内容
                     if (msg.role === 'assistant' && msg.versions && msg.versions.length > 0) {
                         const dv = msg.displayVersionIdx || 0;
@@ -1742,6 +1766,7 @@
                             displayContent = ver.content;
                             displayModel = ver.model || msg.model;
                             displayThought = ver.thought || msg.thought;
+                            displayPresetId = ver.presetId != null ? ver.presetId : msg.presetId;
                         } else if (Array.isArray(msg.content)) {
                             const textPart = msg.content.find(c => c.type === 'text');
                             displayContent = textPart ? textPart.text : '';
@@ -1756,7 +1781,7 @@
                     } else {
                         displayContent = msg.content;
                     }
-                    appendMessageDOM(msg.role, displayContent, displayThought, imageUrl, displayModel, idx);
+                    appendMessageDOM(msg.role, displayContent, displayThought, imageUrl, displayModel, idx, displayPresetId);
                 });
             }
             updateMessageAnchors();
@@ -1773,7 +1798,7 @@
             // 保存当前回复到版本历史
             if (msg && msg.role === 'assistant') {
                 pendingVersions = (msg.versions || []).slice();
-                pendingVersions.push({ content: msg.content, thought: msg.thought, model: msg.model });
+                pendingVersions.push({ content: msg.content, thought: msg.thought, model: msg.model, presetId: msg.presetId });
             }
             currentSession.messages = currentSession.messages.slice(0, index); 
             saveSessionsToStorage();
@@ -1866,7 +1891,7 @@
             const oldAs = session.messages[oldAsIdx];
             if (oldAs && oldAs.role === 'assistant') {
                 pendingVersions = (oldAs.versions || []).slice();
-                pendingVersions.push({ content: oldAs.content, thought: oldAs.thought, model: oldAs.model });
+                pendingVersions.push({ content: oldAs.content, thought: oldAs.thought, model: oldAs.model, presetId: oldAs.presetId });
             }
             // 截断消息列表，仅保留到当前编辑的用户消息及之前的消息
             session.messages = session.messages.slice(0, editingMessageIndex + 1);
@@ -1950,7 +1975,7 @@
         // --- 消息折叠（仅对 user 长消息生效，默认折叠，不持久化） ---
         const COLLAPSE_THRESHOLD = 300; // 内容超过此字符数时自动折叠
 
-        function appendMessageDOM(role, content, thought = null, imageUrl = null, msgModel = null, msgIndex = null) {
+        function appendMessageDOM(role, content, thought = null, imageUrl = null, msgModel = null, msgIndex = null, msgPresetId = null) {
             welcomeScreen.style.display = 'none';
             
             const blockDiv = document.createElement('div');
@@ -2022,7 +2047,10 @@
                     <svg onclick="deleteMessage(this)" width="14" height="14" viewBox="0 0 24 24" title="删除"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                 `;
             } else {
-                const presetName = getActivePreset()?.name || '';
+                const session = sessions.find(s => s.id === currentSessionId);
+                const fallbackPresetId = (msgPresetId != null) ? msgPresetId : (session?.presetId);
+                const msgPreset = (fallbackPresetId != null) ? paramPresets.find(p => p.id === fallbackPresetId) : getActivePreset();
+                const presetName = msgPreset?.name || '';
                 const presetTagHtml = presetName ? `<span class="msg-preset-tag">${escapeHtml(presetName)}</span>` : '';
                 const displayModel = msgModel || activeModel;
                 const msgLogo = msgModel ? getLogoForModel(msgModel) : getActiveLogo();
@@ -2030,7 +2058,6 @@
                     ? `<img class="model-logo" src="${msgLogo}" alt="" onerror="this.style.display='none'" style="width:14px;height:14px;border-radius:3px;">`
                     : '';
                 // 版本切换导航
-                const session = sessions.find(s => s.id === currentSessionId);
                 const msg = (session && msgIndex != null) ? session.messages[msgIndex] : null;
                 const versions = (msg && msg.versions) ? msg.versions : [];
                 const dv = (msg && msg.displayVersionIdx != null) ? msg.displayVersionIdx : 0;
@@ -2174,7 +2201,7 @@
                     const data = await response.json();
                     aiReply = data.choices[0].message.content;
                 }
-                currentSession.messages.push({ role: "assistant", content: aiReply, thought: fakeThought, model: activeModel });
+                currentSession.messages.push({ role: "assistant", content: aiReply, thought: fakeThought, model: activeModel, presetId: activePresetId });
                 if (pendingVersions !== null) {
                     currentSession.messages[currentSession.messages.length - 1].versions = pendingVersions;
                     pendingVersions = null;
@@ -2200,20 +2227,20 @@
                         saveSessionsToStorage();
                         // 插入提示
                         const tipMsg = '⚠️ 该模型不支持图片输入，已自动转为纯文字发送';
-                        currentSession.messages.push({ role: "assistant", content: tipMsg });
+                        currentSession.messages.push({ role: "assistant", content: tipMsg, presetId: activePresetId });
                         saveSessionsToStorage();
                         renderChatArea();
                         setTimeout(() => fetchAIResponse(), 100);
                     } else {
                         const errMsg = '该模型不支持图片输入，请移除图片或切换到支持多模态的模型后重试。';
-                        currentSession.messages.push({ role: "assistant", content: errMsg });
+                        currentSession.messages.push({ role: "assistant", content: errMsg, presetId: activePresetId });
                         pendingVersions = null;
                         saveSessionsToStorage();
                         renderChatArea();
                     }
                 } else {
                     const errFull = `请求失败: ${msg}`;
-                    currentSession.messages.push({ role: "assistant", content: errFull });
+                    currentSession.messages.push({ role: "assistant", content: errFull, presetId: activePresetId });
                     pendingVersions = null;
                     saveSessionsToStorage();
                     renderChatArea();
@@ -2256,7 +2283,6 @@
 
             appendMessageDOM('user', displayText, null, imageForDisplay, null, currentSession.messages.length);
             currentSession.messages.push({ role: "user", content: content });
-            currentSession.presetId = activePresetId;
             saveSessionsToStorage();
             
             clearImagePreview();
