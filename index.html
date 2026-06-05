@@ -381,11 +381,28 @@
             background: var(--bg-surface);
             border: 1px solid var(--border-color);
             border-radius: 12px;
-            padding: 14px 16px;
+            padding: 10px 16px;
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 0;
         }
+        .gen-collapse-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+            font-size: 12px;
+            color: var(--text-muted);
+            padding-bottom: 8px;
+            transition: color 0.15s;
+        }
+        .gen-collapse-bar:hover { color: var(--text-main); }
+        .gen-collapse-arrow { font-size: 10px; }
+        .gen-collapse-body { display: flex; flex-direction: column; gap: 10px; padding-top: 2px; }
+        .gen-collapse-body.collapsed { display: none; }
+        /* 折叠时去除 bar 的底部间距 */
+        .gen-controls-inner:has(.gen-collapse-body.collapsed) .gen-collapse-bar { padding-bottom: 0; }
         .gen-row {
             display: flex;
             align-items: center;
@@ -1335,6 +1352,12 @@
 
         <div class="gen-controls-panel" id="genControlsPanel">
             <div class="gen-controls-inner">
+                <div class="gen-collapse-bar" onclick="toggleGenControls()">
+                    <span>⚙ 生图参数</span>
+                    <span class="gen-collapse-summary" id="genCollapseSummary" style="display:none;flex:1;text-align:right;margin-right:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;"></span>
+                    <span class="gen-collapse-arrow" id="genCollapseArrow">▲</span>
+                </div>
+                <div class="gen-collapse-body" id="genCollapseBody">
                 <div class="gen-row">
                     <label>反向词</label>
                     <input type="text" id="genNegativePrompt" placeholder="blurry ugly bad" maxlength="500">
@@ -1393,6 +1416,7 @@
                         <span class="gen-ctrl-remove" onclick="clearGenControlImage()">✕ 移除</span>
                     </div>
                 </div>
+                </div><!-- gen-collapse-body -->
             </div>
         </div>
 
@@ -3330,6 +3354,7 @@
                 loadGenSettings();
                 userInput.placeholder = '输入图片描述词，Enter 发送';
                 clearImagePreview();
+                restoreGenCollapse();
                 if (!isGenModel(activeModel)) autoSelectGenModel();
             } else {
                 saveGenSettings(); // 离开生图时保存设置
@@ -3378,12 +3403,53 @@
                     document.getElementById('genControlsPanel').classList.add('show');
                     userInput.placeholder = '输入图片描述词，Enter 发送';
                     loadGenSettings();
+                    restoreGenCollapse();
                     if (!isGenModel(activeModel)) autoSelectGenModel();
                 } else {
                     document.documentElement.setAttribute('data-mode', 'chat');
                     if (isGenModel(activeModel)) autoSelectChatModel();
                 }
             } catch(e) {}
+        }
+
+        function toggleGenControls(save = true) {
+            const body = document.getElementById('genCollapseBody');
+            const arrow = document.getElementById('genCollapseArrow');
+            const sum = document.getElementById('genCollapseSummary');
+            if (!body || !arrow) return;
+            body.classList.toggle('collapsed');
+            const collapsed = body.classList.contains('collapsed');
+            arrow.textContent = collapsed ? '▼' : '▲';
+            if (collapsed && sum) {
+                sum.style.display = '';
+                sum.textContent = buildGenSummary();
+            } else if (sum) {
+                sum.style.display = 'none';
+            }
+            if (save) try { localStorage.setItem('chatGenCollapsed', collapsed ? '1' : '0'); } catch(e) {}
+        }
+
+        function buildGenSummary() {
+            const parts = [];
+            parts.push(getGenSize());
+            const steps = document.getElementById('genSteps').value;
+            if (steps != 9) parts.push('步' + steps);
+            const gs = document.getElementById('genGuidanceScale').value;
+            if (gs != 1) parts.push('引导' + gs);
+            const ctrl = document.getElementById('genControlMode').value;
+            if (ctrl) parts.push(ctrl);
+            return parts.join(', ');
+        }
+
+        function restoreGenCollapse() {
+            try {
+                if (localStorage.getItem('chatGenCollapsed') === '1') {
+                    toggleGenControls(false);
+                }
+            } catch(e) {}
+            // 非折叠状态也更新摘要（参数可能已加载）
+            const sum = document.getElementById('genCollapseSummary');
+            if (sum && sum.style.display !== 'none') sum.textContent = buildGenSummary();
         }
 
         function updateGenControlUploadVisibility() {
