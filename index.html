@@ -281,6 +281,7 @@
         .msg-model-tag { display: inline-flex; align-items: center; font-size: 11px; color: var(--text-muted); cursor: pointer; padding: 2px 8px; border-radius: 10px; border: 1px solid transparent; margin-left: auto; transition: all 0.15s; user-select: none; white-space: nowrap; flex-shrink: 0; }
         .msg-model-tag:hover { border-color: var(--border-color); color: var(--text-main); }
         .msg-preset-tag { display: inline-flex; align-items: center; font-size: 11px; color: var(--text-muted); padding: 2px 8px; border-radius: 10px; border: 1px solid var(--border-color); user-select: none; white-space: nowrap; flex-shrink: 0; }
+        .msg-genparams-tag { display: inline-flex; align-items: center; font-size: 10px; color: var(--text-muted); padding: 2px 8px; border-radius: 10px; border: 1px dashed var(--border-color); user-select: none; white-space: nowrap; flex-shrink: 0; cursor: default; }
 
         /* --- 底部输入区 --- */
         .input-area {
@@ -3525,6 +3526,7 @@
                     let displayThought = msg.thought;
                     let displayPresetId = msg.presetId;
                     let displayGenImages = msg.images || null;
+                    let displayGenParams = msg.genParams || null;
                     // 如果有版本历史且正在查看旧版本，使用旧版本内容
                     let displayIsHtml = msg.isHtml || false;
                     if (msg.role === 'assistant' && msg.versions && msg.versions.length > 0) {
@@ -3537,6 +3539,7 @@
                             displayPresetId = ver.presetId != null ? ver.presetId : msg.presetId;
                             displayIsHtml = ver.isHtml != null ? ver.isHtml : displayIsHtml;
                             displayGenImages = ver.images || displayGenImages;
+                            displayGenParams = ver.genParams || displayGenParams;
                         } else if (Array.isArray(msg.content)) {
                             const textPart = msg.content.find(c => c.type === 'text');
                             displayContent = textPart ? textPart.text : '';
@@ -3551,7 +3554,7 @@
                     } else {
                         displayContent = msg.content;
                     }
-                    appendMessageDOM(msg.role, displayContent, displayThought, imageUrl, displayModel, idx, displayPresetId, displayIsHtml, displayGenImages);
+                    appendMessageDOM(msg.role, displayContent, displayThought, imageUrl, displayModel, idx, displayPresetId, displayIsHtml, displayGenImages, displayGenParams);
                 });
             }
             updateMessageAnchors();
@@ -3568,7 +3571,7 @@
             // 保存当前回复到版本历史
             if (msg && msg.role === 'assistant') {
                 pendingVersions = (msg.versions || []).slice();
-                pendingVersions.push({ content: msg.content, thought: msg.thought, model: msg.model, presetId: msg.presetId, isHtml: msg.isHtml, images: msg.images });
+                pendingVersions.push({ content: msg.content, thought: msg.thought, model: msg.model, presetId: msg.presetId, isHtml: msg.isHtml, images: msg.images, genParams: msg.genParams });
             }
             // 生图模式：保留当前用户消息作为提示词，不额外添加用户消息
             if (imageGenMode) {
@@ -3768,7 +3771,7 @@
         // ============================================================
         const COLLAPSE_THRESHOLD = 300; // 内容超过此字符数时自动折叠
 
-        function appendMessageDOM(role, content, thought = null, imageUrl = null, msgModel = null, msgIndex = null, msgPresetId = null, isHtml = false, genImages = null) {
+        function appendMessageDOM(role, content, thought = null, imageUrl = null, msgModel = null, msgIndex = null, msgPresetId = null, isHtml = false, genImages = null, genParams = null) {
             welcomeScreen.style.display = 'none';
             
             const blockDiv = document.createElement('div');
@@ -3878,6 +3881,19 @@
                 const favHeartSvg = isFavd
                     ? `<svg onclick="favGenBlockImages(this)" width="14" height="14" viewBox="0 0 24 24" stroke="none" style="fill:#e74c3c;color:#e74c3c;cursor:pointer;" title="已收藏"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>`
                     : `<svg onclick="favGenBlockImages(this)" width="14" height="14" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="fill:none;" title="收藏图片"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>`;
+                // 生图参数摘要
+                let genParamsHtml = '';
+                if (isHtml && genParams) {
+                    const gp = genParams;
+                    const parts = [];
+                    parts.push(gp.size);
+                    if (gp.steps && gp.steps !== 9) parts.push('步' + gp.steps);
+                    if (gp.guidance && gp.guidance !== 1) parts.push('引导' + gp.guidance);
+                    if (gp.seed) parts.push('种' + gp.seed);
+                    if (gp.control) parts.push(gp.control);
+                    parts.push('图尺' + gp.imgScale);
+                    genParamsHtml = `<span class="msg-genparams-tag">${escapeHtml(parts.join(' · '))}</span>`;
+                }
                 const genExtraBtns = isHtml ? `
                     <svg onclick="downloadGenBlockImages(this)" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" title="下载全部图片"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                     ${favHeartSvg}
@@ -3889,6 +3905,7 @@
                     ${genExtraBtns}
                     ${versionNavHtml}
                     <span class="msg-model-tag" onclick="event.stopPropagation(); retryWithDropdown(this.closest('.message-block'))">${msgLogoHtml}${escapeHtml(displayModel)}</span>
+                    ${genParamsHtml}
                     ${presetTagHtml}
                 `;
             }
@@ -4515,11 +4532,22 @@
                 }
 
                 // 持久化（使用占位符版本，images 数组单独存储）
+                const genParams = {
+                    size: getGenSize(),
+                    steps: parseInt(document.getElementById('genSteps').value) || 9,
+                    guidance: parseFloat(document.getElementById('genGuidanceScale').value) || 1,
+                    imgScale: parseFloat(document.getElementById('genImageScale').value) || 1,
+                    seed: seedVal,
+                    negative: document.getElementById('genNegativePrompt').value.trim() || '',
+                    control: document.getElementById('genControlMode').value || '',
+                    controlScale: document.getElementById('genControlScale').value || ''
+                };
                 const msgData = {
                     role: "assistant",
                     content: `<div>🎨 <strong>${escapeHtml(prompt)}</strong></div>${resultHtml}`,
                     model: activeModel,
                     genPrompt: prompt,
+                    genParams: genParams,
                     isHtml: true
                 };
                 if (genImages.length > 0) msgData.images = genImages;
