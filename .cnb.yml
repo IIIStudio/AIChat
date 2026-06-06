@@ -17,3 +17,13 @@ main:
             branch: main
             # sync_mode: mirror
             # force: true
+  web_trigger:
+    - runner:
+        cpus: 1
+      stages:
+        - name: 拉取
+          script: |
+            git remote add github https://github.com/IIIStudio/AIChat.git
+            git fetch github
+            git merge github/main
+            git push origin main

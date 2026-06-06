@@ -1,0 +1,6 @@
+branch:
+  - buttons:
+      - name: 拉取
+        event: web_trigger
+        description: "拉取GitHub"
+        isDefault: true
