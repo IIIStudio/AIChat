@@ -742,7 +742,7 @@
         .model-info { cursor: pointer; padding: 4px 8px; border-radius: 6px; transition: background 0.2s; user-select: none; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; }
         .model-info:hover { background: rgba(128,128,128,0.1); }
         .model-info::after { content: ' ▾'; font-size: 10px; opacity: 0.5; line-height: 1; }
-        .model-dropdown { position: fixed; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 10px; box-shadow: 0 4px 16px rgba(0,0,0,0.12); min-width: 240px; z-index: 99999; display: none; }
+        .model-dropdown { position: fixed; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 10px; box-shadow: 0 4px 16px rgba(0,0,0,0.12); min-width: 240px; z-index: 99999; display: none; max-height: 300px; overflow-y: auto; scrollbar-width: none; }
         .model-dropdown.show { display: block; }
         .model-dropdown-item { padding: 10px 14px; font-size: 13px; cursor: pointer; white-space: nowrap; border-bottom: 1px solid var(--border-light); display: flex; justify-content: space-between; align-items: center; gap: 8px; transition: background 0.15s; }
         .model-dropdown-item:last-child { border-bottom: none; }
@@ -1103,6 +1103,7 @@
                 border-radius: 14px;
                 gap: 12px;
                 margin: 0 3vw;
+                max-height: 90vh;
             }
             .modal h2 {
                 font-size: 16px;
