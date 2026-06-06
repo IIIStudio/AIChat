@@ -2794,15 +2794,14 @@
         function exportProviders() {
             flushEditingProvider();
             const exportSessions = deepClone(sessions);
-            const data = { providers, activeProviderId, activeModel, paramPresets, activePresetId, sessions: exportSessions, currentChatSessionId, currentGenSessionId, exportedAt: new Date().toISOString() };
+            const data = { providers, activeProviderId, activeModel, paramPresets, activePresetId, sessions: exportSessions, favorites, currentChatSessionId, currentGenSessionId, exportedAt: new Date().toISOString() };
             const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
             a.download = 'chat-providers-' + new Date().toISOString().slice(0, 10) + '.json';
             a.click();
             URL.revokeObjectURL(url);
-            showToast(`已导出 (${providers.length}个运营商, ${sessions.length}个会话)`);
+            showToast(`已导出 (${providers.length}个运营商, ${sessions.length}个会话, ${favorites.length}个收藏)`);
         }
 
         function importProviders(input) {
@@ -2854,7 +2853,16 @@
                         saveSessionsToStorage();
                         switchChat(getCurrentId());
                     }
-                    showToast(`已导入 (${providers.length}个运营商, ${sessions.length}个会话)`);
+                    // 恢复收藏
+                    if (data.favorites && Array.isArray(data.favorites)) {
+                        favorites = data.favorites.map(f => {
+                            if (!f.tags) f.tags = [];
+                            return f;
+                        });
+                        saveFavorites();
+                        if (favMode) renderFavorites();
+                    }
+                    showToast(`已导入 (${providers.length}个运营商, ${sessions.length}个会话, ${favorites.length}个收藏)`);
                 } catch(err) {
                     showToast('导入失败: JSON 格式不正确');
                 }
