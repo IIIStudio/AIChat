@@ -1852,7 +1852,7 @@
 
                     const unfavBtn = document.createElement('button');
                     unfavBtn.title = '取消收藏';
-                    unfavBtn.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" stroke="none" style="fill:#e74c3c;pointer-events:none;"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>';
+                    unfavBtn.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="fill:none;pointer-events:none;"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>';
                     unfavBtn.onclick = function(e) {
                         e.stopPropagation();
                         removeFavorite(card.getAttribute('data-fav-id'));
