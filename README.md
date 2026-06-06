@@ -94,3 +94,6 @@
 - IndexedDB 持久化存储（配置、会话、收藏夹）
 - IntersectionObserver 图片懒加载
 - CSS column 瀑布流 + 毛玻璃效果
+
+## 友链
+本项目积极参与并认可 [linux.do社区](linux.do)
