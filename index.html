@@ -395,7 +395,6 @@
             break-inside: avoid;
             margin-bottom: 12px;
             border-radius: 12px;
-            overflow: hidden;
             position: relative;
             cursor: pointer;
             border: 1px solid var(--border-color);
@@ -412,6 +411,7 @@
             width: 100%;
             display: block;
             object-fit: cover;
+            border-radius: 12px;
         }
         .fav-card-overlay {
             position: absolute;
@@ -422,6 +422,7 @@
             opacity: 0;
             transition: opacity 0.2s;
             background: linear-gradient(180deg, rgba(0,0,0,0.5) 0%, transparent 100%);
+            border-radius: 12px 12px 0 0;
         }
         .fav-card:hover .fav-card-overlay { opacity: 1; }
         .fav-card-overlay button {
