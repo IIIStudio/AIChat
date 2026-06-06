@@ -1,4 +1,4 @@
-# AI Chat — 多模型对话 & 生图客户端
+# AI Chat — 多模型对话 & 生图网页
 
 纯前端单文件，打开即用。支持 OpenAI 格式 Chat Completions API 和 Images Generations API。
 
