@@ -15,5 +15,5 @@ main:
             username: ${GIT_USERNAME} 
             password: ${GIT_ACCESS_TOKEN}
             branch: main
-            sync_mode: mirror
-            force: true
+            # sync_mode: mirror
+            # force: true
