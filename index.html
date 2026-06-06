@@ -360,6 +360,8 @@
         }
         .mode-toggle-btn:first-child { border-radius: 8px 0 0 8px; }
         .mode-toggle-btn:last-child { border-radius: 0 8px 8px 0; }
+        .mode-toggle-btn:not(:first-child):not(:last-child) { border-radius: 0; border-left: none; border-right: none; }
+        .mode-toggle-btn + .mode-toggle-btn { border-left: none; }
         .mode-toggle-btn.active {
             background: var(--text-main);
             color: var(--text-on-dark);
@@ -367,6 +369,103 @@
             font-weight: 500;
         }
         .mode-toggle-btn:hover:not(.active) { border-color: var(--text-muted); color: var(--text-main); }
+
+        /* --- 收藏页面 --- */
+        #favPage { display: none; flex: 1; overflow-y: auto; padding: 24px; }
+        #favPage.show { display: block; }
+        [data-mode="fav"] .chat-container { display: none !important; }
+        [data-mode="fav"] .input-area { display: none !important; }
+        [data-mode="fav"] .preset-tags-area { display: none !important; }
+        [data-mode="fav"] .image-preview-area { display: none !important; }
+        [data-mode="fav"] .gen-controls-panel { display: none !important; }
+        [data-mode="fav"] .message-anchors { display: none !important; }
+
+        .fav-waterfall {
+            column-count: 5;
+            column-gap: 12px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        @media (max-width: 1100px) { .fav-waterfall { column-count: 4; } }
+        @media (max-width: 860px) { .fav-waterfall { column-count: 3; } }
+        @media (max-width: 600px) { .fav-waterfall { column-count: 2; } }
+
+        .fav-card {
+            break-inside: avoid;
+            margin-bottom: 12px;
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+            cursor: pointer;
+            border: 1px solid var(--border-color);
+            background: var(--bg-surface);
+            transition: transform 0.2s, box-shadow 0.2s;
+            animation: favFadeIn 0.4s ease both;
+        }
+        @keyframes favFadeIn {
+            from { opacity: 0; transform: translateY(16px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .fav-card:hover { transform: translateY(-2px); box-shadow: 0 6px 24px rgba(0,0,0,0.1); }
+        .fav-card img {
+            width: 100%;
+            display: block;
+            object-fit: cover;
+        }
+        .fav-card-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            padding: 8px;
+            display: flex;
+            gap: 6px;
+            opacity: 0;
+            transition: opacity 0.2s;
+            background: linear-gradient(180deg, rgba(0,0,0,0.5) 0%, transparent 100%);
+        }
+        .fav-card:hover .fav-card-overlay { opacity: 1; }
+        .fav-card-overlay button {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            border: none;
+            background: rgba(255,255,255,0.9);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #333;
+            transition: background 0.15s, transform 0.15s;
+        }
+        .fav-card-overlay button:hover { background: #fff; transform: scale(1.1); }
+        .fav-card-overlay button svg { width: 15px; height: 15px; }
+
+        .fav-empty {
+            text-align: center;
+            padding: 80px 20px;
+            color: var(--text-muted);
+        }
+        .fav-empty svg { opacity: 0.3; margin-bottom: 16px; }
+        .fav-empty h3 { font-size: 18px; margin-bottom: 6px; font-weight: 600; }
+        .fav-empty p { font-size: 13px; }
+
+        .fav-gen-heart {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: 1px solid var(--border-color);
+            background: var(--bg-surface);
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.15s;
+            flex-shrink: 0;
+        }
+        .fav-gen-heart:hover { border-color: #e74c3c; color: #e74c3c; }
+        .fav-gen-heart.favorited { color: #e74c3c; border-color: #e74c3c; background: #fef0f0; }
+        [data-theme="dark"] .fav-gen-heart.favorited { background: #3a1a1a; }
+        .fav-gen-heart svg { width: 14px; height: 14px; pointer-events: none; }
 
         /* --- 生图控制面板 --- */
         .gen-controls-panel {
@@ -1315,6 +1414,7 @@
                 <div class="mode-toggle-wrap" id="modeToggleWrap">
                     <button class="mode-toggle-btn active" id="modeBtnChat" onclick="setMode('chat')">对话</button>
                     <button class="mode-toggle-btn" id="modeBtnGen" onclick="setMode('gen')">生图</button>
+                    <button class="mode-toggle-btn" id="modeBtnFav" onclick="setMode('fav')">收藏</button>
                 </div>
             </div>
             <div class="nav-right-actions">
@@ -1337,6 +1437,10 @@
                     <p>输入一条消息开始新的会话。</p>
                 </div>
                 </div>
+        </div>
+
+        <div id="favPage" class="thin-scrollbar">
+            <div class="fav-waterfall" id="favWaterfall"></div>
         </div>
 
         <div class="preset-tags-area">
@@ -1554,9 +1658,11 @@
         //  同步初始化：防止刷新时闪烁（先于任何 DOM 渲染）
         // ============================================================
         let imageGenMode = false;
+        let favMode = false;
         (function initModeSync() {
             try {
-                if (localStorage.getItem('chatGenMode') === 'gen') {
+                const mode = localStorage.getItem('chatGenMode');
+                if (mode === 'gen') {
                     imageGenMode = true;
                     document.documentElement.setAttribute('data-mode', 'gen');
                     const btnChat = document.getElementById('modeBtnChat');
@@ -1567,6 +1673,19 @@
                     if (btnGen) btnGen.classList.add('active');
                     if (panel) panel.classList.add('show');
                     if (input) input.placeholder = '输入图片描述词，Enter 发送';
+                } else if (mode === 'fav') {
+                    favMode = true;
+                    document.documentElement.setAttribute('data-mode', 'fav');
+                    const btnChat = document.getElementById('modeBtnChat');
+                    const btnGen = document.getElementById('modeBtnGen');
+                    const btnFav = document.getElementById('modeBtnFav');
+                    const favPage = document.getElementById('favPage');
+                    const input = document.getElementById('userInput');
+                    if (btnChat) btnChat.classList.remove('active');
+                    if (btnGen) btnGen.classList.remove('active');
+                    if (btnFav) btnFav.classList.add('active');
+                    if (favPage) favPage.classList.add('show');
+                    if (input) input.placeholder = '收藏页面';
                 }
             } catch(e) {}
         })();
@@ -1622,6 +1741,142 @@
                 req.onsuccess = () => resolve();
                 req.onerror = () => reject(req.error);
             });
+        }
+
+        // ============================================================
+        //  收藏管理
+        // ============================================================
+        let favorites = [];
+
+        async function loadFavorites() {
+            try {
+                const saved = await dbGet('favorites');
+                if (saved && Array.isArray(saved)) favorites = saved;
+            } catch(e) {}
+        }
+
+        async function saveFavorites() {
+            try { await dbSet('favorites', favorites); } catch(e) {}
+        }
+
+        function addFavorite(src, prompt, type) {
+            // 去重
+            if (favorites.some(f => f.imageSrc === src && f.prompt === prompt)) {
+                showToast('已收藏过此图片');
+                return;
+            }
+            favorites.push({
+                id: Date.now(),
+                prompt: prompt,
+                imageSrc: src,
+                imageType: type || 'url',
+                addedAt: Date.now()
+            });
+            saveFavorites();
+            showToast('已收藏');
+        }
+
+        function removeFavorite(id) {
+            const numId = Number(id);
+            favorites = favorites.filter(f => f.id !== numId);
+            saveFavorites();
+            renderFavorites();
+            showToast('已取消收藏');
+        }
+
+        function downloadFavImage(imageSrc) {
+            const a = document.createElement('a');
+            a.href = imageSrc;
+            a.download = 'favorite-image.png';
+            a.click();
+        }
+
+        function copyFavPrompt(prompt) {
+            navigator.clipboard.writeText(prompt).then(() => {
+                showToast('提示词已复制');
+            }).catch(() => {
+                showToast('复制失败');
+            });
+        }
+
+        function renderFavorites() {
+            const waterfall = document.getElementById('favWaterfall');
+            if (!waterfall) return;
+            if (favorites.length === 0) {
+                waterfall.innerHTML = `
+                    <div class="fav-empty">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+                        <h3>暂无收藏</h3>
+                        <p>在生图模式下点击图片旁的 ❤ 即可收藏</p>
+                    </div>`;
+                return;
+            }
+            // 异步渲染，逐批添加卡片
+            waterfall.innerHTML = '';
+            const allFavs = favorites.slice();
+            const batchSize = 10;
+            let i = 0;
+            function renderBatch() {
+                const batch = allFavs.slice(i, i + batchSize);
+                i += batchSize;
+                batch.forEach((fav, idx) => {
+                    const realIdx = i - batchSize + idx;
+                    const card = document.createElement('div');
+                    card.className = 'fav-card';
+                    card.style.animationDelay = (realIdx * 0.05) + 's';
+                    card.setAttribute('data-fav-id', fav.id);
+                    card.setAttribute('data-fav-prompt', fav.prompt);
+                    card.setAttribute('data-fav-src', fav.imageSrc);
+
+                    const overlay = document.createElement('div');
+                    overlay.className = 'fav-card-overlay';
+
+                    const downloadBtn = document.createElement('button');
+                    downloadBtn.title = '下载图片';
+                    downloadBtn.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>';
+                    downloadBtn.onclick = function(e) {
+                        e.stopPropagation();
+                        downloadFavImage(card.getAttribute('data-fav-src'));
+                    };
+
+                    const copyBtn = document.createElement('button');
+                    copyBtn.title = '复制提示词';
+                    copyBtn.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
+                    copyBtn.onclick = function(e) {
+                        e.stopPropagation();
+                        copyFavPrompt(card.getAttribute('data-fav-prompt'));
+                    };
+
+                    overlay.appendChild(downloadBtn);
+                    overlay.appendChild(copyBtn);
+
+                    const unfavBtn = document.createElement('button');
+                    unfavBtn.title = '取消收藏';
+                    unfavBtn.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" stroke="none" style="fill:#e74c3c;pointer-events:none;"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>';
+                    unfavBtn.onclick = function(e) {
+                        e.stopPropagation();
+                        removeFavorite(card.getAttribute('data-fav-id'));
+                    };
+                    overlay.appendChild(unfavBtn);
+
+                    const img = document.createElement('img');
+                    img.src = fav.imageSrc;
+                    img.loading = 'lazy';
+                    img.alt = '';
+                    img.onclick = function() { previewGenImage(fav.imageSrc); };
+                    img.onerror = function() {
+                        this.src = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="150"><rect fill="#ddd" width="200" height="150"/><text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="#999" font-size="12">图片失效</text></svg>');
+                    };
+
+                    card.appendChild(overlay);
+                    card.appendChild(img);
+                    waterfall.appendChild(card);
+                });
+                if (i < allFavs.length) {
+                    requestAnimationFrame(renderBatch);
+                }
+            }
+            renderBatch();
         }
 
         // ============================================================
@@ -2274,6 +2529,7 @@
             await loadPresets();
             renderPresetTags();
             await loadSessionsFromStorage();
+            await loadFavorites();
             loadImageGenMode();  // 恢复生图模式状态（UI 已在 initModeSync 中同步）
             switchChat(getCurrentId());
         });
@@ -2321,7 +2577,7 @@
         //  参数预设 — UI 渲染 & 交互
         // ============================================================
         function renderPresetTags() {
-            if (imageGenMode) return; // 生图模式不显示预设
+            if (imageGenMode || favMode) return; // 生图/收藏模式不显示预设
             const row = document.getElementById('presetTagsRow');
             if (!row) return;
             row.innerHTML = '';
@@ -2342,7 +2598,7 @@
         }
 
         function selectPreset(id) {
-            if (imageGenMode) return; // 生图模式不操作预设
+            if (imageGenMode || favMode) return; // 生图/收藏模式不操作预设
             activePresetId = id;
             const sess = sessions.find(s => s.id === getCurrentId());
             if (sess) sess.presetId = id;
@@ -2674,6 +2930,13 @@
         }
 
         function switchChat(id) {
+            // 收藏模式下点击会话，先切换到对应模式
+            if (favMode) {
+                const s = sessions.find(s => s.id === id);
+                if (s) setMode(s.type === 'gen' ? 'gen' : 'chat');
+                else setMode('chat');
+                return;
+            }
             const s = sessions.find(s => s.id === id);
             if (s) {
                 if (s.type === 'gen') currentGenSessionId = id;
@@ -3268,10 +3531,20 @@
                 const delTitle = totalVersions > 1 ? '删除此版本' : '删除此回复';
                 // 生图消息不显示复制按钮（HTML 内容无意义）
                 const copyBtn = isHtml ? '' : `<svg onclick="copyMessageText(this)" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" title="复制"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
+                // 生图消息：在删除按钮右边添加下载和收藏
+                const isFavd = isHtml && isGenMsgFavorited(msg);
+                const favHeartSvg = isFavd
+                    ? `<svg onclick="favGenBlockImages(this)" width="14" height="14" viewBox="0 0 24 24" stroke="none" style="fill:#e74c3c;color:#e74c3c;cursor:pointer;" title="已收藏"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>`
+                    : `<svg onclick="favGenBlockImages(this)" width="14" height="14" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="fill:none;" title="收藏图片"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>`;
+                const genExtraBtns = isHtml ? `
+                    <svg onclick="downloadGenBlockImages(this)" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" title="下载全部图片"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                    ${favHeartSvg}
+                ` : '';
                 actionsDiv.innerHTML = `
                     <svg onclick="regenerateMessage(this)" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" title="重新生成"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
                     ${copyBtn}
                     <svg onclick="deleteMessage(this)" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" title="${delTitle}"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                    ${genExtraBtns}
                     ${versionNavHtml}
                     <span class="msg-model-tag" onclick="event.stopPropagation(); retryWithDropdown(this.closest('.message-block'))">${msgLogoHtml}${escapeHtml(displayModel)}</span>
                     ${presetTagHtml}
@@ -3342,20 +3615,36 @@
 
         function setMode(mode) {
             imageGenMode = (mode === 'gen');
+            favMode = (mode === 'fav');
             document.documentElement.setAttribute('data-mode', mode);
             const btnChat = document.getElementById('modeBtnChat');
             const btnGen = document.getElementById('modeBtnGen');
+            const btnFav = document.getElementById('modeBtnFav');
             const panel = document.getElementById('genControlsPanel');
+            const favPage = document.getElementById('favPage');
 
-            if (imageGenMode) {
+            // 重置所有按钮
+            btnChat.classList.remove('active');
+            btnGen.classList.remove('active');
+            if (btnFav) btnFav.classList.remove('active');
+            panel.classList.remove('show');
+            if (favPage) favPage.classList.remove('show');
+
+            if (mode === 'fav') {
+                if (btnFav) btnFav.classList.add('active');
+                if (favPage) favPage.classList.add('show');
+                userInput.placeholder = '收藏页面';
+                clearImagePreview();
+                renderFavorites();
+            } else if (imageGenMode) {
                 btnChat.classList.remove('active');
                 btnGen.classList.add('active');
-                panel.classList.add('show');
-                updateGenControlUploadVisibility();
                 loadGenSettings();
+                restoreGenCollapse(); // 在 show 之前恢复折叠状态，避免闪烁
+                updateGenControlUploadVisibility();
+                panel.classList.add('show');
                 userInput.placeholder = '输入图片描述词，Enter 发送';
                 clearImagePreview();
-                restoreGenCollapse();
                 if (!isGenModel(activeModel)) autoSelectGenModel();
             } else {
                 saveGenSettings(); // 离开生图时保存设置
@@ -3370,7 +3659,8 @@
             updateModelDisplay();
             try { localStorage.setItem('chatGenMode', mode); } catch(e) {}
             // 切换到当前模式的会话（switchChat 内部会 renderSidebar + renderChatArea）
-            switchChat(getCurrentId());
+            if (mode !== 'fav') switchChat(getCurrentId());
+            else renderSidebar();
         }
 
         // 在 providers 中查找第一个匹配类型（gen/chat）的模型并切换
@@ -3401,11 +3691,22 @@
                     document.documentElement.setAttribute('data-mode', 'gen');
                     document.getElementById('modeBtnChat').classList.remove('active');
                     document.getElementById('modeBtnGen').classList.add('active');
-                    document.getElementById('genControlsPanel').classList.add('show');
-                    userInput.placeholder = '输入图片描述词，Enter 发送';
                     loadGenSettings();
                     restoreGenCollapse();
+                    document.getElementById('genControlsPanel').classList.add('show');
+                    userInput.placeholder = '输入图片描述词，Enter 发送';
                     if (!isGenModel(activeModel)) autoSelectGenModel();
+                } else if (mode === 'fav') {
+                    imageGenMode = false;
+                    favMode = true;
+                    document.documentElement.setAttribute('data-mode', 'fav');
+                    document.getElementById('modeBtnChat').classList.remove('active');
+                    document.getElementById('modeBtnGen').classList.remove('active');
+                    const btnFav = document.getElementById('modeBtnFav');
+                    if (btnFav) btnFav.classList.add('active');
+                    const favPage = document.getElementById('favPage');
+                    if (favPage) favPage.classList.add('show');
+                    userInput.placeholder = '收藏页面';
                 } else {
                     document.documentElement.setAttribute('data-mode', 'chat');
                     if (isGenModel(activeModel)) autoSelectChatModel();
@@ -3430,6 +3731,23 @@
             if (save) try { localStorage.setItem('chatGenCollapsed', collapsed ? '1' : '0'); } catch(e) {}
         }
 
+        // 确保折叠/展开到指定状态（不触发 toggle）
+        function setGenCollapsed(collapsed) {
+            const body = document.getElementById('genCollapseBody');
+            const arrow = document.getElementById('genCollapseArrow');
+            const sum = document.getElementById('genCollapseSummary');
+            if (!body || !arrow) return;
+            if (collapsed) {
+                body.classList.add('collapsed');
+                arrow.textContent = '▼';
+                if (sum) { sum.style.display = ''; sum.textContent = buildGenSummary(); }
+            } else {
+                body.classList.remove('collapsed');
+                arrow.textContent = '▲';
+                if (sum) sum.style.display = 'none';
+            }
+        }
+
         function buildGenSummary() {
             const parts = [];
             parts.push(getGenSize());
@@ -3444,13 +3762,13 @@
 
         function restoreGenCollapse() {
             try {
-                if (localStorage.getItem('chatGenCollapsed') === '1') {
-                    toggleGenControls(false);
-                }
+                const wantCollapsed = localStorage.getItem('chatGenCollapsed') === '1';
+                setGenCollapsed(wantCollapsed);
             } catch(e) {}
-            // 非折叠状态也更新摘要（参数可能已加载）
+            // 更新摘要
+            const body = document.getElementById('genCollapseBody');
             const sum = document.getElementById('genCollapseSummary');
-            if (sum && sum.style.display !== 'none') sum.textContent = buildGenSummary();
+            if (sum && body && body.classList.contains('collapsed')) sum.textContent = buildGenSummary();
         }
 
         function updateGenControlUploadVisibility() {
@@ -3696,6 +4014,7 @@
         //  发送消息
         // ============================================================
         function sendMessage() {
+            if (favMode) return; // 收藏模式不发送消息
             const text = userInput.value.trim();
 
             // 生图模式
@@ -3833,17 +4152,14 @@
                             resultHtml += `<div style="position:relative;display:inline-block;margin:4px;">
                                 <img src="${escapeHtml(url)}" onclick="previewGenImage('${escapeHtml(url)}')" 
                                     style="max-width:280px;max-height:280px;border-radius:12px;cursor:pointer;border:1px solid var(--border-color);"
-                                    onerror="this.style.display='none';this.nextElementSibling.style.display='inline-block';">
-                                <a href="${escapeHtml(url)}" download="" class="gen-download-btn" style="margin-top:4px;display:block;text-align:center;text-decoration:none;">⬇ 下载</a>
+                                    onerror="this.style.display='none';">
                             </div>`;
                         } else if (imgData.b64_json) {
                             const idx = genImages.length;
                             genImages.push({ b64: imgData.b64_json, type: imgData.type || 'image/png' });
-                            // 持久化：仅存占位符（极轻量，无 base64 嵌入）
                             resultHtml += `<div style="position:relative;display:inline-block;margin:4px;">
                                 <img src="" data-gen-idx="${idx}" data-gen-src="" onclick="previewGenImage(this.src)" 
                                     style="max-width:280px;max-height:280px;border-radius:12px;cursor:pointer;border:1px solid var(--border-color);">
-                                <button onclick="downloadGenImageFromSrc(this.parentElement.querySelector('img').src)" class="gen-download-btn" style="margin-top:4px;">⬇ 下载</button>
                             </div>`;
                         }
                     }
@@ -3910,6 +4226,77 @@
             a.href = 'data:image/png;base64,' + b64Data;
             a.download = `generated-image-${index}.png`;
             a.click();
+        }
+
+        // 下载消息块中的所有生成图片
+        function downloadGenBlockImages(btnEl) {
+            const block = btnEl.closest('.message-block');
+            const imgs = block.querySelectorAll('.generated-images img, .message-content img');
+            if (imgs.length === 0) { showToast('没有可下载的图片'); return; }
+            imgs.forEach((img, i) => {
+                setTimeout(() => {
+                    const src = img.getAttribute('data-gen-src') || img.src;
+                    if (src) downloadGenImageFromSrc(src);
+                }, i * 200);
+            });
+            showToast(`正在下载 ${imgs.length} 张图片`);
+        }
+
+        // 收藏消息块中的生成图片
+        function favGenBlockImages(btnEl) {
+            const block = btnEl.closest('.message-block');
+            const contentEl = block.querySelector('.message-content');
+            const msgIdx = parseInt(contentEl.getAttribute('data-index'));
+            if (isNaN(msgIdx)) return;
+            const session = sessions.find(s => s.id === getCurrentId());
+            if (!session) return;
+            const msg = session.messages[msgIdx];
+            if (!msg) return;
+            const prompt = msg.genPrompt || '';
+            const imgs = block.querySelectorAll('.generated-images img, .message-content img');
+            let count = 0;
+            imgs.forEach(img => {
+                let src = img.getAttribute('data-gen-src') || img.src;
+                if (!src || src === 'null' || src === 'undefined') return;
+                // 对于占位符，从 session 消息的 images 数组中还原
+                const dataIdx = parseInt(img.getAttribute('data-gen-idx'));
+                if (!isNaN(dataIdx) && msg.images && msg.images[dataIdx]) {
+                    const gi = msg.images[dataIdx];
+                    src = 'data:' + (gi.type || 'image/png') + ';base64,' + gi.b64;
+                }
+                addFavorite(src, prompt, 'gen');
+                count++;
+            });
+            if (count > 0) {
+                btnEl.style.fill = '#e74c3c';
+                btnEl.removeAttribute('stroke');
+                btnEl.style.stroke = 'none';
+                btnEl.style.color = '#e74c3c';
+            }
+        }
+
+        // 检查生成消息是否已收藏（通过 prompt 匹配）
+        function isGenMsgFavorited(msg) {
+            if (!msg || !msg.genPrompt) return false;
+            const prompt = msg.genPrompt;
+            // 如果有 images 数组（base64），逐一比对
+            if (msg.images && msg.images.length > 0) {
+                return msg.images.some(gi => {
+                    const src = 'data:' + (gi.type || 'image/png') + ';base64,' + gi.b64;
+                    return favorites.some(f => f.imageSrc === src && f.prompt === prompt);
+                });
+            }
+            // URL 类型：从 HTML 中提取图片 URL 后比对
+            const html = typeof msg.content === 'string' ? msg.content : '';
+            const urlMatches = html.match(/src="([^"]+)"/g);
+            if (urlMatches) {
+                return urlMatches.some(m => {
+                    const src = m.replace(/^src="/, '').replace(/"$/, '');
+                    return favorites.some(f => f.imageSrc === src && f.prompt === prompt);
+                });
+            }
+            // 兜底：仅按 prompt 匹配
+            return favorites.some(f => f.prompt === prompt);
         }
 
         // ============================================================
