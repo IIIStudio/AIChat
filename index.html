@@ -2796,6 +2796,7 @@
             const exportSessions = deepClone(sessions);
             const data = { providers, activeProviderId, activeModel, paramPresets, activePresetId, sessions: exportSessions, favorites, currentChatSessionId, currentGenSessionId, exportedAt: new Date().toISOString() };
             const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
             a.download = 'chat-providers-' + new Date().toISOString().slice(0, 10) + '.json';
