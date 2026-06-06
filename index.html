@@ -439,6 +439,153 @@
         .fav-card-overlay button:hover { background: #fff; transform: scale(1.1); }
         .fav-card-overlay button svg { width: 15px; height: 15px; }
 
+        /* 标签筛选栏 */
+        .fav-tag-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            max-width: 1200px;
+            margin: 0 auto 16px auto;
+            padding: 0;
+        }
+        .fav-tag-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 12px;
+            border-radius: 16px;
+            font-size: 12px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-surface);
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.15s;
+            user-select: none;
+        }
+        .fav-tag-chip:hover { border-color: var(--text-muted); color: var(--text-main); }
+        .fav-tag-chip.active { background: var(--text-main); color: var(--text-on-dark); border-color: var(--text-main); }
+
+        /* 卡片左下角标签区域 */
+        .fav-card-tags {
+            position: absolute;
+            bottom: 8px;
+            left: 8px;
+            right: 8px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            z-index: 2;
+            pointer-events: none;
+            padding-left: 0;
+            transition: padding-left 0.2s;
+        }
+        .fav-card-tags > * { pointer-events: auto; }
+
+        .fav-card-tag-badge {
+            display: inline-flex;
+            align-items: center;
+            position: relative;
+            gap: 3px;
+            padding: 2px 7px;
+            border-radius: 8px;
+            font-size: 10px;
+            background: rgba(0,0,0,0.4);
+            backdrop-filter: blur(4px);
+            color: #fff;
+            max-width: 90px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .fav-card-tag-badge .fav-tag-x {
+            position: absolute;
+            cursor: pointer;
+            opacity: 0;
+            font-size: 10px;
+            line-height: 1;
+            transition: opacity 0.15s;
+        }
+        .fav-card-tag-badge:hover .fav-tag-x { position: static; opacity: 1; }
+
+        /* + 按钮：绝对定位在标签区域左侧，隐藏时缩回不占空间 */
+        .fav-tag-add-btn {
+            position: absolute;
+            left: 0;
+            bottom: 0;
+            width: 20px;
+            height: 20px;
+            border-radius: 6px;
+            border: 1px solid rgba(255,255,255,0.3);
+            background: rgba(0,0,0,0.35);
+            backdrop-filter: blur(4px);
+            color: rgba(255,255,255,0.7);
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 300;
+            transition: opacity 0.2s, background 0.15s;
+            line-height: 1;
+            opacity: 0;
+            z-index: 3;
+        }
+        .fav-card:hover .fav-tag-add-btn { opacity: 1; }
+        .fav-tag-add-btn:hover { background: rgba(0,0,0,0.6); color: #fff; }
+
+        /* hover 时标签向右挪，给 + 按钮让出空间 */
+        .fav-card:hover .fav-card-tags { padding-left: 24px; }
+
+        /* 标签输入弹窗 */
+        .fav-tag-input-popup {
+            position: absolute;
+            bottom: 38px;
+            left: 8px;
+            z-index: 10;
+            background: rgba(20,20,20,0.92);
+            backdrop-filter: blur(8px);
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.15);
+            min-width: 150px;
+            max-width: 200px;
+            overflow: hidden;
+        }
+        .fav-tag-input-popup input {
+            width: 100%;
+            padding: 7px 10px;
+            border: none;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            background: transparent;
+            color: #fff;
+            font-size: 12px;
+            outline: none;
+            box-sizing: border-box;
+        }
+        .fav-tag-input-popup input::placeholder { color: rgba(255,255,255,0.35); }
+        .fav-tag-suggest-list {
+            max-height: 120px;
+            overflow-y: auto;
+            scrollbar-width: none;
+        }
+        .fav-tag-suggest-list::-webkit-scrollbar { display: none; }
+        .fav-tag-suggest-item {
+            padding: 6px 10px;
+            font-size: 12px;
+            color: rgba(255,255,255,0.75);
+            cursor: pointer;
+            transition: background 0.1s;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .fav-tag-suggest-item:hover { background: rgba(255,255,255,0.1); color: #fff; }
+        .fav-tag-suggest-empty {
+            padding: 8px 10px;
+            font-size: 11px;
+            color: rgba(255,255,255,0.3);
+            text-align: center;
+        }
+
         .fav-empty {
             text-align: center;
             padding: 80px 20px;
@@ -1440,6 +1587,7 @@
         </div>
 
         <div id="favPage" class="thin-scrollbar">
+            <div class="fav-tag-bar" id="favTagBar"></div>
             <div class="fav-waterfall" id="favWaterfall"></div>
         </div>
 
@@ -1770,6 +1918,7 @@
                 prompt: prompt,
                 imageSrc: src,
                 imageType: type || 'url',
+                tags: [],
                 addedAt: Date.now()
             });
             saveFavorites();
@@ -1782,6 +1931,166 @@
             saveFavorites();
             renderFavorites();
             showToast('已取消收藏');
+        }
+
+        // 标签管理
+        let favFilterTag = null;
+        let favTagInputCardId = null;
+
+        function addTagToFavorite(favId, tag) {
+            tag = tag.trim().replace(/\s+/g, '');
+            if (!tag) return;
+            const fav = favorites.find(f => f.id === favId);
+            if (!fav) return;
+            if (!fav.tags) fav.tags = [];
+            if (fav.tags.includes(tag)) { showToast('标签已存在'); return; }
+            fav.tags.push(tag);
+            saveFavorites();
+            renderFavorites();
+        }
+
+        function removeTagFromFavorite(favId, tag) {
+            const fav = favorites.find(f => f.id === favId);
+            if (!fav) return;
+            if (!fav.tags) return;
+            fav.tags = fav.tags.filter(t => t !== tag);
+            saveFavorites();
+            renderFavorites();
+        }
+
+        function showFavTagInput(cardEl) {
+            closeFavTagInput();
+            const favId = Number(cardEl.getAttribute('data-fav-id'));
+            favTagInputCardId = favId;
+            const fav = favorites.find(f => f.id === favId);
+            const currentTags = (fav && fav.tags) ? fav.tags : [];
+
+            // 收集所有已有标签（去重）
+            const allTags = {};
+            favorites.forEach(f => {
+                if (f.tags) f.tags.forEach(t => { allTags[t] = (allTags[t] || 0) + 1; });
+            });
+            // 排除当前卡片已有的标签
+            const suggested = Object.entries(allTags)
+                .filter(([t]) => !currentTags.includes(t))
+                .sort((a, b) => b[1] - a[1])
+                .map(([t]) => t);
+
+            const popup = document.createElement('div');
+            popup.className = 'fav-tag-input-popup';
+            popup.id = 'favTagInputPopup';
+            popup.onclick = (e) => e.stopPropagation();
+
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.placeholder = '输入或选择标签';
+            input.maxLength = 20;
+
+            const suggestList = document.createElement('div');
+            suggestList.className = 'fav-tag-suggest-list';
+
+            function renderSuggestions(filter) {
+                suggestList.innerHTML = '';
+                const list = filter ? suggested.filter(t => t.toLowerCase().includes(filter.toLowerCase())) : suggested;
+                if (list.length === 0) {
+                    const empty = document.createElement('div');
+                    empty.className = 'fav-tag-suggest-empty';
+                    empty.textContent = filter ? '按下 Enter 创建新标签' : '暂无已有标签';
+                    suggestList.appendChild(empty);
+                } else {
+                    list.forEach(tag => {
+                        const item = document.createElement('div');
+                        item.className = 'fav-tag-suggest-item';
+                        item.textContent = tag;
+                        item.onclick = () => {
+                            addTagToFavorite(favId, tag);
+                            closeFavTagInput();
+                        };
+                        suggestList.appendChild(item);
+                    });
+                }
+            }
+
+            input.onkeydown = function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const val = input.value.trim().replace(/\s+/g, '');
+                    if (val) {
+                        if (currentTags.includes(val)) { showToast('标签已存在'); closeFavTagInput(); return; }
+                        addTagToFavorite(favId, val);
+                    }
+                    closeFavTagInput();
+                }
+                if (e.key === 'Escape') { closeFavTagInput(); }
+                e.stopPropagation();
+            };
+            input.oninput = () => renderSuggestions(input.value.trim());
+
+            popup.appendChild(input);
+            popup.appendChild(suggestList);
+            cardEl.appendChild(popup);
+
+            renderSuggestions('');
+            setTimeout(() => input.focus(), 50);
+        }
+
+        function closeFavTagInput() {
+            const p = document.getElementById('favTagInputPopup');
+            if (p) p.remove();
+            favTagInputCardId = null;
+        }
+
+        // 点击外部关闭标签输入
+        document.addEventListener('click', function(e) {
+            if (favTagInputCardId !== null && !e.target.closest('#favTagInputPopup') && !e.target.closest('.fav-tag-add-btn')) {
+                closeFavTagInput();
+            }
+        });
+
+        function filterByTag(tag) {
+            if (favFilterTag === tag) {
+                favFilterTag = null;
+            } else {
+                favFilterTag = tag;
+            }
+            renderFavorites();
+        }
+
+        function getFilteredFavorites() {
+            if (!favFilterTag) return favorites.slice();
+            return favorites.filter(f => f.tags && f.tags.includes(favFilterTag));
+        }
+
+        function renderFavTagBar() {
+            const bar = document.getElementById('favTagBar');
+            if (!bar) return;
+            bar.innerHTML = '';
+            if (favorites.length === 0) return;
+
+            const tagCounts = {};
+            favorites.forEach(f => {
+                if (f.tags) f.tags.forEach(t => {
+                    tagCounts[t] = (tagCounts[t] || 0) + 1;
+                });
+            });
+            const sorted = Object.entries(tagCounts).sort((a, b) => b[1] - a[1]);
+            if (sorted.length === 0) return;
+
+            sorted.forEach(([tag, count]) => {
+                const chip = document.createElement('span');
+                chip.className = 'fav-tag-chip' + (favFilterTag === tag ? ' active' : '');
+                chip.textContent = tag + '（' + count + '）';
+                chip.onclick = () => filterByTag(tag);
+                bar.appendChild(chip);
+            });
+
+            if (favFilterTag) {
+                const clear = document.createElement('span');
+                clear.className = 'fav-tag-chip';
+                clear.textContent = '✕ 全部';
+                clear.onclick = () => filterByTag(favFilterTag);
+                bar.appendChild(clear);
+            }
         }
 
         function downloadFavImage(imageSrc) {
@@ -1802,6 +2111,10 @@
         function renderFavorites() {
             const waterfall = document.getElementById('favWaterfall');
             if (!waterfall) return;
+
+            closeFavTagInput();
+            renderFavTagBar();
+
             if (favorites.length === 0) {
                 waterfall.innerHTML = `
                     <div class="fav-empty">
@@ -1813,7 +2126,11 @@
             }
             // 异步渲染，逐批添加卡片
             waterfall.innerHTML = '';
-            const allFavs = favorites.slice();
+            const allFavs = getFilteredFavorites();
+            if (allFavs.length === 0) {
+                waterfall.innerHTML = '<div class="fav-empty"><h3>该标签下无收藏</h3></div>';
+                return;
+            }
             const batchSize = 10;
             let i = 0;
             function renderBatch() {
@@ -1828,6 +2145,7 @@
                     card.setAttribute('data-fav-prompt', fav.prompt);
                     card.setAttribute('data-fav-src', fav.imageSrc);
 
+                    // 左上角按钮栏
                     const overlay = document.createElement('div');
                     overlay.className = 'fav-card-overlay';
 
@@ -1847,9 +2165,6 @@
                         copyFavPrompt(card.getAttribute('data-fav-prompt'));
                     };
 
-                    overlay.appendChild(downloadBtn);
-                    overlay.appendChild(copyBtn);
-
                     const unfavBtn = document.createElement('button');
                     unfavBtn.title = '取消收藏';
                     unfavBtn.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="fill:none;pointer-events:none;"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>';
@@ -1857,7 +2172,33 @@
                         e.stopPropagation();
                         removeFavorite(card.getAttribute('data-fav-id'));
                     };
+
+                    overlay.appendChild(downloadBtn);
+                    overlay.appendChild(copyBtn);
                     overlay.appendChild(unfavBtn);
+
+                    // 标签显示区（+ 按钮内嵌在第一位置）
+                    const tagsDiv = document.createElement('div');
+                    tagsDiv.className = 'fav-card-tags';
+
+                    const tagAddBtn = document.createElement('div');
+                    tagAddBtn.className = 'fav-tag-add-btn';
+                    tagAddBtn.textContent = '+';
+                    tagAddBtn.title = '添加标签';
+                    tagAddBtn.onclick = function(e) {
+                        e.stopPropagation();
+                        showFavTagInput(card);
+                    };
+                    tagsDiv.appendChild(tagAddBtn);
+
+                    if (fav.tags && fav.tags.length > 0) {
+                        fav.tags.forEach(tag => {
+                            const b = document.createElement('span');
+                            b.className = 'fav-card-tag-badge';
+                            b.innerHTML = escapeHtml(tag) + '<span class="fav-tag-x" onclick="event.stopPropagation();removeTagFromFavorite(' + fav.id + ',\'' + escapeHtml(tag).replace(/'/g, "\\'") + '\')">×</span>';
+                            tagsDiv.appendChild(b);
+                        });
+                    }
 
                     const img = document.createElement('img');
                     img.src = fav.imageSrc;
@@ -1869,6 +2210,7 @@
                     };
 
                     card.appendChild(overlay);
+                    card.appendChild(tagsDiv);
                     card.appendChild(img);
                     waterfall.appendChild(card);
                 });
