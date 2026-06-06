@@ -2,7 +2,9 @@
 
 纯前端单文件，打开即用。支持 OpenAI 格式 Chat Completions API 和 Images Generations API。
 
-![](image/2.jpg)
+![](image/3.jpg)
+
+![](image/4.jpg)
 
 ## 快速开始
 
