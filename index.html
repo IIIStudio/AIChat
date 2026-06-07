@@ -509,6 +509,39 @@
         }
         .fav-card-tag-badge:hover .fav-tag-x { position: static; opacity: 1; }
 
+        .fav-card-model-badge {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-size: 10px;
+            background: rgba(0,0,0,0.45);
+            backdrop-filter: blur(4px);
+            color: #ddd;
+            z-index: 2;
+            max-width: 120px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            pointer-events: none;
+            opacity: 1;
+            transition: opacity 0.25s;
+        }
+        .fav-card:hover .fav-card-model-badge { opacity: 0; }
+        .fav-card-model-badge img,
+        .fav-card-model-badge .model-logo-fallback {
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
+            flex-shrink: 0;
+            object-fit: contain;
+        }
+        [data-theme="dark"] .fav-card-model-badge img { filter: invert(0.85) hue-rotate(180deg) brightness(1.2); }
+
         /* + 按钮：绝对定位在标签区域左侧，隐藏时缩回不占空间 */
         .fav-tag-add-btn {
             position: absolute;
@@ -1909,7 +1942,7 @@
             try { await dbSet('favorites', favorites); } catch(e) {}
         }
 
-        function addFavorite(src, prompt, type) {
+        function addFavorite(src, prompt, type, model) {
             // 去重
             if (favorites.some(f => f.imageSrc === src && f.prompt === prompt)) {
                 showToast('已收藏过此图片');
@@ -1921,6 +1954,7 @@
                 imageSrc: src,
                 imageType: type || 'url',
                 tags: [],
+                model: model || '',
                 addedAt: Date.now()
             });
             saveFavorites();
@@ -2212,6 +2246,19 @@
                     };
 
                     card.appendChild(overlay);
+
+                    // 模型标签（收藏时自动记录）
+                    if (fav.model) {
+                        const modelBadge = document.createElement('div');
+                        modelBadge.className = 'fav-card-model-badge';
+                        const logo = getLogoForModel(fav.model);
+                        const logoHtml = logo
+                            ? '<img src="' + logo + '" alt="" onerror="this.style.display=\'none\'">'
+                            : '<span class="model-logo-fallback">AI</span>';
+                        modelBadge.innerHTML = logoHtml + escapeHtml(fav.model);
+                        card.appendChild(modelBadge);
+                    }
+
                     card.appendChild(tagsDiv);
                     card.appendChild(img);
                     waterfall.appendChild(card);
@@ -4633,6 +4680,7 @@
             const msg = session.messages[msgIdx];
             if (!msg) return;
             const prompt = msg.genPrompt || '';
+            const genModel = msg.model || activeModel;
             const imgs = block.querySelectorAll('.generated-images img, .message-content img');
             let count = 0;
             imgs.forEach(img => {
@@ -4644,7 +4692,7 @@
                     const gi = msg.images[dataIdx];
                     src = 'data:' + (gi.type || 'image/png') + ';base64,' + gi.b64;
                 }
-                addFavorite(src, prompt, 'gen');
+                addFavorite(src, prompt, 'gen', genModel);
                 count++;
             });
             if (count > 0) {
