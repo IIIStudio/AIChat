@@ -4601,7 +4601,7 @@
                 };
                 const msgData = {
                     role: "assistant",
-                    content: `<div>🎨 <strong>${escapeHtml(prompt)}</strong></div>${resultHtml}`,
+                    content: resultHtml,
                     model: activeModel,
                     genPrompt: prompt,
                     genParams: genParams,
