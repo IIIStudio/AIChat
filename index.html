@@ -571,12 +571,10 @@
         /* hover 时标签向右挪，给 + 按钮让出空间 */
         .fav-card:hover .fav-card-tags { padding-left: 24px; }
 
-        /* 标签输入弹窗 */
+        /* 标签输入弹窗（挂载在 body，fixed 定位，不影响瀑布流） */
         .fav-tag-input-popup {
-            position: absolute;
-            bottom: 38px;
-            left: 8px;
-            z-index: 10;
+            position: fixed;
+            z-index: 110;
             background: rgba(20,20,20,0.92);
             backdrop-filter: blur(8px);
             border-radius: 10px;
@@ -584,6 +582,7 @@
             min-width: 150px;
             max-width: 200px;
             overflow: hidden;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.25);
         }
         .fav-tag-input-popup input {
             width: 100%;
@@ -1973,6 +1972,21 @@
         let favFilterTag = null;
         let favTagInputCardId = null;
 
+        function updateCardTags(card, fav) {
+            const tagsDiv = card.querySelector('.fav-card-tags');
+            if (!tagsDiv) return;
+            const addBtn = tagsDiv.querySelector('.fav-tag-add-btn');
+            tagsDiv.querySelectorAll('.fav-card-tag-badge').forEach(b => b.remove());
+            if (fav.tags && fav.tags.length > 0) {
+                fav.tags.forEach(tag => {
+                    const b = document.createElement('span');
+                    b.className = 'fav-card-tag-badge';
+                    b.innerHTML = escapeHtml(tag) + '<span class="fav-tag-x" onclick="event.stopPropagation();removeTagFromFavorite(' + fav.id + ',\'' + escapeHtml(tag).replace(/'/g, "\\'") + '\')">×</span>';
+                    tagsDiv.insertBefore(b, addBtn);
+                });
+            }
+        }
+
         function addTagToFavorite(favId, tag) {
             tag = tag.trim().replace(/\s+/g, '');
             if (!tag) return;
@@ -1982,7 +1996,9 @@
             if (fav.tags.includes(tag)) { showToast('标签已存在'); return; }
             fav.tags.push(tag);
             saveFavorites();
-            renderFavorites();
+            renderFavTagBar();
+            const card = document.querySelector('.fav-card[data-fav-id="' + favId + '"]');
+            if (card) updateCardTags(card, fav);
         }
 
         function removeTagFromFavorite(favId, tag) {
@@ -1991,7 +2007,9 @@
             if (!fav.tags) return;
             fav.tags = fav.tags.filter(t => t !== tag);
             saveFavorites();
-            renderFavorites();
+            renderFavTagBar();
+            const card = document.querySelector('.fav-card[data-fav-id="' + favId + '"]');
+            if (card) updateCardTags(card, fav);
         }
 
         function showFavTagInput(cardEl) {
@@ -2064,10 +2082,39 @@
 
             popup.appendChild(input);
             popup.appendChild(suggestList);
-            cardEl.appendChild(popup);
+            document.body.appendChild(popup);
+
+            // 使用 fixed 定位，根据卡片位置计算弹窗坐标
+            function repositionPopup() {
+                const rect = cardEl.getBoundingClientRect();
+                const popupWidth = popup.offsetWidth || 180;
+                const popupHeight = popup.offsetHeight || 40;
+                // 弹窗默认显示在卡片底部下方
+                let top = rect.bottom + 6;
+                let left = rect.left + 8;
+                // 如果底部空间不够，弹窗从卡片底部向上展开（标签上方，而非图片上方）
+                if (top + popupHeight > window.innerHeight - 8) {
+                    top = rect.bottom - popupHeight - 6;
+                }
+                // 不超出左右边界
+                if (left + popupWidth > window.innerWidth - 8) left = window.innerWidth - popupWidth - 8;
+                if (left < 8) left = 8;
+                // 如果上方也不够，贴窗口顶部
+                if (top < 4) top = 4;
+                popup.style.top = top + 'px';
+                popup.style.left = left + 'px';
+            }
+            repositionPopup();
+
+            // 渲染建议后重新定位
+            const origRender = renderSuggestions;
+            renderSuggestions = function(filter) {
+                origRender(filter);
+                setTimeout(repositionPopup, 10);
+            };
 
             renderSuggestions('');
-            setTimeout(() => input.focus(), 50);
+            setTimeout(() => { input.focus(); }, 50);
         }
 
         function closeFavTagInput() {
