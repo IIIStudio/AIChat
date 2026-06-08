@@ -372,13 +372,13 @@
         .mode-toggle-btn:hover:not(.active) { border-color: var(--text-muted); color: var(--text-main); }
 
         /* --- 收藏页面 --- */
-        #favPage { display: none; flex: 1; overflow-y: auto; padding: 24px; }
-        #favPage.show { display: block; }
-        [data-mode="fav"] .chat-container { display: none !important; }
-        [data-mode="fav"] .input-area { display: none !important; }
+        #favPage { flex: 0; overflow: hidden; opacity: 0; pointer-events: none; height: 0; padding: 0; transition: opacity 0.15s; }
+        #favPage.show { flex: 1; overflow-y: auto; opacity: 1; pointer-events: auto; height: auto; padding: 24px; }
+        [data-mode="fav"] .chat-container { flex: none !important; height: 0 !important; overflow: hidden !important; padding: 0 !important; opacity: 0 !important; pointer-events: none !important; }
+        [data-mode="fav"] .input-area { flex: none !important; height: 0 !important; overflow: hidden !important; padding: 0 !important; opacity: 0 !important; pointer-events: none !important; }
         [data-mode="fav"] .preset-tags-area { display: none !important; }
         [data-mode="fav"] .image-preview-area { display: none !important; }
-        [data-mode="fav"] .gen-controls-panel { display: none !important; }
+        [data-mode="fav"] .gen-controls-panel { flex: none !important; height: 0 !important; overflow: hidden !important; padding: 0 !important; opacity: 0 !important; pointer-events: none !important; }
         [data-mode="fav"] .message-anchors { display: none !important; }
 
         .fav-waterfall {
@@ -1929,6 +1929,7 @@
         //  收藏管理
         // ============================================================
         let favorites = [];
+        let favRenderedOnce = false; // 仅在首次初始化时渲染一次
 
         async function loadFavorites() {
             try {
@@ -1957,6 +1958,8 @@
                 addedAt: Date.now()
             });
             saveFavorites();
+            // 原地追加卡片到瀑布流（避免全量重建）
+            appendFavCard(favorites[favorites.length - 1]);
             showToast('已收藏');
         }
 
@@ -1964,7 +1967,10 @@
             const numId = Number(id);
             favorites = favorites.filter(f => f.id !== numId);
             saveFavorites();
-            renderFavorites();
+            // 原地移除卡片，不重建
+            const card = document.querySelector('.fav-card[data-fav-id="' + numId + '"]');
+            if (card) { card.style.transition = 'opacity 0.2s'; card.style.opacity = '0'; setTimeout(() => card.remove(), 200); }
+            renderFavTagBar();
             showToast('已取消收藏');
         }
 
@@ -2191,23 +2197,106 @@
             });
         }
 
+        // 创建单张收藏卡片（公共函数，用于渲染和追加）
+        function createFavCard(fav, index) {
+            const card = document.createElement('div');
+            card.className = 'fav-card';
+            card.style.animationDelay = (index * 0.05) + 's';
+            card.setAttribute('data-fav-id', fav.id);
+            card.setAttribute('data-fav-prompt', fav.prompt);
+            card.setAttribute('data-fav-src', fav.imageSrc);
+
+            const overlay = document.createElement('div');
+            overlay.className = 'fav-card-overlay';
+
+            const downloadBtn = document.createElement('button');
+            downloadBtn.title = '下载图片';
+            downloadBtn.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>';
+            downloadBtn.onclick = function(e) { e.stopPropagation(); downloadFavImage(card.getAttribute('data-fav-src')); };
+
+            const copyBtn = document.createElement('button');
+            copyBtn.title = '复制提示词';
+            copyBtn.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
+            copyBtn.onclick = function(e) { e.stopPropagation(); copyFavPrompt(card.getAttribute('data-fav-prompt')); };
+
+            const unfavBtn = document.createElement('button');
+            unfavBtn.title = '取消收藏';
+            unfavBtn.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="fill:none;pointer-events:none;"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>';
+            unfavBtn.onclick = function(e) { e.stopPropagation(); removeFavorite(card.getAttribute('data-fav-id')); };
+
+            const genBtn = document.createElement('button');
+            genBtn.title = '发送提示词到生图';
+            genBtn.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></svg>';
+            genBtn.onclick = function(e) { e.stopPropagation(); setMode('gen'); userInput.value = fav.prompt; userInput.style.height = 'auto'; userInput.style.height = userInput.scrollHeight + 'px'; userInput.focus(); showToast('已填入提示词'); };
+
+            overlay.appendChild(downloadBtn);
+            overlay.appendChild(copyBtn);
+            overlay.appendChild(genBtn);
+            overlay.appendChild(unfavBtn);
+
+            const tagsDiv = document.createElement('div');
+            tagsDiv.className = 'fav-card-tags';
+            const tagAddBtn = document.createElement('div');
+            tagAddBtn.className = 'fav-tag-add-btn';
+            tagAddBtn.textContent = '+';
+            tagAddBtn.title = '添加标签';
+            tagAddBtn.onclick = function(e) { e.stopPropagation(); showFavTagInput(card); };
+            tagsDiv.appendChild(tagAddBtn);
+            if (fav.tags && fav.tags.length > 0) {
+                fav.tags.forEach(tag => {
+                    const b = document.createElement('span');
+                    b.className = 'fav-card-tag-badge';
+                    b.innerHTML = escapeHtml(tag) + '<span class="fav-tag-x" onclick="event.stopPropagation();removeTagFromFavorite(' + fav.id + ',\'' + escapeHtml(tag).replace(/'/g, "\\'") + '\')">×</span>';
+                    tagsDiv.appendChild(b);
+                });
+            }
+
+            const img = document.createElement('img');
+            img.src = fav.imageSrc;
+            img.loading = 'lazy';
+            img.alt = '';
+            img.onclick = function() { previewGenImage(fav.imageSrc); };
+            img.onerror = function() { this.src = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="150"><rect fill="#ddd" width="200" height="150"/><text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="#999" font-size="12">图片失效</text></svg>'); };
+
+            card.appendChild(overlay);
+
+            if (fav.model) {
+                const modelBadge = document.createElement('div');
+                modelBadge.className = 'fav-card-model-badge';
+                const logo = getLogoForModel(fav.model);
+                const logoHtml = logo ? '<img src="' + logo + '" alt="" onerror="this.style.display=\'none\'">' : '<span class="model-logo-fallback">AI</span>';
+                modelBadge.innerHTML = logoHtml + escapeHtml(fav.model);
+                card.appendChild(modelBadge);
+            }
+
+            card.appendChild(tagsDiv);
+            card.appendChild(img);
+            return card;
+        }
+
+        // 原地追加一张新卡片（addFavorite 时调用，避免全量重建）
+        function appendFavCard(fav) {
+            const waterfall = document.getElementById('favWaterfall');
+            if (!waterfall) return;
+            // 如果有筛选且新卡片不匹配，不追加
+            if (favFilterTag && (!fav.tags || !fav.tags.includes(favFilterTag))) return;
+            // 如果瀑布流是空状态提示，先清除
+            if (waterfall.querySelector('.fav-empty')) waterfall.innerHTML = '';
+            const card = createFavCard(fav, waterfall.children.length);
+            waterfall.insertBefore(card, waterfall.firstChild);
+            renderFavTagBar();
+        }
+
         function renderFavorites() {
             const waterfall = document.getElementById('favWaterfall');
             if (!waterfall) return;
-
             closeFavTagInput();
             renderFavTagBar();
 
             if (favorites.length === 0) {
-                waterfall.innerHTML = `
-                    <div class="fav-empty">
-                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
-                        <h3>暂无收藏</h3>
-                        <p>在生图模式下点击图片旁的 ❤ 即可收藏</p>
-                    </div>`;
+                waterfall.innerHTML = '<div class="fav-empty"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg><h3>暂无收藏</h3><p>在生图模式下点击图片旁的 ❤ 即可收藏</p></div>';
                 return;
             }
-            // 异步渲染，逐批添加卡片
             waterfall.innerHTML = '';
             const allFavs = getFilteredFavorites();
             if (allFavs.length === 0) {
@@ -2220,113 +2309,10 @@
                 const batch = allFavs.slice(i, i + batchSize);
                 i += batchSize;
                 batch.forEach((fav, idx) => {
-                    const realIdx = i - batchSize + idx;
-                    const card = document.createElement('div');
-                    card.className = 'fav-card';
-                    card.style.animationDelay = (realIdx * 0.05) + 's';
-                    card.setAttribute('data-fav-id', fav.id);
-                    card.setAttribute('data-fav-prompt', fav.prompt);
-                    card.setAttribute('data-fav-src', fav.imageSrc);
-
-                    // 左上角按钮栏
-                    const overlay = document.createElement('div');
-                    overlay.className = 'fav-card-overlay';
-
-                    const downloadBtn = document.createElement('button');
-                    downloadBtn.title = '下载图片';
-                    downloadBtn.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>';
-                    downloadBtn.onclick = function(e) {
-                        e.stopPropagation();
-                        downloadFavImage(card.getAttribute('data-fav-src'));
-                    };
-
-                    const copyBtn = document.createElement('button');
-                    copyBtn.title = '复制提示词';
-                    copyBtn.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
-                    copyBtn.onclick = function(e) {
-                        e.stopPropagation();
-                        copyFavPrompt(card.getAttribute('data-fav-prompt'));
-                    };
-
-                    const unfavBtn = document.createElement('button');
-                    unfavBtn.title = '取消收藏';
-                    unfavBtn.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="fill:none;pointer-events:none;"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>';
-                    unfavBtn.onclick = function(e) {
-                        e.stopPropagation();
-                        removeFavorite(card.getAttribute('data-fav-id'));
-                    };
-
-                    const genBtn = document.createElement('button');
-                    genBtn.title = '发送提示词到生图';
-                    genBtn.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></svg>';
-                    genBtn.onclick = function(e) {
-                        e.stopPropagation();
-                        setMode('gen');
-                        userInput.value = fav.prompt;
-                        userInput.style.height = 'auto';
-                        userInput.style.height = userInput.scrollHeight + 'px';
-                        userInput.focus();
-                        showToast('已填入提示词');
-                    };
-
-                    overlay.appendChild(downloadBtn);
-                    overlay.appendChild(copyBtn);
-                    overlay.appendChild(genBtn);
-                    overlay.appendChild(unfavBtn);
-
-                    // 标签显示区（+ 按钮内嵌在第一位置）
-                    const tagsDiv = document.createElement('div');
-                    tagsDiv.className = 'fav-card-tags';
-
-                    const tagAddBtn = document.createElement('div');
-                    tagAddBtn.className = 'fav-tag-add-btn';
-                    tagAddBtn.textContent = '+';
-                    tagAddBtn.title = '添加标签';
-                    tagAddBtn.onclick = function(e) {
-                        e.stopPropagation();
-                        showFavTagInput(card);
-                    };
-                    tagsDiv.appendChild(tagAddBtn);
-
-                    if (fav.tags && fav.tags.length > 0) {
-                        fav.tags.forEach(tag => {
-                            const b = document.createElement('span');
-                            b.className = 'fav-card-tag-badge';
-                            b.innerHTML = escapeHtml(tag) + '<span class="fav-tag-x" onclick="event.stopPropagation();removeTagFromFavorite(' + fav.id + ',\'' + escapeHtml(tag).replace(/'/g, "\\'") + '\')">×</span>';
-                            tagsDiv.appendChild(b);
-                        });
-                    }
-
-                    const img = document.createElement('img');
-                    img.src = fav.imageSrc;
-                    img.loading = 'lazy';
-                    img.alt = '';
-                    img.onclick = function() { previewGenImage(fav.imageSrc); };
-                    img.onerror = function() {
-                        this.src = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="150"><rect fill="#ddd" width="200" height="150"/><text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="#999" font-size="12">图片失效</text></svg>');
-                    };
-
-                    card.appendChild(overlay);
-
-                    // 模型标签（收藏时自动记录）
-                    if (fav.model) {
-                        const modelBadge = document.createElement('div');
-                        modelBadge.className = 'fav-card-model-badge';
-                        const logo = getLogoForModel(fav.model);
-                        const logoHtml = logo
-                            ? '<img src="' + logo + '" alt="" onerror="this.style.display=\'none\'">'
-                            : '<span class="model-logo-fallback">AI</span>';
-                        modelBadge.innerHTML = logoHtml + escapeHtml(fav.model);
-                        card.appendChild(modelBadge);
-                    }
-
-                    card.appendChild(tagsDiv);
-                    card.appendChild(img);
+                    const card = createFavCard(fav, i - batchSize + idx);
                     waterfall.appendChild(card);
                 });
-                if (i < allFavs.length) {
-                    requestAnimationFrame(renderBatch);
-                }
+                if (i < allFavs.length) requestAnimationFrame(renderBatch);
             }
             renderBatch();
         }
@@ -2960,6 +2946,7 @@
                             currentGenSessionId = sessions.find(s => s.type === 'gen')?.id || null;
                         }
                         saveSessionsToStorage();
+                        lastRenderedSessionId = null; // 导入后强制重建
                         switchChat(getCurrentId());
                     }
                     // 恢复收藏
@@ -3317,6 +3304,7 @@
         let sessions = [];
         let currentChatSessionId = null;
         let currentGenSessionId = null;
+        let lastRenderedSessionId = null; // 避免切模式时无意义重建聊天区
 
         function getCurrentId() {
             return imageGenMode ? currentGenSessionId : currentChatSessionId;
@@ -3411,7 +3399,11 @@
                 renderPresetTags();
             }
             renderSidebar();
-            renderChatArea();
+            // 只有会话 ID 变化才重建聊天区（避免无意义销毁 base64 图片）
+            if (id !== lastRenderedSessionId) {
+                lastRenderedSessionId = id;
+                renderChatArea();
+            }
             // 移动端选择会话后自动收起侧边栏
             closeSidebarOnMobile();
         }
@@ -4105,14 +4097,15 @@
             btnGen.classList.remove('active');
             if (btnFav) btnFav.classList.remove('active');
             panel.classList.remove('show');
-            if (favPage) favPage.classList.remove('show');
+            if (mode !== 'fav' && favPage) favPage.classList.remove('show');
 
             if (mode === 'fav') {
                 if (btnFav) btnFav.classList.add('active');
                 if (favPage) favPage.classList.add('show');
                 userInput.placeholder = '收藏页面';
                 clearImagePreview();
-                renderFavorites();
+                // 瀑布流永不重建：初始化时渲染一次，后续只用原地增删
+                if (!favRenderedOnce) { favRenderedOnce = true; renderFavorites(); }
             } else if (imageGenMode) {
                 btnChat.classList.remove('active');
                 btnGen.classList.add('active');
