@@ -2256,8 +2256,22 @@
                         removeFavorite(card.getAttribute('data-fav-id'));
                     };
 
+                    const genBtn = document.createElement('button');
+                    genBtn.title = '发送提示词到生图';
+                    genBtn.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></svg>';
+                    genBtn.onclick = function(e) {
+                        e.stopPropagation();
+                        setMode('gen');
+                        userInput.value = fav.prompt;
+                        userInput.style.height = 'auto';
+                        userInput.style.height = userInput.scrollHeight + 'px';
+                        userInput.focus();
+                        showToast('已填入提示词');
+                    };
+
                     overlay.appendChild(downloadBtn);
                     overlay.appendChild(copyBtn);
+                    overlay.appendChild(genBtn);
                     overlay.appendChild(unfavBtn);
 
                     // 标签显示区（+ 按钮内嵌在第一位置）
