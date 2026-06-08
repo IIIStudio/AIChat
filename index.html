@@ -3386,12 +3386,15 @@
                 else setMode('chat');
                 return;
             }
+            // 同一个 session 则跳过
+            const prevId = getCurrentId();
+            if (id === prevId && id === lastRenderedSessionId) return;
             const s = sessions.find(s => s.id === id);
             if (s) {
                 if (s.type === 'gen') currentGenSessionId = id;
                 else currentChatSessionId = id;
             }
-            saveSessionsToStorage();
+            // 不在切模式时写 IndexedDB（session 内容未变，只改当前 ID）
             // 同步该会话的预设
             if (s && s.presetId != null && paramPresets.find(p => p.id === s.presetId)) {
                 activePresetId = s.presetId;
@@ -3399,7 +3402,7 @@
                 renderPresetTags();
             }
             renderSidebar();
-            // 只有会话 ID 变化才重建聊天区（避免无意义销毁 base64 图片）
+            // 只有会话 ID 变化才重建聊天区（避免 base64 图片重新解码）
             if (id !== lastRenderedSessionId) {
                 lastRenderedSessionId = id;
                 renderChatArea();
@@ -3619,7 +3622,6 @@
 
         function renderChatArea() {
             const session = sessions.find(s => s.id === getCurrentId());
-            
             // 清空除了 welcomeScreen 以外的所有消息块
             Array.from(chatInner.children).forEach(child => {
                 if(child.id !== 'welcomeScreen') child.remove();
