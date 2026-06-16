@@ -4390,7 +4390,6 @@
             if (!provider) { sendBtn.disabled = false; return; }
 
             const currentSession = sessions.find(s => s.id === getCurrentId());
-            sendBtn.disabled = true;
 
             const preset = getActivePreset();
             const fakeThought = "Thinking about your request...";
@@ -4398,6 +4397,7 @@
             const aiMessageElement = appendMessageDOM('assistant', '正在思考...', fakeThought, null, null, msgIdx);
 
             try {
+                sendBtn.disabled = true;
                 let messages = [...currentSession.messages];
                 if (preset && preset.systemPrompt) {
                     messages = [{ role: 'system', content: preset.systemPrompt }, ...messages];
@@ -4564,12 +4564,12 @@
 
             userInput.value = '';
             userInput.style.height = '24px';
-            sendBtn.disabled = true;
 
             const msgIdx = currentSession.messages.length;
             const aiMsgEl = appendMessageDOM('assistant', '🎨 正在生成图片...', null, null, null, msgIdx);
 
             try {
+                sendBtn.disabled = true;
                 let baseUrl = (provider.apiUrl || '').trim().replace(/\/+$/, '');
                 if (baseUrl.endsWith('/chat/completions')) {
                     baseUrl = baseUrl.slice(0, -'/chat/completions'.length);
