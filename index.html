@@ -11,6 +11,9 @@
     <link rel="stylesheet" href="https://cdn.jsdmirror.com/npm/katex/dist/katex.min.css">
     <script src="https://cdn.jsdmirror.com/npm/katex/dist/katex.min.js"></script>
     <script src="https://cdn.jsdmirror.com/npm/katex/dist/contrib/auto-render.min.js"></script>
+    <script src="https://cdn.jsdmirror.com/npm/@highlightjs/cdn-assets@11/highlight.min.js"></script>
+    <link rel="stylesheet" id="hljsLightTheme" href="https://cdn.jsdmirror.com/npm/highlight.js@11/styles/github.min.css">
+    <link rel="stylesheet" id="hljsDarkTheme" href="https://cdn.jsdmirror.com/npm/highlight.js@11/styles/github-dark.min.css" disabled>
     <script type="module">
         // streaming-markdown 用于流式增量渲染，暴露到 window 供非模块脚本调用
         import * as smd from "https://cdn.jsdmirror.com/npm/streaming-markdown/smd.min.js";
@@ -4175,7 +4178,8 @@
             blockDiv.appendChild(actionsDiv);
 
             chatInner.appendChild(blockDiv);
-            // 渲染数学公式（思考段与正文段统一处理）
+            // 代码高亮与数学公式渲染（思考段与正文段统一处理）
+            highlightCodeBlocks(blockDiv);
             renderMath(blockDiv);
             // 添加新消息后自动滚动到底部
             requestAnimationFrame(() => { chatContainer.scrollTop = chatContainer.scrollHeight; });
@@ -4506,6 +4510,31 @@
         });
 
         // ============================================================
+        //  代码高亮 — 统一处理 marked 与 smd 两条路径的代码块
+        // ============================================================
+        // 对容器内 <pre><code> 元素调用 hljs 着色，已处理的跳过
+        // marked v15 不再支持 highlight 选项，故两条路径都在此统一处理
+        // 传参：container 为待处理的 DOM 容器
+        // 返回：无
+        function highlightCodeBlocks(container) {
+            if (!container || !window.hljs) return;
+            // 查找未着色的代码块，已加 hljs class 的跳过
+            container.querySelectorAll('pre > code:not(.hljs)').forEach(el => {
+                // marked/smd 把语言写在 class 上（如 language-javascript），提取语言名
+                const langMatch = el.className.match(/language-(\w+)/);
+                const lang = langMatch ? langMatch[1] : null;
+                try {
+                    if (lang && hljs.getLanguage(lang)) {
+                        el.innerHTML = hljs.highlight(el.textContent, { language: lang }).value;
+                    } else {
+                        el.innerHTML = hljs.highlightAuto(el.textContent).value;
+                    }
+                    el.classList.add('hljs');
+                } catch(e) {}
+            });
+        }
+
+        // ============================================================
         //  数学公式预处理 — 剥离包裹公式的反引号
         // ============================================================
         // 模型常以 `$...$` 或 `$$...$$` 形式输出公式，反引号会被 markdown
@@ -4621,9 +4650,10 @@
             // 5.结束流，刷新剩余未闭合的 markdown 标记
             if (contentParser) window.smd.parser_end(contentParser);
             if (thoughtParser) window.smd.parser_end(thoughtParser);
-            // 6.流结束后渲染数学公式（流式中途渲染会因 LaTeX 不完整而失败）
+            // 6.流结束后代码高亮与渲染数学公式（流式中途处理会因内容不完整而失败）
+            highlightCodeBlocks(el);
             renderMath(el);
-            if (thoughtEl) renderMath(thoughtEl);
+            if (thoughtEl) { highlightCodeBlocks(thoughtEl); renderMath(thoughtEl); }
             return { content: full, thought: thoughtFull };
         }
 
@@ -5053,11 +5083,17 @@
                 btn.innerHTML = moonIcon;
                 btn.title = '切换深色模式';
                 localStorage.setItem('theme', 'light');
+                // 切换代码高亮主题为亮色
+                document.getElementById('hljsLightTheme').disabled = false;
+                document.getElementById('hljsDarkTheme').disabled = true;
             } else {
                 html.setAttribute('data-theme', 'dark');
                 btn.innerHTML = sunIcon;
                 btn.title = '切换浅色模式';
                 localStorage.setItem('theme', 'dark');
+                // 切换代码高亮主题为暗色
+                document.getElementById('hljsLightTheme').disabled = true;
+                document.getElementById('hljsDarkTheme').disabled = false;
             }
         }
 
@@ -5068,6 +5104,11 @@
                 const btn = document.querySelector('.dark-mode-btn');
                 btn.innerHTML = sunIcon;
                 btn.title = '切换浅色模式';
+                document.getElementById('hljsLightTheme').disabled = true;
+                document.getElementById('hljsDarkTheme').disabled = false;
+            } else {
+                document.getElementById('hljsLightTheme').disabled = false;
+                document.getElementById('hljsDarkTheme').disabled = true;
             }
         })();
     </script>
