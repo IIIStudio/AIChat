@@ -381,7 +381,7 @@
         .message { display: flex; flex-direction: column; max-width: 100%; }
         
         .message.user { align-self: flex-end; align-items: flex-end; max-width: 85%; }
-        .message.assistant { align-self: flex-start; align-items: flex-start; }
+        .message.assistant { align-self: stretch; align-items: flex-start; }
 
         .message-content {
             font-size: 15px;
@@ -398,6 +398,7 @@
         .message.assistant .message-content { 
             background-color: transparent; 
             padding: 4px 0; 
+            width: 100%;
         }
 
         /* 操作按钮 */
@@ -428,6 +429,7 @@
             max-width: var(--chat-max-width);
             padding: 12px 16px;
             gap: 8px;
+            position: relative;
         }
 
         .upload-icon {
@@ -2073,7 +2075,46 @@
             background-color: #111b26;
             color: #177ddc;
         }
+        .source-editor {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+        }
+        .source-highlight {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 16px;
+            box-sizing: border-box;
+            background-color: var(--bg-surface);
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            overflow: auto;
+            pointer-events: none;
+            white-space: pre-wrap;
+            overflow-wrap: break-word;
+            word-break: break-word;
+            border: none;
+            z-index: 1;
+        }
+        .source-highlight code {
+            background: none;
+            padding: 0;
+            font-family: inherit;
+            font-size: inherit;
+            line-height: inherit;
+            white-space: pre-wrap;
+            overflow-wrap: break-word;
+            word-break: break-word;
+        }
         #executorSource {
+            position: relative;
+            z-index: 2;
             flex: 1;
             width: 100%;
             border: none;
@@ -2081,12 +2122,25 @@
             outline: none;
             padding: 16px;
             box-sizing: border-box;
-            background-color: var(--bg-surface);
-            color: var(--text-main);
+            background-color: transparent;
+            color: transparent;
+            caret-color: var(--text-main);
+            -webkit-text-fill-color: transparent;
             font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
             font-size: 13px;
             line-height: 1.6;
             overflow-y: auto;
+            white-space: pre-wrap;
+            overflow-wrap: break-word;
+            word-break: break-word;
+        }
+        #executorSource::placeholder {
+            color: var(--text-muted);
+            opacity: 0.5;
+            -webkit-text-fill-color: var(--text-muted);
+        }
+        [data-theme="dark"] #executorSource {
+            caret-color: var(--text-main);
         }
         .executor-right {
             position: relative;
@@ -2184,15 +2238,17 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            padding: 12px;
+            box-sizing: border-box;
+            background: var(--bg-gray);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
         }
         .viewer-canvas svg {
             max-width: none !important;
             max-height: none !important;
             user-select: none;
             pointer-events: none;
-        }
-        .viewer-canvas svg rect {
-            fill: transparent !important;
         }
         .viewer-tip {
             position: absolute;
@@ -2211,8 +2267,8 @@
         /* --- 一键回到最新位置悬浮按钮样式 --- */
         .scroll-down-btn {
             position: absolute;
-            bottom: 120px;
-            left: calc(50% + (var(--chat-max-width) / 2) - 36px);
+            bottom: calc(100% + 10px);
+            right: 8px;
             width: 36px;
             height: 36px;
             border-radius: 50%;
@@ -2409,13 +2465,12 @@
             </div>
         </div>
 
-        <!-- 回到最新位置悬浮按钮 -->
-        <div class="scroll-down-btn" id="scrollDownBtn" onclick="scrollToBottomSmoothly()" title="回到最新位置">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
-        </div>
-
         <div class="input-area">
             <div class="input-pill">
+                <!-- 回到最新位置悬浮按钮 -->
+                <div class="scroll-down-btn" id="scrollDownBtn" onclick="scrollToBottomSmoothly()" title="回到最新位置">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </div>
                 <div class="image-preview-area" id="imagePreviewArea" style="display:none;">
                     <div class="image-preview-grid" id="imagePreviewGrid"></div>
                 </div>
@@ -2491,7 +2546,10 @@
         <div class="executor-content" id="executorContent">
             <div class="executor-panel executor-left" id="executorLeftPanel">
                 <div class="panel-header">HTML 源码</div>
-                <textarea id="executorSource" spellcheck="false" placeholder="输入 HTML 代码..."></textarea>
+                <div class="source-editor">
+                    <pre class="source-highlight" id="executorHighlight" aria-hidden="true"><code class="hljs language-xml"></code></pre>
+                    <textarea id="executorSource" spellcheck="false" placeholder="输入 HTML 代码..."></textarea>
+                </div>
             </div>
             <div class="executor-panel executor-right" id="executorRightPanel">
                 <div class="panel-header">
@@ -4754,64 +4812,93 @@
         const chatContainer = document.getElementById('chatContainer');
         const chatInner = document.getElementById('chatInner');
         const welcomeScreen = document.getElementById('welcomeScreen');
+        let suppressMessageAutoScroll = false;
 
-        function renderChatArea() {
+        /**
+         * 重新渲染当前会话的聊天区域，并按选项控制滚动位置
+         * @param {Object} [options] - 渲染选项
+         * @param {boolean} [options.preserveScroll=false] - 是否保留当前聊天滚动位置
+         * @returns {void}
+         */
+        function renderChatArea(options = {}) {
             const session = sessions.find(s => s.id === getCurrentId());
-            // 清空除了 welcomeScreen 以外的所有消息块
-            Array.from(chatInner.children).forEach(child => {
-                if(child.id !== 'welcomeScreen') child.remove();
-            });
+            const preserveScroll = options.preserveScroll === true;
+            const previousScrollTop = chatContainer ? chatContainer.scrollTop : 0;
+            const previousAutoScroll = shouldAutoScroll;
+            const previousSuppressAutoScroll = suppressMessageAutoScroll;
 
-            if (session.messages.length === 0) {
-                welcomeScreen.style.display = 'block';
-                updateMessageAnchors();
-            } else {
-                welcomeScreen.style.display = 'none';
-                session.messages.forEach((msg, idx) => {
-                    // 【网络搜索/TinyFish】【消息渲染】跳过中间过渡的工具调用、系统角色消息或无内容的过渡助手消息，只渲染用户和最终的助手回复
-                    if (msg.role === 'tool' || msg.role === 'system' || (msg.role === 'assistant' && !msg.content && msg.tool_calls && msg.tool_calls.length > 0)) {
-                        return;
-                    }
-                    let displayContent, imageUrl;
-                    let displayModel = msg.model;
-                    let displayThought = msg.thought;
-                    let displayPresetId = msg.presetId;
-                    let displayGenImages = msg.images || null;
-                    let displayGenParams = msg.genParams || null;
-                    // 如果有版本历史且正在查看旧版本，使用旧版本内容
-                    let displayIsHtml = msg.isHtml || false;
-                    if (msg.role === 'assistant' && msg.versions && msg.versions.length > 0) {
-                        const dv = msg.displayVersionIdx || 0;
-                        if (dv > 0 && msg.versions[dv - 1]) {
-                            const ver = msg.versions[dv - 1];
-                            displayContent = ver.content;
-                            displayModel = ver.model || msg.model;
-                            displayThought = ver.thought || msg.thought;
-                            displayPresetId = ver.presetId != null ? ver.presetId : msg.presetId;
-                            displayIsHtml = ver.isHtml != null ? ver.isHtml : displayIsHtml;
-                            displayGenImages = ver.images || displayGenImages;
-                            displayGenParams = ver.genParams || displayGenParams;
+            if (preserveScroll) {
+                suppressMessageAutoScroll = true;
+            }
+
+            try {
+                // 1. 清空除了 welcomeScreen 以外的所有消息块
+                Array.from(chatInner.children).forEach(child => {
+                    if(child.id !== 'welcomeScreen') child.remove();
+                });
+
+                if (session.messages.length === 0) {
+                    welcomeScreen.style.display = 'block';
+                    updateMessageAnchors();
+                } else {
+                    welcomeScreen.style.display = 'none';
+                    session.messages.forEach((msg, idx) => {
+                        // 【网络搜索/TinyFish】【消息渲染】跳过中间过渡的工具调用、系统角色消息或无内容的过渡助手消息，只渲染用户和最终的助手回复
+                        if (msg.role === 'tool' || msg.role === 'system' || (msg.role === 'assistant' && !msg.content && msg.tool_calls && msg.tool_calls.length > 0)) {
+                            return;
+                        }
+                        let displayContent, imageUrl;
+                        let displayModel = msg.model;
+                        let displayThought = msg.thought;
+                        let displayPresetId = msg.presetId;
+                        let displayGenImages = msg.images || null;
+                        let displayGenParams = msg.genParams || null;
+                        // 2. 如果有版本历史且正在查看旧版本，使用旧版本内容
+                        let displayIsHtml = msg.isHtml || false;
+                        if (msg.role === 'assistant' && msg.versions && msg.versions.length > 0) {
+                            const dv = msg.displayVersionIdx || 0;
+                            if (dv > 0 && msg.versions[dv - 1]) {
+                                const ver = msg.versions[dv - 1];
+                                displayContent = ver.content;
+                                displayModel = ver.model || msg.model;
+                                displayThought = ver.thought || msg.thought;
+                                displayPresetId = ver.presetId != null ? ver.presetId : msg.presetId;
+                                displayIsHtml = ver.isHtml != null ? ver.isHtml : displayIsHtml;
+                                displayGenImages = ver.images || displayGenImages;
+                                displayGenParams = ver.genParams || displayGenParams;
+                            } else if (Array.isArray(msg.content)) {
+                                const textPart = msg.content.find(c => c.type === 'text');
+                                displayContent = textPart ? textPart.text : '';
+                            } else {
+                                displayContent = msg.content;
+                            }
                         } else if (Array.isArray(msg.content)) {
                             const textPart = msg.content.find(c => c.type === 'text');
                             displayContent = textPart ? textPart.text : '';
+                            // 3. 提取所有图片 URL，支持多图显示
+                            const imgParts = msg.content.filter(c => c.type === 'image_url');
+                            imageUrl = imgParts.length > 0 ? imgParts.map(p => p.image_url.url) : null;
                         } else {
                             displayContent = msg.content;
                         }
-                    } else if (Array.isArray(msg.content)) {
-                        const textPart = msg.content.find(c => c.type === 'text');
-                        displayContent = textPart ? textPart.text : '';
-                        // 提取所有图片 URL，支持多图显示
-                        const imgParts = msg.content.filter(c => c.type === 'image_url');
-                        imageUrl = imgParts.length > 0 ? imgParts.map(p => p.image_url.url) : null;
-                    } else {
-                        displayContent = msg.content;
-                    }
-                    appendMessageDOM(msg.role, displayContent, displayThought, imageUrl, displayModel, idx, displayPresetId, displayIsHtml, displayGenImages, displayGenParams);
+                        appendMessageDOM(msg.role, displayContent, displayThought, imageUrl, displayModel, idx, displayPresetId, displayIsHtml, displayGenImages, displayGenParams);
+                    });
+                }
+                updateMessageAnchors();
+                // 【网络搜索/TinyFish】【恢复历史】每次重绘聊天区时，根据最新消息历史恢复右侧搜索面板状态
+                restoreSearchProcess();
+            } finally {
+                suppressMessageAutoScroll = previousSuppressAutoScroll;
+            }
+
+            if (preserveScroll && chatContainer) {
+                requestAnimationFrame(() => {
+                    // 【聊天/主题切换】4. 主题重绘只刷新样式，不改变用户当前阅读位置
+                    chatContainer.scrollTop = previousScrollTop;
+                    shouldAutoScroll = previousAutoScroll;
+                    updateScrollDownBtnVisibility();
                 });
             }
-            updateMessageAnchors();
-            // 【网络搜索/TinyFish】【恢复历史】每次重绘聊天区时，根据最新消息历史恢复右侧搜索面板状态
-            restoreSearchProcess();
         }
 
         function regenerateMessage(btn) {
@@ -5205,9 +5292,11 @@
             highlightCodeBlocks(blockDiv);
             renderMath(blockDiv);
             renderMermaid(blockDiv);
-            // 添加新消息后自动滚动到底部并重置自动滚动状态
-            shouldAutoScroll = true;
-            requestAnimationFrame(() => { chatContainer.scrollTop = chatContainer.scrollHeight; });
+            // 【聊天/滚动控制】添加新消息后自动滚动到底部，主题重绘期间跳过该副作用
+            if (!suppressMessageAutoScroll) {
+                shouldAutoScroll = true;
+                requestAnimationFrame(() => { chatContainer.scrollTop = chatContainer.scrollHeight; });
+            }
             updateMessageAnchors();
             return contentDiv; 
         }
@@ -7005,7 +7094,7 @@
                     securityLevel: 'loose'
                 });
             }
-            renderChatArea();
+            renderChatArea({ preserveScroll: true });
         }
 
         // 初始化主题
@@ -7041,6 +7130,7 @@
             
             const sourceTextarea = document.getElementById('executorSource');
             if (sourceTextarea) sourceTextarea.value = htmlContent;
+            updateExecutorHighlight();
 
             // 1. 恢复双栏的初始状态
             const leftPanel = document.getElementById('executorLeftPanel');
@@ -7165,6 +7255,46 @@
 
 
         // ============================================================
+        //  HTML 源码编辑器语法高亮（textarea 叠加 hljs 着色层）
+        // ============================================================
+        // 同步源码到背后的 <pre> 着色层，并同步滚动位置
+        function updateExecutorHighlight() {
+            const ta = document.getElementById('executorSource');
+            const codeEl = document.querySelector('#executorHighlight code');
+            if (!ta || !codeEl) return;
+            const src = ta.value || '';
+            if (window.hljs) {
+                try {
+                    codeEl.innerHTML = hljs.highlight(src, { language: 'xml' }).value;
+                } catch(e) {
+                    try { codeEl.innerHTML = hljs.highlightAuto(src).value; }
+                    catch(e2) { codeEl.textContent = src; }
+                }
+            } else {
+                codeEl.textContent = src;
+            }
+            const pre = document.getElementById('executorHighlight');
+            if (pre) {
+                pre.scrollTop = ta.scrollTop;
+                pre.scrollLeft = ta.scrollLeft;
+            }
+        }
+
+        (function setupExecutorHighlightSync() {
+            const ta = document.getElementById('executorSource');
+            if (!ta) return;
+            ta.addEventListener('input', updateExecutorHighlight);
+            ta.addEventListener('scroll', function() {
+                const pre = document.getElementById('executorHighlight');
+                if (pre) {
+                    pre.scrollTop = ta.scrollTop;
+                    pre.scrollLeft = ta.scrollLeft;
+                }
+            });
+        })();
+
+
+        // ============================================================
         //  Mermaid 全屏放大查看器逻辑
         // ============================================================
         // 存储放大查看器的变换参数
@@ -7182,22 +7312,45 @@
          */
         window.openMermaidViewer = function(svgHtml) {
             const canvas = document.getElementById('viewerCanvas');
+            const body = document.getElementById('viewerBody');
+            const modal = document.getElementById('mermaidViewerModal');
             if (!canvas) return;
             canvas.innerHTML = svgHtml;
 
-            // 1. 去除 SVG 的绝对尺寸硬编码以适应无级缩放
+            // 1. 先显示弹窗，以便测量可用尺寸
+            if (modal) modal.style.display = 'flex';
+
             const svg = canvas.querySelector('svg');
-            if (svg) {
-                svg.style.width = 'auto';
-                svg.style.height = 'auto';
+            if (svg && body) {
+                // 解除 mermaid 内置的最大宽高限制
+                svg.style.maxWidth = 'none';
+                svg.style.maxHeight = 'none';
+                svg.style.display = 'block';
+
+                // 2. 取 viewBox 作为原始比例依据；缺失时回退到 width/height 属性
+                let vbW = 0, vbH = 0;
+                const vb = svg.getAttribute('viewBox');
+                if (vb) {
+                    const p = vb.split(/[\s,]+/).map(Number);
+                    if (p.length === 4) { vbW = p[2]; vbH = p[3]; }
+                }
+                if (!vbW || !vbH) {
+                    vbW = parseFloat(svg.getAttribute('width')) || 800;
+                    vbH = parseFloat(svg.getAttribute('height')) || 600;
+                }
+
+                // 3. 移除硬编码尺寸，改用按视口等比缩放后的明确尺寸，避免在绝对定位画布中塌缩为空白
                 svg.removeAttribute('width');
                 svg.removeAttribute('height');
+                const bw = Math.max(body.clientWidth - 80, 100);
+                const bh = Math.max(body.clientHeight - 80, 100);
+                const fit = Math.min(bw / vbW, bh / vbH);
+                svg.setAttribute('width', Math.max(vbW * fit, 1));
+                svg.setAttribute('height', Math.max(vbH * fit, 1));
             }
 
-            // 2. 重置画板坐标和比例并显示
+            // 4. 重置画板坐标和比例
             resetMermaidViewer();
-            const modal = document.getElementById('mermaidViewerModal');
-            if (modal) modal.style.display = 'flex';
         };
 
         /**
