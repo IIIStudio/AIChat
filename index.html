@@ -4049,12 +4049,7 @@
             updateSearchBtnUI();
 
             if (window.mermaid) {
-                const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-                mermaid.initialize({
-                    startOnLoad: false,
-                    theme: isDark ? 'dark' : 'default',
-                    securityLevel: 'loose'
-                });
+                mermaid.initialize(getMermaidConfig());
             }
             await loadProviders();
             updateModelDisplay();
@@ -6005,6 +6000,76 @@
         // ============================================================
         //  Mermaid 图表渲染与视图切换
         // ============================================================
+        /**
+         * 【流式渲染/系统】【主题配置】获取 Mermaid 当前主题配置
+         * @returns {Object} - Mermaid 初始化配置
+         */
+        function getMermaidConfig() {
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            const lightThemeVariables = {
+                background: 'transparent',
+                primaryColor: '#eef2ff',
+                primaryTextColor: '#172033',
+                primaryBorderColor: '#7c8fd6',
+                lineColor: '#526172',
+                secondaryColor: '#edf8ef',
+                secondaryTextColor: '#173321',
+                secondaryBorderColor: '#78b38a',
+                tertiaryColor: '#fff3d8',
+                tertiaryTextColor: '#3b2a10',
+                tertiaryBorderColor: '#d6a24a',
+                nodeBorder: '#7c8fd6',
+                mainBkg: '#eef2ff',
+                clusterBkg: '#f7f4ff',
+                clusterBorder: '#b6a7df',
+                edgeLabelBackground: '#ffffff',
+                textColor: '#172033',
+                labelTextColor: '#172033',
+                actorBkg: '#eef2ff',
+                actorBorder: '#7c8fd6',
+                actorTextColor: '#172033',
+                signalColor: '#526172',
+                signalTextColor: '#172033',
+                noteBkgColor: '#fff3d8',
+                noteTextColor: '#3b2a10',
+                noteBorderColor: '#d6a24a'
+            };
+            const darkThemeVariables = {
+                background: 'transparent',
+                primaryColor: '#263a5c',
+                primaryTextColor: '#f3f7ff',
+                primaryBorderColor: '#86a7e8',
+                lineColor: '#b7c1d0',
+                secondaryColor: '#244532',
+                secondaryTextColor: '#f1fff4',
+                secondaryBorderColor: '#82c695',
+                tertiaryColor: '#4c3a1e',
+                tertiaryTextColor: '#fff5dd',
+                tertiaryBorderColor: '#d6ad61',
+                nodeBorder: '#86a7e8',
+                mainBkg: '#263a5c',
+                clusterBkg: '#2b2540',
+                clusterBorder: '#9f8fd4',
+                edgeLabelBackground: '#171a20',
+                textColor: '#f3f7ff',
+                labelTextColor: '#f3f7ff',
+                actorBkg: '#263a5c',
+                actorBorder: '#86a7e8',
+                actorTextColor: '#f3f7ff',
+                signalColor: '#b7c1d0',
+                signalTextColor: '#f3f7ff',
+                noteBkgColor: '#4c3a1e',
+                noteTextColor: '#fff5dd',
+                noteBorderColor: '#d6ad61'
+            };
+            return {
+                startOnLoad: false,
+                theme: 'base',
+                securityLevel: 'loose',
+                themeVariables: isDark ? darkThemeVariables : lightThemeVariables
+            };
+        }
+
         // 切换 Mermaid 视图模式
         window.switchMermaidTab = function(wrapper, mode) {
             if (!wrapper) return;
@@ -6068,7 +6133,10 @@
 
             const previewDiv = document.createElement('div');
             previewDiv.className = 'mermaid-preview';
-            previewDiv.innerHTML = svg;
+            const mermaidDiv = document.createElement('div');
+            mermaidDiv.className = 'mermaid';
+            mermaidDiv.innerHTML = svg;
+            previewDiv.appendChild(mermaidDiv);
             btnZoom.onclick = () => {
                 const svgEl = previewDiv.querySelector('svg');
                 if (svgEl) {
@@ -6115,12 +6183,7 @@
             const source = codeEl.textContent || '';
             if (!source.trim() || codeEl.__mermaidErrorSource === source) return;
             codeEl.__mermaidRendering = true;
-            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-            mermaid.initialize({
-                startOnLoad: false,
-                theme: isDark ? 'dark' : 'default',
-                securityLevel: 'loose'
-            });
+            mermaid.initialize(getMermaidConfig());
             const renderId = `mermaid-render-${Date.now()}-${mermaidRenderSeq++}`;
             let renderTask;
             try {
@@ -6128,7 +6191,7 @@
             } catch (err) {
                 codeEl.__mermaidErrorSource = source;
                 codeEl.__mermaidRendering = false;
-                console.info('Mermaid 渲染暂缓: ', err);
+                console.info('【流式渲染/系统】【Mermaid暂缓】Mermaid 渲染暂缓: ', err);
                 return;
             }
             renderTask.then(result => {
@@ -6148,7 +6211,7 @@
                 targetToReplace.parentNode.replaceChild(wrapper, targetToReplace);
             }).catch(err => {
                 codeEl.__mermaidErrorSource = source;
-                console.info('Mermaid 渲染暂缓: ', err);
+                console.info('【流式渲染/系统】【Mermaid暂缓】Mermaid 渲染暂缓: ', err);
             }).finally(() => {
                 codeEl.__mermaidRendering = false;
             });
@@ -6242,8 +6305,13 @@
                                 thoughtFull += deltaObj.reasoning_content;
                                 if (thoughtEl) {
                                     thoughtEl.setAttribute('data-raw', thoughtFull);
-                                    if (thoughtParser) window.smd.parser_write(thoughtParser, unwrapMathFromCode(deltaObj.reasoning_content));
-                                    else thoughtEl.textContent = thoughtFull;
+                                    if (thoughtParser) {
+                                        window.smd.parser_write(thoughtParser, unwrapMathFromCode(deltaObj.reasoning_content));
+                                        // 【流式渲染/系统】【眉头优先】写入后立即渲染代码块外壳，避免内容先于眉头出现
+                                        renderCodeBlockShells(thoughtEl, true);
+                                    } else {
+                                        thoughtEl.textContent = thoughtFull;
+                                    }
                                     if (shouldRenderClosedCodeFence(thoughtFull, thoughtRenderedFenceCount)) {
                                         thoughtRenderedFenceCount = getCodeFenceCount(thoughtFull);
                                         renderCompletedMarkdownBlocks(thoughtEl, true);
@@ -6258,8 +6326,13 @@
                                 }
                                 full += deltaObj.content;
                                 el.setAttribute('data-raw', full);
-                                if (contentParser) window.smd.parser_write(contentParser, unwrapMathFromCode(deltaObj.content));
-                                else el.textContent = full;
+                                if (contentParser) {
+                                    window.smd.parser_write(contentParser, unwrapMathFromCode(deltaObj.content));
+                                    // 【流式渲染/系统】【眉头优先】写入后立即渲染代码块外壳，避免内容先于眉头出现
+                                    renderCodeBlockShells(el, true);
+                                } else {
+                                    el.textContent = full;
+                                }
                                 if (shouldRenderClosedCodeFence(full, contentRenderedFenceCount)) {
                                     contentRenderedFenceCount = getCodeFenceCount(full);
                                     renderCompletedMarkdownBlocks(el, true);
@@ -7276,12 +7349,7 @@
             }
             // 重新初始化并应用 Mermaid 主题，然后刷新聊天区域
             if (window.mermaid) {
-                const isDark = html.getAttribute('data-theme') === 'dark';
-                mermaid.initialize({
-                    startOnLoad: false,
-                    theme: isDark ? 'dark' : 'default',
-                    securityLevel: 'loose'
-                });
+                mermaid.initialize(getMermaidConfig());
             }
             renderChatArea({ preserveScroll: true });
         }
