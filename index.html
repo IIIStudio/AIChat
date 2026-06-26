@@ -987,9 +987,19 @@
         .message-content hr, .thought-content hr { border: none; height: 1px; background: var(--border-color); margin: 16px 0; }
         .message-content img, .thought-content img { max-width: 100%; border-radius: 8px; margin: 8px 0; }
         .message-content strong, .thought-content strong { font-weight: 700; color: var(--text-main); }
-        .mermaid-wrapper { width: 100%; overflow-x: auto; background: var(--bg-gray); border-radius: 6px; padding: 12px; margin: 8px 0; display: flex; justify-content: center; box-sizing: border-box; }
+        .mermaid-wrapper { width: 100%; background: var(--bg-gray); border-radius: 8px; border: 1px solid var(--border-color); margin: 10px 0; display: flex; flex-direction: column; box-sizing: border-box; overflow: hidden; }
+        .mermaid-toolbar { display: flex; align-items: center; background: var(--bg-hover); padding: 6px 12px; border-bottom: 1px solid var(--border-color); user-select: none; gap: 8px; }
+        .mermaid-tool-btn { font-size: 12px; color: var(--text-muted); cursor: pointer; padding: 3px 8px; border-radius: 4px; transition: all 0.15s; }
+        .mermaid-tool-btn:hover { color: var(--text-main); background: var(--bg-gray); }
+        .mermaid-tool-btn.active { color: var(--text-main); background: var(--bg-active-chat); font-weight: 500; }
+        .mermaid-tool-copy { margin-left: auto; font-size: 11px; color: var(--text-muted); cursor: pointer; display: inline-flex; align-items: center; gap: 4px; transition: color 0.15s; }
+        .mermaid-tool-copy:hover { color: var(--text-main); }
+        .mermaid-preview { width: 100%; padding: 12px; box-sizing: border-box; overflow-x: auto; display: flex; justify-content: center; }
         .mermaid { display: flex; justify-content: center; width: 100%; }
         .mermaid svg { margin: 0 auto; display: block; }
+        .mermaid-code { width: 100%; box-sizing: border-box; }
+        .mermaid-code pre { margin: 0; border: none; border-radius: 0; background: var(--bg-main); }
+        .mermaid-source-text { display: block; padding: 12px; font-size: 12px; line-height: 1.6; overflow-x: auto; }
         .message-content .katex-display, .thought-content .katex-display { margin: 12px 0; overflow-x: auto; overflow-y: hidden; padding: 4px 0; }
         .message-content .katex, .thought-content .katex { font-size: 1.05em; }
 
@@ -4898,8 +4908,29 @@
         }
 
         // ============================================================
-        //  Mermaid 图表渲染
+        //  Mermaid 图表渲染与视图切换
         // ============================================================
+        // 切换 Mermaid 视图模式
+        window.switchMermaidTab = function(wrapper, mode) {
+            if (!wrapper) return;
+            const btnPreview = wrapper.querySelector('.mermaid-toolbar .mermaid-tool-btn:nth-child(1)');
+            const btnCode = wrapper.querySelector('.mermaid-toolbar .mermaid-tool-btn:nth-child(2)');
+            const previewDiv = wrapper.querySelector('.mermaid-preview');
+            const codeDiv = wrapper.querySelector('.mermaid-code');
+
+            if (mode === 'preview') {
+                btnPreview?.classList.add('active');
+                btnCode?.classList.remove('active');
+                if (previewDiv) previewDiv.style.display = 'flex';
+                if (codeDiv) codeDiv.style.display = 'none';
+            } else if (mode === 'code') {
+                btnPreview?.classList.remove('active');
+                btnCode?.classList.add('active');
+                if (previewDiv) previewDiv.style.display = 'none';
+                if (codeDiv) codeDiv.style.display = 'block';
+            }
+        };
+
         function renderMermaid(container) {
             if (!container || !window.mermaid) return;
             const codeEls = Array.from(container.querySelectorAll('pre > code.mermaid-raw, pre > code.language-mermaid'));
@@ -4910,13 +4941,68 @@
                 if (!pre || pre.tagName !== 'PRE') return;
                 if (pre.closest('.mermaid-wrapper')) return;
 
+                const wrapper = document.createElement('div');
+                wrapper.className = 'mermaid-wrapper';
+
+                // 1. 创建工具栏
+                const toolbar = document.createElement('div');
+                toolbar.className = 'mermaid-toolbar';
+
+                const btnPreview = document.createElement('span');
+                btnPreview.className = 'mermaid-tool-btn active';
+                btnPreview.textContent = '图表';
+                btnPreview.onclick = () => switchMermaidTab(wrapper, 'preview');
+
+                const btnCode = document.createElement('span');
+                btnCode.className = 'mermaid-tool-btn';
+                btnCode.textContent = '源码';
+                btnCode.onclick = () => switchMermaidTab(wrapper, 'code');
+
+                const btnCopy = document.createElement('span');
+                btnCopy.className = 'mermaid-tool-copy';
+                btnCopy.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> 复制';
+                btnCopy.onclick = () => {
+                    navigator.clipboard.writeText(el.textContent).then(() => {
+                        btnCopy.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg> 已复制';
+                        setTimeout(() => {
+                            btnCopy.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> 复制';
+                        }, 2000);
+                    });
+                };
+
+                toolbar.appendChild(btnPreview);
+                toolbar.appendChild(btnCode);
+                toolbar.appendChild(btnCopy);
+
+                // 2. 创建图表预览区域
+                const previewDiv = document.createElement('div');
+                previewDiv.className = 'mermaid-preview';
+                
                 const mermaidDiv = document.createElement('div');
                 mermaidDiv.className = 'mermaid';
                 mermaidDiv.textContent = el.textContent;
+                previewDiv.appendChild(mermaidDiv);
 
-                const wrapper = document.createElement('div');
-                wrapper.className = 'mermaid-wrapper';
-                wrapper.appendChild(mermaidDiv);
+                // 3. 创建源码框
+                const codeDiv = document.createElement('div');
+                codeDiv.className = 'mermaid-code';
+                codeDiv.style.display = 'none';
+
+                const preNode = document.createElement('pre');
+                const codeNode = document.createElement('code');
+                codeNode.className = 'mermaid-source-text hljs';
+                if (window.hljs) {
+                    try { codeNode.innerHTML = hljs.highlightAuto(el.textContent).value; } 
+                    catch(e) { codeNode.textContent = el.textContent; }
+                } else {
+                    codeNode.textContent = el.textContent;
+                }
+                preNode.appendChild(codeNode);
+                codeDiv.appendChild(preNode);
+
+                wrapper.appendChild(toolbar);
+                wrapper.appendChild(previewDiv);
+                wrapper.appendChild(codeDiv);
 
                 // 检查并替换可能已存在的高亮包装容器 code-block-wrapper，避免残留 header 栏
                 let targetToReplace = pre;
