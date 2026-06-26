@@ -7050,7 +7050,7 @@
             // 1. 生成 CDN script 引入标签
             let scriptsHtml = '';
             injectedCdnUrls.forEach(url => {
-                scriptsHtml += `<script src="${url}"></script>\n`;
+                scriptsHtml += '<script src="' + url + '"></' + 'script>\n';
             });
 
             let iframeContent = '';
