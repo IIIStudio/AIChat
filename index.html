@@ -1919,6 +1919,294 @@
                 font-size: 28px;
             }
         }
+
+        /* --- HTML 沙箱执行器样式 --- */
+        .html-executor-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: var(--bg-main);
+            z-index: 100000;
+            display: flex;
+            flex-direction: column;
+            animation: fadeIn 0.2s ease-out;
+        }
+        .executor-header {
+            height: 56px;
+            border-bottom: 1px solid var(--border-light);
+            background-color: var(--bg-surface);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            box-sizing: border-box;
+        }
+        .executor-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .executor-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .cdn-injector {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            border-right: 1px solid var(--border-light);
+            padding-right: 12px;
+            margin-right: 4px;
+        }
+        .cdn-injector input {
+            width: 260px;
+            height: 32px;
+            padding: 0 10px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            font-size: 12px;
+            outline: none;
+            transition: border-color 0.15s;
+        }
+        .cdn-injector input:focus {
+            border-color: var(--black-btn);
+        }
+        .executor-btn {
+            height: 32px;
+            padding: 0 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            transition: all 0.15s;
+            border: 1px solid transparent;
+        }
+        .btn-primary {
+            background-color: var(--black-btn);
+            color: var(--text-on-dark);
+        }
+        .btn-primary:hover {
+            opacity: 0.85;
+        }
+        .btn-secondary {
+            background-color: var(--bg-surface);
+            border-color: var(--border-color);
+            color: var(--text-muted);
+        }
+        .btn-secondary:hover {
+            color: var(--text-main);
+            border-color: var(--text-muted);
+        }
+        .btn-close {
+            background: transparent;
+            border: none;
+            font-size: 16px;
+            color: var(--text-muted);
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .btn-close:hover {
+            background-color: var(--bg-hover);
+            color: var(--text-main);
+        }
+        .executor-content {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+            background-color: var(--bg-main);
+        }
+        .executor-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .executor-left {
+            border-right: 1px solid var(--border-light);
+            transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+        .executor-left.collapsed {
+            width: 0;
+            flex: 0;
+            border-right: none;
+        }
+        .panel-header {
+            height: 36px;
+            background-color: var(--bg-hover);
+            border-bottom: 1px solid var(--border-light);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+        }
+        .sandbox-badge {
+            background-color: #e6f7ff;
+            color: #1890ff;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: normal;
+        }
+        .dark-mode .sandbox-badge {
+            background-color: #111b26;
+            color: #177ddc;
+        }
+        #executorSource {
+            flex: 1;
+            width: 100%;
+            border: none;
+            resize: none;
+            outline: none;
+            padding: 16px;
+            box-sizing: border-box;
+            background-color: var(--bg-surface);
+            color: var(--text-main);
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            overflow-y: auto;
+        }
+        .executor-right {
+            position: relative;
+        }
+        .iframe-container {
+            flex: 1;
+            background-color: #ffffff;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+        }
+        #executorIframe {
+            border: none;
+            width: 100%;
+            height: 100%;
+            background-color: #ffffff;
+        }
+
+        /* --- Mermaid 全屏放大查看器样式 --- */
+        .mermaid-viewer-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            z-index: 100000;
+            display: flex;
+            flex-direction: column;
+            animation: fadeIn 0.2s ease-out;
+            user-select: none;
+        }
+        .viewer-header {
+            height: 56px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            background-color: rgba(20, 20, 20, 0.8);
+            color: #ffffff;
+        }
+        .viewer-title {
+            font-size: 15px;
+            font-weight: 600;
+        }
+        .viewer-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .viewer-btn {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #dddddd;
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s;
+            padding: 0;
+        }
+        .viewer-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+            color: #ffffff;
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+        .viewer-btn.btn-close {
+            background: #ff4d4f;
+            border-color: #ff4d4f;
+            color: #ffffff;
+            font-size: 14px;
+        }
+        .viewer-btn.btn-close:hover {
+            background: #ff7875;
+            border-color: #ff7875;
+        }
+        .viewer-body {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .viewer-canvas {
+            position: absolute;
+            transform-origin: center center;
+            transition: transform 0.05s ease-out;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .viewer-canvas svg {
+            max-width: none !important;
+            max-height: none !important;
+            user-select: none;
+            pointer-events: none;
+        }
+        .viewer-canvas svg rect {
+            fill: transparent !important;
+        }
+        .viewer-tip {
+            position: absolute;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.6);
+            color: rgba(255, 255, 255, 0.7);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            pointer-events: none;
+            letter-spacing: 0.5px;
+        }
     </style>
 </head>
 <body>
@@ -2130,6 +2418,63 @@
         <div class="search-sidebar-content thin-scrollbar" id="searchSidebarContent">
             <div class="search-sidebar-empty">当前会话未触发网络搜索。</div>
         </div>
+    </div>
+
+    <!-- HTML 沙箱执行器面板 -->
+    <div id="htmlExecutorModal" class="html-executor-modal" style="display:none;">
+        <div class="executor-header">
+            <div class="executor-title">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                HTML 沙箱执行器
+            </div>
+            <div class="executor-toolbar">
+                <div class="cdn-injector">
+                    <input type="text" id="cdnInput" placeholder="输入 CDN 库 URL (例如 https://...)" title="注入外部 CDN 库">
+                    <button class="executor-btn btn-secondary" onclick="injectCdnLibrary()">注入 CDN</button>
+                </div>
+                <button class="executor-btn btn-primary" onclick="runSandboxHtml()">重新运行</button>
+                <button class="executor-btn btn-secondary" id="btnToggleFullPreview" onclick="toggleFullPreview()">全屏预览</button>
+                <button class="executor-btn btn-close" onclick="closeHtmlExecutor()">✕</button>
+            </div>
+        </div>
+        <div class="executor-content" id="executorContent">
+            <div class="executor-panel executor-left" id="executorLeftPanel">
+                <div class="panel-header">HTML 源码</div>
+                <textarea id="executorSource" spellcheck="false" placeholder="输入 HTML 代码..."></textarea>
+            </div>
+            <div class="executor-panel executor-right" id="executorRightPanel">
+                <div class="panel-header">
+                    <span>运行结果</span>
+                    <span class="sandbox-badge">Sandbox</span>
+                </div>
+                <div class="iframe-container">
+                    <iframe id="executorIframe" sandbox="allow-scripts"></iframe>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mermaid 全屏放大查看器 -->
+    <div id="mermaidViewerModal" class="mermaid-viewer-modal" style="display:none;" onwheel="handleMermaidViewerWheel(event)">
+        <div class="viewer-header">
+            <div class="viewer-title">Mermaid 图表放大视图</div>
+            <div class="viewer-actions">
+                <button class="viewer-btn" onclick="zoomMermaidViewer(1.2)" title="放大">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="11" y1="8" x2="11" y2="14"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg>
+                </button>
+                <button class="viewer-btn" onclick="zoomMermaidViewer(0.8)" title="缩小">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg>
+                </button>
+                <button class="viewer-btn" onclick="resetMermaidViewer()" title="重置">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><polyline points="3 3 3 8 8 8"></polyline></svg>
+                </button>
+                <button class="viewer-btn btn-close" onclick="closeMermaidViewer()">✕</button>
+            </div>
+        </div>
+        <div class="viewer-body" id="viewerBody" onmousedown="startDragMermaidViewer(event)" style="cursor: grab;">
+            <div class="viewer-canvas" id="viewerCanvas"></div>
+        </div>
+        <div class="viewer-tip">提示：支持使用鼠标拖拽平移、滚轮缩放图表</div>
     </div>
 
     <div class="modal-overlay" id="settingsModal">
@@ -5195,12 +5540,28 @@
             if (e.key === 'Escape') closeImgLightbox();
         });
 
-        // 【流式渲染/系统】【辅助函数】判断一个代码块是否已经完全闭合
+        /**
+         * 【流式渲染/系统】【辅助函数】判断代码块是否已闭合
+         * @param {HTMLElement} codeEl - 待判断的 code 元素
+         * @returns {boolean} - 是否已闭合
+         */
         function isCodeBlockClosed(codeEl) {
             const pre = codeEl.parentElement;
             if (!pre || pre.tagName !== 'PRE') return false;
-            // 如果 pre 后面还有任何兄弟节点，说明大模型已开始输出后续内容，该代码块必然已闭合
+            // 1. 如果 pre 后面还有任何兄弟节点，说明已输出后续内容，该代码块必然已闭合
             if (pre.nextSibling) return true;
+            
+            // 2. 增量检查：从消息容器的 data-raw 属性中获取完整的已收文本
+            const container = codeEl.closest('[data-raw]');
+            if (container) {
+                const raw = container.getAttribute('data-raw') || '';
+                // 3. 统计代码块定界符的数量
+                const count = (raw.match(/```/g) || []).length;
+                // 4. 如果定界符数量为偶数，说明当前消息的所有代码块均已闭合
+                if (count > 0 && count % 2 === 0) {
+                    return true;
+                }
+            }
             return false;
         }
 
@@ -5260,6 +5621,30 @@
                         }).catch(() => showToast('复制失败'));
                     };
                     header.appendChild(langLabel);
+                    
+                    // 如果是 html 代码块，增加执行按钮
+                    if (lang === 'html') {
+                        const runBtn = document.createElement('span');
+                        runBtn.className = 'code-run-btn';
+                        runBtn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:2px;"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>运行';
+                        runBtn.style.cursor = 'pointer';
+                        runBtn.style.color = 'var(--text-muted)';
+                        runBtn.style.display = 'inline-flex';
+                        runBtn.style.alignItems = 'center';
+                        runBtn.style.gap = '2px';
+                        runBtn.style.marginRight = '12px';
+                        runBtn.style.fontSize = '11px';
+                        runBtn.style.transition = 'color 0.15s';
+                        runBtn.onmouseover = () => runBtn.style.color = 'var(--text-main)';
+                        runBtn.onmouseout = () => runBtn.style.color = 'var(--text-muted)';
+                        runBtn.onclick = () => {
+                            // 调用执行器打开沙箱
+                            const htmlContent = el.textContent;
+                            openHtmlExecutor(htmlContent);
+                        };
+                        header.appendChild(runBtn);
+                    }
+                    
                     header.appendChild(copyBtn);
                     // 7.将 pre 移入 wrapper，替换原位置
                     pre.parentNode.insertBefore(wrapper, pre);
@@ -5397,8 +5782,21 @@
                     });
                 };
 
+                const btnZoom = document.createElement('span');
+                btnZoom.className = 'mermaid-tool-btn';
+                btnZoom.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:2px;vertical-align:middle;"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>放大';
+                btnZoom.onclick = () => {
+                    const svgEl = previewDiv.querySelector('svg');
+                    if (svgEl) {
+                        openMermaidViewer(svgEl.outerHTML);
+                    } else {
+                        showToast('图表尚未渲染完成');
+                    }
+                };
+
                 toolbar.appendChild(btnPreview);
                 toolbar.appendChild(btnCode);
+                toolbar.appendChild(btnZoom);
                 toolbar.appendChild(btnCopy);
 
                 // 2. 创建图表预览区域
@@ -5512,8 +5910,11 @@
                                     }
                                 }
                                 thoughtFull += deltaObj.reasoning_content;
-                                if (thoughtParser) window.smd.parser_write(thoughtParser, unwrapMathFromCode(deltaObj.reasoning_content));
-                                else if (thoughtEl) thoughtEl.textContent = thoughtFull;
+                                if (thoughtEl) {
+                                    thoughtEl.setAttribute('data-raw', thoughtFull);
+                                    if (thoughtParser) window.smd.parser_write(thoughtParser, unwrapMathFromCode(deltaObj.reasoning_content));
+                                    else thoughtEl.textContent = thoughtFull;
+                                }
                             }
                             // 5.累积并增量渲染正文内容
                             if (deltaObj.content) {
@@ -5522,6 +5923,7 @@
                                     thoughtProcessEl.remove();
                                 }
                                 full += deltaObj.content;
+                                el.setAttribute('data-raw', full);
                                 if (contentParser) window.smd.parser_write(contentParser, unwrapMathFromCode(deltaObj.content));
                                 else el.textContent = full;
                             }
@@ -6561,6 +6963,286 @@
                 document.getElementById('hljsDarkTheme').disabled = true;
             }
         })();
+
+        // ============================================================
+        //  HTML 沙箱执行器逻辑
+        // ============================================================
+        // 存储当前执行器中已注入的 CDN 地址
+        let injectedCdnUrls = [];
+
+        /**
+         * 打开 HTML 执行器并装载代码
+         * @param {string} htmlContent - 待执行的 HTML 源代码
+         * @returns {void}
+         */
+        window.openHtmlExecutor = function(htmlContent) {
+            injectedCdnUrls = [];
+            const cdnInput = document.getElementById('cdnInput');
+            if (cdnInput) cdnInput.value = '';
+            
+            const sourceTextarea = document.getElementById('executorSource');
+            if (sourceTextarea) sourceTextarea.value = htmlContent;
+
+            // 1. 恢复双栏的初始状态
+            const leftPanel = document.getElementById('executorLeftPanel');
+            const toggleBtn = document.getElementById('btnToggleFullPreview');
+            if (leftPanel) leftPanel.classList.remove('collapsed');
+            if (toggleBtn) toggleBtn.textContent = '全屏预览';
+
+            const modal = document.getElementById('htmlExecutorModal');
+            if (modal) modal.style.display = 'flex';
+            
+            // 2. 启动沙箱渲染
+            runSandboxHtml();
+        };
+
+        /**
+         * 关闭 HTML 执行器并清空沙箱
+         * @returns {void}
+         */
+        window.closeHtmlExecutor = function() {
+            const modal = document.getElementById('htmlExecutorModal');
+            if (modal) modal.style.display = 'none';
+            
+            // 1. 清空 iframe 以释放内存并停止脚本执行
+            const iframe = document.getElementById('executorIframe');
+            if (iframe) iframe.srcdoc = '';
+        };
+
+        /**
+         * 向沙箱中注入外部 CDN 库
+         * @returns {void}
+         */
+        window.injectCdnLibrary = function() {
+            const urlInput = document.getElementById('cdnInput');
+            if (!urlInput) return;
+            const url = urlInput.value.trim();
+            
+            if (!url) {
+                showToast('请输入有效的 CDN URL');
+                return;
+            }
+            if (injectedCdnUrls.includes(url)) {
+                showToast('该 CDN 已经注入过');
+                return;
+            }
+            
+            // 1. 记录要注入的 CDN 地址
+            injectedCdnUrls.push(url);
+            showToast('注入成功，正在刷新沙箱');
+            urlInput.value = '';
+            
+            // 2. 重新载入运行结果
+            runSandboxHtml();
+        };
+
+        /**
+         * 拼接源码和 CDN 脚本，加载并运行沙箱 iframe
+         * @returns {void}
+         */
+        window.runSandboxHtml = function() {
+            const sourceTextarea = document.getElementById('executorSource');
+            const iframe = document.getElementById('executorIframe');
+            if (!sourceTextarea || !iframe) return;
+
+            const source = sourceTextarea.value;
+
+            // 1. 生成 CDN script 引入标签
+            let scriptsHtml = '';
+            injectedCdnUrls.forEach(url => {
+                scriptsHtml += `<script src="${url}"></script>\n`;
+            });
+
+            let iframeContent = '';
+            
+            // 2. 检查是否有完整的 HTML 结构，若有则注入 head，若无则补充完整模板
+            if (source.includes('<html') || source.includes('<body')) {
+                if (source.includes('</head>')) {
+                    iframeContent = source.replace('</head>', `${scriptsHtml}</head>`);
+                } else if (source.includes('<body>')) {
+                    iframeContent = source.replace('<body>', `<body>\n${scriptsHtml}`);
+                } else {
+                    iframeContent = scriptsHtml + source;
+                }
+            } else {
+                iframeContent = `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { margin: 0; padding: 16px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    </style>
+    ${scriptsHtml}
+</head>
+<body>
+    ${source}
+</body>
+</html>`;
+            }
+
+            // 3. 将拼接好的内容作为 srcdoc 传给沙箱 iframe 执行
+            iframe.srcdoc = iframeContent;
+        };
+
+        /**
+         * 切换全屏预览与左右双栏模式
+         * @returns {void}
+         */
+        window.toggleFullPreview = function() {
+            const leftPanel = document.getElementById('executorLeftPanel');
+            const toggleBtn = document.getElementById('btnToggleFullPreview');
+            if (!leftPanel || !toggleBtn) return;
+
+            const isCollapsed = leftPanel.classList.toggle('collapsed');
+            
+            // 1. 更新切换按钮的文案提示
+            if (isCollapsed) {
+                toggleBtn.textContent = '双栏模式';
+                showToast('已进入全屏预览模式');
+            } else {
+                toggleBtn.textContent = '全屏预览';
+            }
+        };
+
+
+        // ============================================================
+        //  Mermaid 全屏放大查看器逻辑
+        // ============================================================
+        // 存储放大查看器的变换参数
+        let viewerScale = 1.0;
+        let viewerTranslateX = 0;
+        let viewerTranslateY = 0;
+        let isDraggingViewer = false;
+        let dragStartX = 0;
+        let dragStartY = 0;
+
+        /**
+         * 弹出 Mermaid 全屏放大查看器并装载 SVG 结构
+         * @param {string} svgHtml - Mermaid 渲染出的 SVG 代码
+         * @returns {void}
+         */
+        window.openMermaidViewer = function(svgHtml) {
+            const canvas = document.getElementById('viewerCanvas');
+            if (!canvas) return;
+            canvas.innerHTML = svgHtml;
+
+            // 1. 去除 SVG 的绝对尺寸硬编码以适应无级缩放
+            const svg = canvas.querySelector('svg');
+            if (svg) {
+                svg.style.width = 'auto';
+                svg.style.height = 'auto';
+                svg.removeAttribute('width');
+                svg.removeAttribute('height');
+            }
+
+            // 2. 重置画板坐标和比例并显示
+            resetMermaidViewer();
+            const modal = document.getElementById('mermaidViewerModal');
+            if (modal) modal.style.display = 'flex';
+        };
+
+        /**
+         * 关闭 Mermaid 放大查看器并释放 DOM 节点
+         * @returns {void}
+         */
+        window.closeMermaidViewer = function() {
+            const modal = document.getElementById('mermaidViewerModal');
+            if (modal) modal.style.display = 'none';
+            
+            const canvas = document.getElementById('viewerCanvas');
+            if (canvas) canvas.innerHTML = '';
+        };
+
+        /**
+         * 重置 Mermaid 查看器的缩放比例与平移中心
+         * @returns {void}
+         */
+        window.resetMermaidViewer = function() {
+            viewerScale = 1.0;
+            viewerTranslateX = 0;
+            viewerTranslateY = 0;
+            updateViewerTransform();
+        };
+
+        /**
+         * 对 Mermaid 图表进行指定因子的缩放
+         * @param {number} factor - 缩放系数
+         * @returns {void}
+         */
+        window.zoomMermaidViewer = function(factor) {
+            viewerScale *= factor;
+            
+            // 1. 限制极限缩放值以保证图形不致消失或过载
+            viewerScale = Math.max(0.1, Math.min(10, viewerScale));
+            updateViewerTransform();
+        };
+
+        /**
+         * 重新计算并应用画布的 CSS 变换矩阵
+         * @returns {void}
+         */
+        function updateViewerTransform() {
+            const canvas = document.getElementById('viewerCanvas');
+            if (canvas) {
+                canvas.style.transform = `translate(${viewerTranslateX}px, ${viewerTranslateY}px) scale(${viewerScale})`;
+            }
+        }
+
+        /**
+         * 响应滚轮手势对画板进行缩放
+         * @param {WheelEvent} e - 滚轮事件对象
+         * @returns {void}
+         */
+        window.handleMermaidViewerWheel = function(e) {
+            e.preventDefault();
+            const factor = e.deltaY < 0 ? 1.1 : 0.9;
+            zoomMermaidViewer(factor);
+        };
+
+        /**
+         * 响应鼠标按下开始拖拽平移画布
+         * @param {MouseEvent} e - 鼠标按键按下事件对象
+         * @returns {void}
+         */
+        window.startDragMermaidViewer = function(e) {
+            // 1. 只响应左键拖拽
+            if (e.button !== 0) return;
+            isDraggingViewer = true;
+            
+            // 2. 缓存平移基点
+            dragStartX = e.clientX - viewerTranslateX;
+            dragStartY = e.clientY - viewerTranslateY;
+
+            const body = document.getElementById('viewerBody');
+            if (body) body.style.cursor = 'grabbing';
+
+            document.addEventListener('mousemove', dragMermaidViewer);
+            document.addEventListener('mouseup', stopDragMermaidViewer);
+        };
+
+        /**
+         * 鼠标移动事件，实时平移画布位置
+         * @param {MouseEvent} e - 鼠标移动事件对象
+         * @returns {void}
+         */
+        function dragMermaidViewer(e) {
+            if (!isDraggingViewer) return;
+            viewerTranslateX = e.clientX - dragStartX;
+            viewerTranslateY = e.clientY - dragStartY;
+            updateViewerTransform();
+        }
+
+        /**
+         * 鼠标松开，停止拖拽事件监听
+         * @returns {void}
+         */
+        function stopDragMermaidViewer() {
+            isDraggingViewer = false;
+            const body = document.getElementById('viewerBody');
+            if (body) body.style.cursor = 'grab';
+            document.removeEventListener('mousemove', dragMermaidViewer);
+            document.removeEventListener('mouseup', stopDragMermaidViewer);
+        }
     </script>
     <div class="img-lightbox" id="imgLightbox" onclick="closeImgLightbox()">
         <span class="img-lightbox-close" onclick="event.stopPropagation();closeImgLightbox()">✕</span>
