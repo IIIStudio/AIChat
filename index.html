@@ -1055,6 +1055,14 @@
         .sidebar-brand svg, .sidebar-brand svg * { fill: currentColor !important; stroke: none !important; stroke-width: 0 !important; }
         .message-content svg, .message-content svg * { fill: initial !important; stroke: initial !important; stroke-width: initial !important; stroke-linecap: initial !important; stroke-linejoin: initial !important; }
         .message-content svg { max-width: 100%; height: auto; }
+        /* 避免全局 SVG 重置污染 Mermaid 图表 */
+        .mermaid svg, .mermaid svg * {
+            fill: revert !important;
+            stroke: revert !important;
+            stroke-width: revert !important;
+            stroke-linecap: revert !important;
+            stroke-linejoin: revert !important;
+        }
 
         .settings-panels { display: flex; gap: 0; border: 1px solid var(--border-color); border-radius: 10px; overflow: hidden; min-height: 320px; margin-bottom: 12px; }
         .settings-left { width: 180px; flex-shrink: 0; background: var(--bg-sidebar); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; }
@@ -4893,7 +4901,7 @@
             codeEls.forEach(el => {
                 const pre = el.parentElement;
                 if (!pre || pre.tagName !== 'PRE') return;
-                if (pre.parentElement?.classList.contains('mermaid-wrapper')) return;
+                if (pre.closest('.mermaid-wrapper')) return;
 
                 const mermaidDiv = document.createElement('div');
                 mermaidDiv.className = 'mermaid';
@@ -4903,7 +4911,13 @@
                 wrapper.className = 'mermaid-wrapper';
                 wrapper.appendChild(mermaidDiv);
 
-                pre.parentNode.replaceChild(wrapper, pre);
+                // 检查并替换可能已存在的高亮包装容器 code-block-wrapper，避免残留 header 栏
+                let targetToReplace = pre;
+                if (pre.parentNode && pre.parentNode.classList.contains('code-block-wrapper')) {
+                    targetToReplace = pre.parentNode;
+                }
+
+                targetToReplace.parentNode.replaceChild(wrapper, targetToReplace);
             });
 
             try {
