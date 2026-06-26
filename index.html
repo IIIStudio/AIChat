@@ -8,6 +8,9 @@
     <link rel="icon" type="image/png" href="image/1.png">
     <title>AI Chat — 多模型对话 & 生图网页</title>
     <script src="https://cdn.jsdmirror.com/npm/marked/marked.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdmirror.com/npm/katex/dist/katex.min.css">
+    <script src="https://cdn.jsdmirror.com/npm/katex/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdmirror.com/npm/marked-katex-extension/lib/index.umd.js"></script>
     <script type="module">
         // streaming-markdown 用于流式增量渲染，暴露到 window 供非模块脚本调用
         import * as smd from "https://cdn.jsdmirror.com/npm/streaming-markdown/smd.min.js";
@@ -1864,6 +1867,11 @@
     </div>
 
     <script>
+        // 配置 marked 的 KaTeX 扩展，使 marked.parse 直接输出渲染后的公式 HTML
+        // 在 marked 解析阶段保护 $...$、$$...$$ 公式，避免被斜体/粗体规则破坏
+        if (window.marked && window.markedKatex) {
+            marked.use(markedKatex({ throwOnError: false }));
+        }
         // ============================================================
         //  同步初始化：防止刷新时闪烁（先于任何 DOM 渲染）
         // ============================================================
@@ -4153,6 +4161,8 @@
             blockDiv.appendChild(actionsDiv);
 
             chatInner.appendChild(blockDiv);
+            // 渲染数学公式（思考段与正文段统一处理）
+            renderMath(blockDiv);
             // 添加新消息后自动滚动到底部
             requestAnimationFrame(() => { chatContainer.scrollTop = chatContainer.scrollHeight; });
             updateMessageAnchors();
@@ -4482,6 +4492,32 @@
         });
 
         // ============================================================
+        //  数学公式渲染 — 处理 streaming-markdown 生成的公式元素
+        // ============================================================
+        // 对容器内 smd 生成的 <equation-inline>/<equation-block> 调用 KaTeX 渲染
+        // marked 路径已由 marked-katex-extension 在 parse 阶段直接输出公式 HTML，无需此处处理
+        // 传参：container 为待渲染的 DOM 容器
+        // 返回：无
+        function renderMath(container) {
+            if (!container || !window.katex) return;
+            // 渲染 smd 生成的 equation 自定义元素，已处理的跳过
+            container.querySelectorAll('equation-inline:not([data-katex])').forEach(el => {
+                const tex = el.textContent;
+                if (tex) {
+                    try { katex.render(tex, el, { displayMode: false, throwOnError: false }); } catch(e) {}
+                    el.setAttribute('data-katex', '1');
+                }
+            });
+            container.querySelectorAll('equation-block:not([data-katex])').forEach(el => {
+                const tex = el.textContent;
+                if (tex) {
+                    try { katex.render(tex, el, { displayMode: true, throwOnError: false }); } catch(e) {}
+                    el.setAttribute('data-katex', '1');
+                }
+            });
+        }
+
+        // ============================================================
         //  SSE 流式读取
         // ============================================================
         // 读取 SSE 流，分别累积正文 content 与思考 reasoning_content
@@ -4538,6 +4574,9 @@
             // 5.结束流，刷新剩余未闭合的 markdown 标记
             if (contentParser) window.smd.parser_end(contentParser);
             if (thoughtParser) window.smd.parser_end(thoughtParser);
+            // 6.流结束后渲染数学公式（流式中途渲染会因 LaTeX 不完整而失败）
+            renderMath(el);
+            if (thoughtEl) renderMath(thoughtEl);
             return { content: full, thought: thoughtFull };
         }
 
