@@ -2212,7 +2212,7 @@
         .scroll-down-btn {
             position: absolute;
             bottom: 120px;
-            right: 24px;
+            left: calc(50% + (var(--chat-max-width) / 2) - 36px);
             width: 36px;
             height: 36px;
             border-radius: 50%;
@@ -2228,6 +2228,12 @@
             transition: all 0.2s ease, opacity 0.2s, transform 0.2s;
             opacity: 0;
             transform: scale(0.8);
+        }
+        @media (max-width: 860px) {
+            .scroll-down-btn {
+                left: auto;
+                right: 24px;
+            }
         }
         .scroll-down-btn.show {
             display: flex;
