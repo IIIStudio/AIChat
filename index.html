@@ -1052,7 +1052,7 @@
         .btn-cancel { background: var(--bg-gray); color: var(--text-main); }
         .btn-save { background: var(--black-btn); color: var(--text-on-dark); }
 
-        svg { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+        svg:not(.mermaid *) { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
         .sidebar-brand svg, .sidebar-brand svg * { fill: currentColor !important; stroke: none !important; stroke-width: 0 !important; }
         .message-content svg:not(.mermaid *):not(.mermaid), .message-content svg:not(.mermaid *):not(.mermaid) * { fill: initial !important; stroke: initial !important; stroke-width: initial !important; stroke-linecap: initial !important; stroke-linejoin: initial !important; }
         .message-content svg { max-width: 100%; height: auto; }
