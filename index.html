@@ -14,6 +14,7 @@
     <script src="https://cdn.jsdmirror.com/npm/@highlightjs/cdn-assets@11/highlight.min.js"></script>
     <link rel="stylesheet" id="hljsLightTheme" href="https://cdn.jsdmirror.com/npm/highlight.js@11/styles/github.min.css">
     <link rel="stylesheet" id="hljsDarkTheme" href="https://cdn.jsdmirror.com/npm/highlight.js@11/styles/github-dark.min.css" disabled>
+    <script src="https://cdn.jsdmirror.com/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
     <script type="module">
         // streaming-markdown 用于流式增量渲染，暴露到 window 供非模块脚本调用
         import * as smd from "https://cdn.jsdmirror.com/npm/streaming-markdown/smd.min.js";
@@ -974,9 +975,9 @@
         .code-block-wrapper > pre { margin: 0; border: none; border-radius: 0; }
         .message-content blockquote, .thought-content blockquote { border-left: 3px solid var(--border-color); padding: 4px 12px; margin: 8px 0; color: var(--text-muted); background: var(--bg-hover); border-radius: 0 6px 6px 0; }
         .message-content blockquote p, .thought-content blockquote p { margin: 4px 0; }
-        .message-content table, .thought-content table { border-collapse: collapse; margin: 10px 0; border-radius: 8px; overflow: hidden; border: 1px solid var(--border-color); }
-        .message-content th, .thought-content th { border: 1px solid var(--border-color); padding: 8px 14px; font-size: 13px; font-weight: 600; background: var(--bg-gray); text-align: left; }
-        .message-content td, .thought-content td { border: 1px solid var(--border-light); padding: 6px 14px; font-size: 13px; }
+        .message-content table, .thought-content table { border-collapse: collapse; margin: 10px 0; border: 1px solid var(--border-color); width: 100%; }
+        .message-content th, .thought-content th { border: 1px solid var(--border-color); padding: 8px 12px; font-size: 13px; font-weight: 600; background: var(--bg-gray); text-align: left; }
+        .message-content td, .thought-content td { border: 1px solid var(--border-color); padding: 8px 12px; font-size: 13px; }
         .message-content tbody tr:nth-child(even), .thought-content tbody tr:nth-child(even) { background: var(--bg-hover); }
         .message-content ul, .thought-content ul { padding-left: 22px; margin: 6px 0; list-style: disc; }
         .message-content ol, .thought-content ol { padding-left: 22px; margin: 6px 0; }
@@ -985,7 +986,9 @@
         .message-content a:hover, .thought-content a:hover { text-decoration-color: var(--text-main); }
         .message-content hr, .thought-content hr { border: none; height: 1px; background: var(--border-color); margin: 16px 0; }
         .message-content img, .thought-content img { max-width: 100%; border-radius: 8px; margin: 8px 0; }
-        .message-content strong, .thought-content strong { font-weight: 600; color: var(--text-main); }
+        .message-content strong, .thought-content strong { font-weight: 700; color: var(--text-main); }
+        .mermaid-wrapper { width: 100%; overflow-x: auto; background: var(--bg-gray); border-radius: 6px; padding: 12px; margin: 8px 0; display: flex; justify-content: center; box-sizing: border-box; }
+        .mermaid { display: block; width: 100%; }
         .message-content .katex-display, .thought-content .katex-display { margin: 12px 0; overflow-x: auto; overflow-y: hidden; padding: 4px 0; }
         .message-content .katex, .thought-content .katex { font-size: 1.05em; }
 
@@ -3209,6 +3212,14 @@
         //  初始化入口
         // ============================================================
         window.addEventListener('DOMContentLoaded', async () => {
+            if (window.mermaid) {
+                const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+                mermaid.initialize({
+                    startOnLoad: false,
+                    theme: isDark ? 'dark' : 'default',
+                    securityLevel: 'loose'
+                });
+            }
             await loadProviders();
             updateModelDisplay();
             renderModelDropdown();
@@ -4226,17 +4237,25 @@
                 blockDiv.appendChild(thoughtDiv);
             }
 
+            let safeContent = content;
+            if (Array.isArray(content)) {
+                const textItem = content.find(c => c.type === 'text');
+                safeContent = textItem ? textItem.text : '';
+            } else if (typeof content !== 'string') {
+                safeContent = String(content || '');
+            }
+
             const msgDiv = document.createElement('div');
             msgDiv.className = `message ${role}`;
             const contentDiv = document.createElement('div');
             contentDiv.className = 'message-content';
             // 保存原始内容（Markdown 格式）
-            contentDiv.setAttribute('data-raw', content);
+            contentDiv.setAttribute('data-raw', safeContent);
             if (msgIndex != null) contentDiv.setAttribute('data-index', msgIndex);
-            if (role === 'assistant' && content) {
-                let displayHtml = isHtml ? content : marked.parse(unwrapMathFromCode(content)).trim();
+            if (safeContent) {
+                let displayHtml = isHtml ? safeContent : marked.parse(unwrapMathFromCode(safeContent)).trim();
                 // 生图占位符替换：src="" data-gen-idx="N" data-gen-src="" → src="data:..."
-                if (isHtml && genImages && genImages.length > 0) {
+                if (role === 'assistant' && isHtml && genImages && genImages.length > 0) {
                     genImages.forEach((img, i) => {
                         const dataUrl = 'data:' + (img.type || 'image/png') + ';base64,' + img.b64;
                         displayHtml = displayHtml.split('src="" data-gen-idx="' + i + '" data-gen-src=""').join('src="' + dataUrl + '"');
@@ -4244,7 +4263,7 @@
                 }
                 contentDiv.innerHTML = displayHtml;
             } else {
-                contentDiv.textContent = content;
+                contentDiv.textContent = '';
             }
 
             // 长内容自动折叠（仅对 user 消息生效，默认折叠，不持久化）
@@ -4352,9 +4371,10 @@
             blockDiv.appendChild(actionsDiv);
 
             chatInner.appendChild(blockDiv);
-            // 代码高亮与数学公式渲染（思考段与正文段统一处理）
+            // 代码高亮、数学公式与 Mermaid 渲染（思考段与正文段统一处理）
             highlightCodeBlocks(blockDiv);
             renderMath(blockDiv);
+            renderMermaid(blockDiv);
             // 添加新消息后自动滚动到底部
             requestAnimationFrame(() => { chatContainer.scrollTop = chatContainer.scrollHeight; });
             updateMessageAnchors();
@@ -4863,6 +4883,45 @@
         }
 
         // ============================================================
+        //  Mermaid 图表渲染
+        // ============================================================
+        function renderMermaid(container) {
+            if (!container || !window.mermaid) return;
+            const codeEls = Array.from(container.querySelectorAll('pre > code.mermaid-raw, pre > code.language-mermaid'));
+            if (codeEls.length === 0) return;
+
+            codeEls.forEach(el => {
+                const pre = el.parentElement;
+                if (!pre || pre.tagName !== 'PRE') return;
+                if (pre.parentElement?.classList.contains('mermaid-wrapper')) return;
+
+                const mermaidDiv = document.createElement('div');
+                mermaidDiv.className = 'mermaid';
+                mermaidDiv.textContent = el.textContent;
+
+                const wrapper = document.createElement('div');
+                wrapper.className = 'mermaid-wrapper';
+                wrapper.appendChild(mermaidDiv);
+
+                pre.parentNode.replaceChild(wrapper, pre);
+            });
+
+            try {
+                const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+                mermaid.initialize({
+                    startOnLoad: false,
+                    theme: isDark ? 'dark' : 'default',
+                    securityLevel: 'loose'
+                });
+                mermaid.run({
+                    nodes: Array.from(container.querySelectorAll('.mermaid'))
+                });
+            } catch (err) {
+                console.error("Mermaid 渲染错误: ", err);
+            }
+        }
+
+        // ============================================================
         //  SSE 流式读取
         // ============================================================
         // 读取 SSE 流，分别累积正文 content 与思考 reasoning_content
@@ -4947,10 +5006,15 @@
             if (thoughtParser) window.smd.parser_end(thoughtParser);
             // 8.移除思考中样式
             if (thoughtProcessEl) thoughtProcessEl.classList.remove('thinking');
-            // 9.流结束后最终代码高亮与渲染数学公式（含最后一个代码块）
+            // 9.流结束后最终代码高亮、数学公式与 Mermaid 渲染（含最后一个代码块）
             highlightCodeBlocks(el);
             renderMath(el);
-            if (thoughtEl) { highlightCodeBlocks(thoughtEl); renderMath(thoughtEl); }
+            renderMermaid(el);
+            if (thoughtEl) {
+                highlightCodeBlocks(thoughtEl);
+                renderMath(thoughtEl);
+                renderMermaid(thoughtEl);
+            }
             return { content: full, thought: thoughtFull };
         }
 
@@ -5448,6 +5512,16 @@
                 document.getElementById('hljsLightTheme').disabled = true;
                 document.getElementById('hljsDarkTheme').disabled = false;
             }
+            // 重新初始化并应用 Mermaid 主题，然后刷新聊天区域
+            if (window.mermaid) {
+                const isDark = html.getAttribute('data-theme') === 'dark';
+                mermaid.initialize({
+                    startOnLoad: false,
+                    theme: isDark ? 'dark' : 'default',
+                    securityLevel: 'loose'
+                });
+            }
+            renderChatArea();
         }
 
         // 初始化主题
