@@ -5081,21 +5081,33 @@
             if (e.key === 'Escape') closeImgLightbox();
         });
 
+        // 【流式渲染/系统】【辅助函数】判断一个代码块是否已经完全闭合
+        function isCodeBlockClosed(codeEl) {
+            const pre = codeEl.parentElement;
+            if (!pre || pre.tagName !== 'PRE') return false;
+            // 如果 pre 后面还有任何兄弟节点，说明大模型已开始输出后续内容，该代码块必然已闭合
+            if (pre.nextSibling) return true;
+            return false;
+        }
+
         // ============================================================
         //  代码高亮 — 统一处理 marked 与 smd 两条路径的代码块
         // ============================================================
         // 对容器内 <pre><code> 元素调用 hljs 着色，并添加语言标记与复制按钮
         // 传参：container 为待处理的 DOM 容器
-        //       skipLast 为 true 时跳过最后一个代码块（流式中可能未完成）
+        //       skipLast 为 true 时跳过最后一个未闭合的代码块（流式中可能未完成）
         // 返回：无
         function highlightCodeBlocks(container, skipLast = false) {
             if (!container || !window.hljs) return;
             // 1.收集未着色的代码块
             const codeEls = Array.from(container.querySelectorAll('pre > code:not(.hljs)'));
-            // 2.skipLast 模式下跳过最后一个（流式输出中可能尚未完成）
-            const end = skipLast ? codeEls.length - 1 : codeEls.length;
+            const end = codeEls.length;
             for (let i = 0; i < end; i++) {
                 const el = codeEls[i];
+                // 2.skipLast 模式下，若为最后一块且尚未闭合，则跳过（流式输出中可能尚未完成）
+                if (skipLast && i === end - 1 && !isCodeBlockClosed(el)) {
+                    continue;
+                }
                 // 3.提取语言名：兼容 marked 的 language-xxx 和 smd 的直接语言名
                 const langMatch = el.className.match(/(?:language-)?(\w+)/);
                 const lang = langMatch ? langMatch[1] : null;
@@ -5226,15 +5238,22 @@
             }
         };
 
-        function renderMermaid(container) {
+        function renderMermaid(container, skipLast = false) {
             if (!container || !window.mermaid) return;
             const codeEls = Array.from(container.querySelectorAll('pre > code.mermaid-raw, pre > code.language-mermaid'));
             if (codeEls.length === 0) return;
 
-            codeEls.forEach(el => {
+            const end = codeEls.length;
+            for (let i = 0; i < end; i++) {
+                const el = codeEls[i];
                 const pre = el.parentElement;
-                if (!pre || pre.tagName !== 'PRE') return;
-                if (pre.closest('.mermaid-wrapper')) return;
+                if (!pre || pre.tagName !== 'PRE') continue;
+                if (pre.closest('.mermaid-wrapper')) continue;
+
+                // 【流式渲染/系统】【增量渲染】skipLast 模式下，若为最后一个 Mermaid 块且尚未闭合，则跳过中途渲染
+                if (skipLast && i === end - 1 && !isCodeBlockClosed(el)) {
+                    continue;
+                }
 
                 const wrapper = document.createElement('div');
                 wrapper.className = 'mermaid-wrapper';
@@ -5305,7 +5324,7 @@
                 }
 
                 targetToReplace.parentNode.replaceChild(wrapper, targetToReplace);
-            });
+            }
 
             try {
                 const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
@@ -5410,11 +5429,18 @@
                             }
                         } catch(e) {}
                     }
-                    // 6.节流着色：对已完成代码块（跳过最后一个可能未完成的）着色
+                    // 【流式渲染/系统】【增量渲染】6. 增量渲染节流：每 600ms 对已闭合的代码高亮、数学公式与 Mermaid 视图进行中途渲染
                     const now = Date.now();
                     if (useSmd && now - lastHighlightTime > 600) {
                         lastHighlightTime = now;
                         highlightCodeBlocks(el, true);
+                        renderMath(el);
+                        renderMermaid(el, true);
+                        if (thoughtEl) {
+                            highlightCodeBlocks(thoughtEl, true);
+                            renderMath(thoughtEl);
+                            renderMermaid(thoughtEl, true);
+                        }
                     }
                     // 流式输出时持续滚动到底部
                     requestAnimationFrame(() => { chatContainer.scrollTop = chatContainer.scrollHeight; });
