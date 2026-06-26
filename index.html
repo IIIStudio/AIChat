@@ -923,12 +923,12 @@
         .preset-stream-opt { font-size: 12px; padding: 5px 16px; border-radius: 16px; border: 1px solid var(--border-color); cursor: pointer; background: var(--bg-surface); color: var(--text-muted); transition: all 0.15s; }
         .preset-stream-opt.active { background: var(--text-main); color: var(--text-on-dark); border-color: var(--text-main); }
 
-        /* 图片预览 */
-        .image-preview-area { display: flex; justify-content: center; padding: 0 20px 4px 20px; max-width: var(--chat-max-width); width: 100%; margin: 0 auto; }
+        /* 图片预览：在输入框内部显示 */
+        .image-preview-area { padding: 0 0 6px 0; width: 100%; }
         .image-preview-grid { display: flex; flex-wrap: wrap; gap: 8px; width: 100%; }
-        .image-preview-item { position: relative; width: 64px; height: 64px; border-radius: 10px; overflow: visible; border: 1px solid var(--border-color); flex-shrink: 0; }
-        .image-preview-item img { width: 100%; height: 100%; border-radius: 10px; object-fit: cover; }
-        .image-preview-item .img-remove-btn { position: absolute; top: -6px; right: -6px; width: 18px; height: 18px; border-radius: 50%; background: var(--black-btn); color: var(--text-on-dark); border: 2px solid var(--bg-main); display: none; align-items: center; justify-content: center; cursor: pointer; font-size: 11px; line-height: 1; z-index: 2; }
+        .image-preview-item { position: relative; width: 56px; height: 56px; border-radius: 8px; overflow: visible; border: 1px solid var(--border-color); flex-shrink: 0; }
+        .image-preview-item img { width: 100%; height: 100%; border-radius: 8px; object-fit: cover; }
+        .image-preview-item .img-remove-btn { position: absolute; top: -5px; right: -5px; width: 16px; height: 16px; border-radius: 50%; background: var(--black-btn); color: var(--text-on-dark); border: 2px solid var(--bg-gray); display: none; align-items: center; justify-content: center; cursor: pointer; font-size: 10px; line-height: 1; z-index: 2; }
         .image-preview-item:hover .img-remove-btn { display: flex; }
         .user-image { max-width: 200px; max-height: 200px; border-radius: 12px; display: block; margin-top: 6px; cursor: pointer; }
 
@@ -1450,10 +1450,7 @@
                 font-size: 12px;
             }
 
-            /* 图片预览 */
-            .image-preview-area {
-                padding: 0 10px 6px 10px;
-            }
+            /* 图片预览：在输入框内部，无需额外 padding */
             .user-image {
                 max-width: 150px;
                 max-height: 150px;
@@ -1782,12 +1779,11 @@
             </div>
         </div>
 
-        <div class="image-preview-area" id="imagePreviewArea" style="display:none;">
-            <div class="image-preview-grid" id="imagePreviewGrid"></div>
-        </div>
-
         <div class="input-area">
             <div class="input-pill">
+                <div class="image-preview-area" id="imagePreviewArea" style="display:none;">
+                    <div class="image-preview-grid" id="imagePreviewGrid"></div>
+                </div>
                 <textarea id="userInput" placeholder="输入你的问题, Enter 发送, Shift+Enter 换行" rows="1"></textarea>
                 <input type="file" id="fileInput" style="display:none;" multiple onchange="handleFileSelected(this)">
                 <div class="pill-bottom">
