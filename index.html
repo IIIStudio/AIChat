@@ -247,37 +247,42 @@
             width: 100%;
         }
 
-        /* 思考过程 */
+        /* 思考过程：简洁横条 + 可折叠内容 */
         .thought-process {
-            display: flex;
-            flex-direction: column;
             color: var(--text-muted);
             font-size: 13px;
-            margin-bottom: 12px;
+            margin-bottom: 10px;
         }
-        .thought-summary { 
-            display: inline-flex; 
-            align-items: center; 
-            gap: 6px; 
-            cursor: pointer; 
-            user-select: none; 
+        .thought-bar {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            user-select: none;
             width: fit-content;
+            padding: 2px 0;
         }
-        .thought-content {
-            padding-left: 12px;
-            border-left: 2px solid var(--border-color);
-            line-height: 1.6;
-            margin-top: 8px;
-        }
-        /* 思考动效：三点跳动 */
-        .thinking-dots { display: inline-flex; align-items: center; gap: 4px; padding: 4px 0; }
-        .thinking-dots span { width: 6px; height: 6px; border-radius: 50%; background: var(--text-muted); animation: thinking-bounce 1.4s infinite ease-in-out both; }
+        .thought-bar .thought-label { white-space: nowrap; }
+        .thought-bar .thought-arrow { font-size: 10px; transition: transform 0.2s; opacity: 0.6; }
+        .thought-process.collapsed .thought-arrow { transform: rotate(-90deg); }
+        /* 思考中动效：跳动点 */
+        .thinking-dots { display: inline-flex; align-items: center; gap: 3px; }
+        .thinking-dots span { width: 4px; height: 4px; border-radius: 50%; background: var(--text-muted); animation: thinking-bounce 1.4s infinite ease-in-out both; }
         .thinking-dots span:nth-child(1) { animation-delay: -0.32s; }
         .thinking-dots span:nth-child(2) { animation-delay: -0.16s; }
-        @keyframes thinking-bounce { 0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; } 40% { transform: scale(1); opacity: 1; } }
-        /* 思考过程展开时的脉冲边框 */
-        .thought-process.thinking .thought-content { border-left-color: var(--text-muted); animation: thought-pulse 2s infinite ease-in-out; }
-        @keyframes thought-pulse { 0%, 100% { border-left-color: var(--border-color); } 50% { border-left-color: var(--text-muted); } }
+        @keyframes thinking-bounce { 0%, 80%, 100% { transform: scale(0.5); opacity: 0.3; } 40% { transform: scale(1); opacity: 1; } }
+        /* 思考内容区 */
+        .thought-content {
+            padding-left: 10px;
+            border-left: 2px solid var(--border-color);
+            line-height: 1.6;
+            margin-top: 6px;
+            max-height: 500px;
+            overflow-y: auto;
+            transition: max-height 0.2s;
+        }
+        .thought-process.collapsed .thought-content { display: none; }
+        .thought-process.thinking .thought-content { border-left-color: var(--text-muted); }
 
         .message { display: flex; flex-direction: column; max-width: 100%; }
         
@@ -4102,17 +4107,21 @@
             blockDiv.className = `message-block ${role}-block`;
 
             if (role === 'assistant' && thought) {
-                const thoughtDiv = document.createElement('details');
+                const thoughtDiv = document.createElement('div');
                 thoughtDiv.className = 'thought-process';
-                // thought 以 < 开头视为 HTML 片段（如思考动效），直接 innerHTML；否则走 marked 解析
-                const thoughtHtml = thought.trimStart().startsWith('<') ? thought : marked.parse(unwrapMathFromCode(thought));
+                // __thinking__ 标记：显示思考中动效（跳动点 + 思考中文案），不显示折叠箭头
+                const isThinking = thought === '__thinking__';
+                const thoughtHtml = isThinking ? '' : (thought.trimStart().startsWith('<') ? thought : marked.parse(unwrapMathFromCode(thought)));
+                const barInner = isThinking
+                    ? '<span class="thinking-dots"><span></span><span></span><span></span></span><span class="thought-label">思考中</span>'
+                    : '<span class="thought-label">思考过程</span><svg class="thought-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>';
                 thoughtDiv.innerHTML = `
-                    <summary class="thought-summary">
-                        <span>思考过程</span>
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                    </summary>
+                    <div class="thought-bar" onclick="this.parentElement.classList.toggle('collapsed')">
+                        ${barInner}
+                    </div>
                     <div class="thought-content">${thoughtHtml}</div>
                 `;
+                if (isThinking) thoughtDiv.classList.add('thinking');
                 blockDiv.appendChild(thoughtDiv);
             }
 
@@ -4795,11 +4804,16 @@
                         if (!deltaObj) continue;
                         // 4.累积并增量渲染思考内容
                         if (deltaObj.reasoning_content) {
-                            // 首次收到思考内容时移除占位动效，添加思考中样式
+                            // 首次收到思考内容时：把"思考中"动效替换为"思考过程"标题
                             if (!thoughtStarted) {
                                 thoughtStarted = true;
                                 if (thoughtEl) thoughtEl.innerHTML = '';
-                                if (thoughtProcessEl) thoughtProcessEl.classList.add('thinking');
+                                if (thoughtProcessEl) {
+                                    thoughtProcessEl.classList.add('thinking');
+                                    // 更新 bar：跳动点→折叠箭头，标签改为"思考过程"
+                                    const bar = thoughtProcessEl.querySelector('.thought-bar');
+                                    if (bar) bar.innerHTML = '<span class="thought-label">思考过程</span><svg class="thought-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>';
+                                }
                             }
                             thoughtFull += deltaObj.reasoning_content;
                             if (thoughtParser) window.smd.parser_write(thoughtParser, unwrapMathFromCode(deltaObj.reasoning_content));
@@ -4879,9 +4893,10 @@
             const currentSession = sessions.find(s => s.id === getCurrentId());
 
             const preset = getActivePreset();
-            const fakeThought = '<div class="thinking-dots"><span></span><span></span><span></span></div>';
+            // fakeThought 为特殊标记，appendMessageDOM 检测后显示思考中动效
+            const fakeThought = '__thinking__';
             const msgIdx = currentSession.messages.length;
-            const aiMessageElement = appendMessageDOM('assistant', '正在思考...', fakeThought, null, null, msgIdx);
+            const aiMessageElement = appendMessageDOM('assistant', '', fakeThought, null, null, msgIdx);
 
             try {
                 currentAbortController = new AbortController();
