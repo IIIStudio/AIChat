@@ -3630,13 +3630,17 @@
         function updateSearchBtnUI() {
             const btn = document.getElementById('searchInfo');
             const label = document.getElementById('searchLabel');
+            const toggleBtn = document.getElementById('searchPanelToggle');
             if (!btn || !label) return;
             if (webSearchSettings.enabled) {
                 btn.classList.add('active');
                 label.textContent = '搜索开';
+                if (toggleBtn) toggleBtn.style.display = 'inline-flex';
             } else {
                 btn.classList.remove('active');
                 label.textContent = '搜索关';
+                if (toggleBtn) toggleBtn.style.display = 'none';
+                toggleSearchSidebar(false);
             }
         }
 
@@ -5836,9 +5840,9 @@
                 }
             });
 
-            // 【网络搜索/TinyFish】【恢复历史】4. 如果重建出了合法的搜索流程卡片，则显示按钮并根据持久化偏好展开/折叠侧边栏
+            // 【网络搜索/TinyFish】【恢复历史】4. 如果开启了网络搜索，则显示详情切换按钮并恢复上次的展开/折叠状态
             const toggleBtn = document.getElementById('searchPanelToggle');
-            if (hasValidSearch) {
+            if (webSearchSettings.enabled) {
                 if (toggleBtn) toggleBtn.style.display = 'inline-flex';
                 const isExpanded = localStorage.getItem('searchSidebarExpanded') !== 'false';
                 toggleSearchSidebar(isExpanded);
