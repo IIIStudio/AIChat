@@ -4949,7 +4949,13 @@
         let editingMessageIndex = null;
         let pendingVersions = null;
 
+        /**
+         * 编辑用户已发送的聊天消息
+         * @param {HTMLElement} btnEl - 触发编辑操作的按钮元素
+         * @returns {void}
+         */
         function editMessage(btnEl) {
+            // 1. 获取当前消息块和关联的数据索引
             const block = btnEl.closest('.message-block');
             const contentEl = block.querySelector('.message-content');
             const idx = parseInt(contentEl.getAttribute('data-index'));
@@ -4961,24 +4967,42 @@
             const msg = session.messages[idx];
             if (!msg) return;
             
+            // 2. 提取出当前消息的原始纯文本内容
             const originalContent = Array.isArray(msg.content)
                 ? msg.content.filter(c => c.type === 'text').map(c => c.text).join('\n')
                 : (msg.content || '');
             
-            // 将内容替换为文本框进行内联编辑
+            // 3. 创建用于编辑的 textarea 并配置与底部输入框一致的样式
             const textarea = document.createElement('textarea');
             textarea.id = 'editingTextarea';
             textarea.value = originalContent;
             Object.assign(textarea.style, {
-                width: '100%', minHeight: '60px', padding: '10px 14px',
-                border: '2px solid var(--black-btn)', borderRadius: '10px', fontSize: '14px',
-                resize: 'vertical', fontFamily: 'inherit', outline: 'none',
-                background: 'var(--bg-surface)', lineHeight: '1.5', color: 'var(--text-main)'
+                width: '100%',
+                minHeight: '40px',
+                padding: '12px 16px',
+                border: 'none',
+                borderRadius: '18px',
+                fontSize: '15px',
+                resize: 'none',
+                fontFamily: 'inherit',
+                outline: 'none',
+                background: 'var(--bg-gray)',
+                lineHeight: '1.6',
+                color: 'var(--text-main)',
+                overflowY: 'hidden'
             });
+            
+            // 4. 绑定自适应高度与键盘快捷键事件
+            const adjustHeight = () => {
+                textarea.style.height = 'auto';
+                textarea.style.height = textarea.scrollHeight + 'px';
+            };
+            textarea.oninput = adjustHeight;
             textarea.onkeydown = (e) => {
                 if (e.key === 'Escape') { e.preventDefault(); cancelEdit(); }
             };
             
+            // 5. 替换原有消息内容 DOM 并使编辑框获得焦点
             const wrapper = contentEl.closest('.collapse-wrapper');
             const targetParent = wrapper || contentEl.parentElement;
             if (wrapper) {
@@ -4990,11 +5014,15 @@
             textarea.focus();
             textarea.setSelectionRange(textarea.value.length, textarea.value.length);
             
+            // 6. 异步延迟确保渲染完成后再计算初始高度
+            setTimeout(adjustHeight, 0);
+            
+            // 7. 更新操作按钮区域，提供“取消”和“保存”功能
             const actionsDiv = block.querySelector('.message-actions');
             actionsDiv.setAttribute('data-original-html', actionsDiv.innerHTML);
             actionsDiv.innerHTML = `
-                <span onclick="cancelEdit()" style="cursor:pointer;font-size:12px;color:var(--text-muted);border:1px solid var(--border-color);border-radius:12px;padding:3px 10px;user-select:none;transition:all 0.15s;" onmouseover="this.style.borderColor='var(--text-main)';this.style.color='var(--text-main)'" onmouseout="this.style.borderColor='';this.style.color=''">取消</span>
-                <span onclick="saveEdit()" style="cursor:pointer;font-size:12px;background:var(--text-main);color:var(--text-on-dark);border-radius:12px;padding:3px 12px;user-select:none;transition:all 0.15s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">保存并重新生成</span>
+                <span onclick="cancelEdit()" style="cursor:pointer;font-size:13px;color:var(--text-muted);border:1px solid var(--border-color);border-radius:18px;padding:6px 14px;user-select:none;transition:all 0.2s;" onmouseover="this.style.borderColor='var(--text-main)';this.style.color='var(--text-main)';this.style.background='rgba(128,128,128,0.05)'" onmouseout="this.style.borderColor='';this.style.color='';this.style.background=''">取消</span>
+                <span onclick="saveEdit()" style="cursor:pointer;font-size:13px;background:var(--black-btn);color:var(--text-on-dark);border-radius:18px;padding:6px 16px;user-select:none;transition:all 0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">保存并重新生成</span>
             `;
         }
 
