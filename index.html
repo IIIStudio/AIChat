@@ -90,10 +90,12 @@
 
         ::placeholder { color: var(--text-muted); opacity: 0.6; }
 
-        /* 共享细滚动条 */
-        .thin-scrollbar::-webkit-scrollbar { width: 4px; }
+        /* 共享简洁滚动条：默认隐藏，hover 时显示 */
+        .thin-scrollbar { scrollbar-width: thin; scrollbar-color: transparent transparent; }
+        .thin-scrollbar:hover { scrollbar-color: var(--scrollbar-hover) transparent; }
+        .thin-scrollbar::-webkit-scrollbar { width: 5px; height: 5px; }
         .thin-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .thin-scrollbar::-webkit-scrollbar-thumb { background: transparent; border-radius: 4px; }
+        .thin-scrollbar::-webkit-scrollbar-thumb { background: transparent; border-radius: 5px; transition: background 0.2s; }
         .thin-scrollbar:hover::-webkit-scrollbar-thumb { background: var(--scrollbar-hover); }
         .thin-scrollbar::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-active); }
 
@@ -312,14 +314,13 @@
 
         .input-pill {
             display: flex;
-            flex-wrap: wrap;
-            align-items: center;
+            flex-direction: column;
             background-color: var(--bg-gray);
-            border-radius: 32px;
+            border-radius: 24px;
             width: 100%;
             max-width: var(--chat-max-width);
-            padding: 10px 12px 10px 20px;
-            gap: 12px;
+            padding: 12px 16px;
+            gap: 8px;
         }
 
         .upload-icon {
@@ -334,8 +335,7 @@
         .upload-icon:hover { color: var(--text-main); }
 
         .input-pill textarea {
-            flex: 1;
-            min-width: 0;
+            width: 100%;
             background: transparent;
             border: none;
             outline: none;
@@ -346,10 +346,12 @@
             max-height: 150px;
             color: var(--text-main);
             overflow-y: hidden;
+            padding: 0;
         }
         .input-pill textarea::placeholder { color: var(--text-muted); opacity: 0.5; }
 
-        .pill-bottom { display: flex; align-items: center; gap: 12px; width: 100%; padding-top: 4px; }
+        .pill-bottom { display: flex; align-items: center; gap: 8px; width: 100%; }
+        .pill-bottom .send-btn { margin-left: auto; }
         .model-info { color: var(--text-muted); font-size: 13px; white-space: nowrap; }
 
         .send-btn {
@@ -1767,19 +1769,16 @@
 
         <div class="input-area">
             <div class="input-pill">
-                <div class="upload-icon" onclick="document.getElementById('fileInput').click()" title="上传文件">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                        <line x1="12" y1="15" x2="12" y2="3"></line>
-                        <polyline points="7 8 12 3 17 8"></polyline>
-                        <line x1="4" y1="20" x2="20" y2="20"></line>
-                    </svg>
-                </div>
-                <input type="file" id="fileInput" style="display:none;" multiple onchange="handleFileSelected(this)">
                 <textarea id="userInput" placeholder="输入你的问题, Enter 发送, Shift+Enter 换行" rows="1"></textarea>
-                <button class="send-btn" id="sendBtn" onclick="sendMessage()">
-                    <svg width="18" height="18" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
-                </button>
+                <input type="file" id="fileInput" style="display:none;" multiple onchange="handleFileSelected(this)">
                 <div class="pill-bottom">
+                    <div class="upload-icon" onclick="document.getElementById('fileInput').click()" title="上传文件">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                            <polyline points="7 8 12 3 17 8"></polyline>
+                            <line x1="4" y1="20" x2="20" y2="20"></line>
+                        </svg>
+                    </div>
                     <div class="thinking-switcher">
                         <span class="thinking-info" id="thinkingInfo" onclick="event.stopPropagation(); toggleThinkingDropdown()" title="思考等级">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"></path><path d="M10 22h4"></path><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"></path></svg>
@@ -1791,6 +1790,9 @@
                         <span class="model-info" id="displayModelName" onclick="event.stopPropagation(); toggleModelDropdown()"></span>
                         <div class="model-dropdown" id="modelDropdown"></div>
                     </div>
+                    <button class="send-btn" id="sendBtn" onclick="sendMessage()">
+                        <svg width="18" height="18" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                    </button>
                 </div>
             </div>
         </div>
