@@ -359,23 +359,24 @@
         .input-pill textarea::placeholder { color: var(--text-muted); opacity: 0.5; }
 
         .pill-bottom { display: flex; align-items: center; gap: 8px; width: 100%; }
-        .pill-bottom .send-btn { margin-left: auto; }
         .model-info { color: var(--text-muted); font-size: 13px; white-space: nowrap; }
 
-        .send-btn {
-            background-color: var(--black-btn);
-            color: var(--text-on-dark);
-            border: none;
-            width: 34px;
-            height: 34px;
-            border-radius: 50%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            cursor: pointer;
-            transition: opacity 0.2s;
-        }
-        .send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        /* 按钮组：上传 + 发送，右侧对齐 */
+        .action-group { display: flex; align-items: center; gap: 4px; margin-left: auto; }
+        .action-btn { border: none; border-radius: 50%; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: all 0.2s; }
+        /* 上传按钮：透明背景，次要按钮 */
+        .upload-action { background: transparent; color: var(--text-muted); width: 34px; height: 34px; }
+        .upload-action:hover { color: var(--text-main); background: rgba(128,128,128,0.1); }
+        /* 发送按钮：深色圆形主按钮 */
+        .send-action { background-color: var(--black-btn); color: var(--text-on-dark); width: 34px; height: 34px; }
+        .send-action:hover { opacity: 0.85; }
+        .send-action .stop-icon { display: none; }
+        .send-action .send-icon { display: block; }
+        /* 响应中：切换为停止样式 */
+        .send-action.responding { background-color: var(--text-muted); }
+        .send-action.responding .stop-icon { display: block; }
+        .send-action.responding .send-icon { display: none; }
+        .send-action.responding:hover { opacity: 0.85; }
 
         /* --- 模式切换 --- */
         .mode-toggle-wrap { display: flex; align-items: center; gap: 0; }
@@ -1799,16 +1800,15 @@
                         </span>
                         <div class="thinking-dropdown" id="thinkingDropdown"></div>
                     </div>
-                    <div class="upload-icon" onclick="document.getElementById('fileInput').click()" title="上传文件">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                            <line x1="12" y1="15" x2="12" y2="3"></line>
-                            <polyline points="7 8 12 3 17 8"></polyline>
-                            <line x1="4" y1="20" x2="20" y2="20"></line>
-                        </svg>
+                    <div class="action-group">
+                        <button class="action-btn upload-action" onclick="document.getElementById('fileInput').click()" title="上传文件">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
+                        </button>
+                        <button class="action-btn send-action" id="sendBtn" onclick="onSendClick()">
+                            <svg class="send-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                            <svg class="stop-icon" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"></rect></svg>
+                        </button>
                     </div>
-                    <button class="send-btn" id="sendBtn" onclick="sendMessage()">
-                        <svg width="18" height="18" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
-                    </button>
                 </div>
             </div>
         </div>
@@ -4620,7 +4620,7 @@
         });
 
         userInput.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (!isResponding) sendMessage(); }
         });
 
         // 粘贴图片：监听 textarea 的 paste 事件
@@ -4837,9 +4837,31 @@
         // ============================================================
         //  API 请求 & AI 响应处理
         // ============================================================
+        // 全局中止控制器与响应状态
+        let currentAbortController = null;
+        let isResponding = false;
+
+        // 发送按钮点击：响应中则中止，否则发送
+        function onSendClick() {
+            if (isResponding) {
+                if (currentAbortController) currentAbortController.abort();
+                return;
+            }
+            sendMessage();
+        }
+
+        // 设置发送按钮为响应中状态（显示停止图标）
+        function setResponding(v) {
+            isResponding = v;
+            const btn = document.getElementById('sendBtn');
+            if (!btn) return;
+            if (v) btn.classList.add('responding');
+            else btn.classList.remove('responding');
+        }
+
         async function fetchAIResponse() {
             const provider = getActiveProvider();
-            if (!provider) { sendBtn.disabled = false; return; }
+            if (!provider) { setResponding(false); return; }
 
             const currentSession = sessions.find(s => s.id === getCurrentId());
 
@@ -4849,7 +4871,8 @@
             const aiMessageElement = appendMessageDOM('assistant', '正在思考...', fakeThought, null, null, msgIdx);
 
             try {
-                sendBtn.disabled = true;
+                currentAbortController = new AbortController();
+                setResponding(true);
                 let messages = [...currentSession.messages];
                 if (preset && preset.systemPrompt) {
                     messages = [{ role: 'system', content: preset.systemPrompt }, ...messages];
@@ -4869,7 +4892,8 @@
                 const response = await fetch(normalizeApiUrl(provider.apiUrl), {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${provider.apiKey}` },
-                    body: JSON.stringify(body)
+                    body: JSON.stringify(body),
+                    signal: currentAbortController?.signal
                 });
 
                 if (!response.ok) {
@@ -4901,6 +4925,17 @@
                 renderChatArea();
 
             } catch (error) {
+                // 用户主动中止：保存已收到的内容，不报错
+                if (error.name === 'AbortError') {
+                    if (full || (typeof aiReply !== 'undefined' && aiReply)) {
+                        const partialContent = typeof aiReply !== 'undefined' ? aiReply : full;
+                        currentSession.messages.push({ role: "assistant", content: partialContent, thought: realThought || '', model: activeModel, presetId: activePresetId });
+                        pendingVersions = null;
+                        saveSessionsToStorage();
+                        renderChatArea();
+                    }
+                    return;
+                }
                 const msg = error.message || '';
                 if (msg.toLowerCase().includes('image') || msg.includes('图片')) {
                     // 尝试过滤图片内容后重试
@@ -4937,7 +4972,8 @@
                     renderChatArea();
                 }
             } finally {
-                sendBtn.disabled = false;
+                currentAbortController = null;
+                setResponding(false);
                 // 请求完成后自动滚动到底部
                 requestAnimationFrame(() => { chatContainer.scrollTop = chatContainer.scrollHeight; });
             }
@@ -5031,7 +5067,8 @@
             const aiMsgEl = appendMessageDOM('assistant', '🎨 正在生成图片...', null, null, null, msgIdx);
 
             try {
-                sendBtn.disabled = true;
+                currentAbortController = new AbortController();
+                setResponding(true);
                 let baseUrl = (provider.apiUrl || '').trim().replace(/\/+$/, '');
                 if (baseUrl.endsWith('/chat/completions')) {
                     baseUrl = baseUrl.slice(0, -'/chat/completions'.length);
@@ -5064,7 +5101,8 @@
                 const response = await fetch(genUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${provider.apiKey}` },
-                    body: JSON.stringify(body)
+                    body: JSON.stringify(body),
+                    signal: currentAbortController?.signal
                 });
 
                 if (!response.ok) {
@@ -5139,13 +5177,15 @@
                 clearGenControlImage();
 
             } catch (error) {
+                if (error.name === 'AbortError') return;
                 const errFull = `生图失败: ${error.message || '未知错误'}`;
                 aiMsgEl.textContent = errFull;
                 currentSession.messages.push({ role: "assistant", content: errFull });
                 saveSessionsToStorage();
                 renderChatArea();
             } finally {
-                sendBtn.disabled = false;
+                currentAbortController = null;
+                setResponding(false);
                 requestAnimationFrame(() => { chatContainer.scrollTop = chatContainer.scrollHeight; });
             }
         }
