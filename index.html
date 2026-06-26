@@ -2207,6 +2207,46 @@
             pointer-events: none;
             letter-spacing: 0.5px;
         }
+
+        /* --- 一键回到最新位置悬浮按钮样式 --- */
+        .scroll-down-btn {
+            position: absolute;
+            bottom: 120px;
+            right: 24px;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background-color: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 999;
+            color: var(--text-muted);
+            transition: all 0.2s ease, opacity 0.2s, transform 0.2s;
+            opacity: 0;
+            transform: scale(0.8);
+        }
+        .scroll-down-btn.show {
+            display: flex;
+            opacity: 1;
+            transform: scale(1);
+        }
+        .scroll-down-btn:hover {
+            color: var(--text-main);
+            background-color: var(--bg-hover);
+            border-color: var(--text-muted);
+            transform: translateY(-2px);
+        }
+        .scroll-down-btn svg {
+            stroke-width: 2.5;
+            transition: transform 0.2s ease;
+        }
+        .scroll-down-btn:hover svg {
+            transform: translateY(1px);
+        }
     </style>
 </head>
 <body>
@@ -2361,6 +2401,11 @@
                 </div>
                 </div><!-- gen-collapse-body -->
             </div>
+        </div>
+
+        <!-- 回到最新位置悬浮按钮 -->
+        <div class="scroll-down-btn" id="scrollDownBtn" onclick="scrollToBottomSmoothly()" title="回到最新位置">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
         </div>
 
         <div class="input-area">
@@ -5154,7 +5199,8 @@
             highlightCodeBlocks(blockDiv);
             renderMath(blockDiv);
             renderMermaid(blockDiv);
-            // 添加新消息后自动滚动到底部
+            // 添加新消息后自动滚动到底部并重置自动滚动状态
+            shouldAutoScroll = true;
             requestAnimationFrame(() => { chatContainer.scrollTop = chatContainer.scrollHeight; });
             updateMessageAnchors();
             return contentDiv; 
@@ -5962,8 +6008,10 @@
                             renderMermaid(thoughtEl, true);
                         }
                     }
-                    // 流式输出时持续滚动到底部
-                    requestAnimationFrame(() => { chatContainer.scrollTop = chatContainer.scrollHeight; });
+                    // 流式输出时持续滚动到底部（受自动滚动标志控制）
+                    if (shouldAutoScroll) {
+                        requestAnimationFrame(() => { chatContainer.scrollTop = chatContainer.scrollHeight; });
+                    }
                 }
             } catch(streamErr) {
                 // abort 或其他错误：确保已收集内容能返回
@@ -5998,6 +6046,7 @@
         // 全局中止控制器与响应状态
         let currentAbortController = null;
         let isResponding = false;
+        let shouldAutoScroll = true;
 
         // 发送按钮点击：响应中则中止，否则发送
         function onSendClick() {
@@ -6593,8 +6642,10 @@
             } finally {
                 currentAbortController = null;
                 setResponding(false);
-                // 【AI响应/系统】【对话生成】滚动容器到聊天底部
-                requestAnimationFrame(() => { chatContainer.scrollTop = chatContainer.scrollHeight; });
+                // 【AI响应/系统】【对话生成】滚动容器到聊天底部（受自动滚动标志控制）
+                if (shouldAutoScroll) {
+                    requestAnimationFrame(() => { chatContainer.scrollTop = chatContainer.scrollHeight; });
+                }
             }
         }
 
@@ -6809,7 +6860,9 @@
             } finally {
                 currentAbortController = null;
                 setResponding(false);
-                requestAnimationFrame(() => { chatContainer.scrollTop = chatContainer.scrollHeight; });
+                if (shouldAutoScroll) {
+                    requestAnimationFrame(() => { chatContainer.scrollTop = chatContainer.scrollHeight; });
+                }
             }
         }
 
@@ -7243,6 +7296,83 @@
             document.removeEventListener('mousemove', dragMermaidViewer);
             document.removeEventListener('mouseup', stopDragMermaidViewer);
         }
+
+        // ============================================================
+        //  回到最新位置悬浮按钮逻辑
+        // ============================================================
+        /**
+         * 平滑滚动到聊天窗口最底部并重置自动滚动状态
+         * @returns {void}
+         */
+        window.scrollToBottomSmoothly = function() {
+            const chatContainer = document.getElementById('chatContainer');
+            if (chatContainer) {
+                chatContainer.scrollTo({
+                    top: chatContainer.scrollHeight,
+                    behavior: 'smooth'
+                });
+            }
+            shouldAutoScroll = true;
+            updateScrollDownBtnVisibility();
+        };
+
+        /**
+         * 判定当前滚动状态，并动态控制悬浮按钮的显隐
+         * @returns {void}
+         */
+        function updateScrollDownBtnVisibility() {
+            const chatContainer = document.getElementById('chatContainer');
+            const btn = document.getElementById('scrollDownBtn');
+            if (!chatContainer || !btn) return;
+
+            // 1. 判断当前滚动条是否偏离底部
+            const isAtBottom = chatContainer.scrollHeight - chatContainer.scrollTop - chatContainer.clientHeight <= 80;
+            
+            // 2. 只有在 AI 响应中且手动向上偏离，或者日常查看历史且偏离底部较远时才显示按钮
+            const shouldShow = (isResponding && !shouldAutoScroll) || (!isAtBottom && chatContainer.scrollTop > 200);
+
+            if (shouldShow) {
+                btn.classList.add('show');
+            } else {
+                btn.classList.remove('show');
+            }
+        }
+
+        /**
+         * 检测用户的主动滚动行为（滚轮或触摸拖动）
+         * @returns {void}
+         */
+        function handleUserScrollAction() {
+            const chatContainer = document.getElementById('chatContainer');
+            if (!chatContainer) return;
+            
+            // 1. 如果当前 AI 正在输出回复
+            if (isResponding) {
+                const isAtBottom = chatContainer.scrollHeight - chatContainer.scrollTop - chatContainer.clientHeight <= 80;
+                // 2. 偏离底部则立即切断自动滚屏状态
+                if (!isAtBottom) {
+                    shouldAutoScroll = false;
+                    updateScrollDownBtnVisibility();
+                }
+            }
+        }
+
+        // 挂载滚轮、触控与常规滚动事件监听
+        window.addEventListener('DOMContentLoaded', () => {
+            const chatContainer = document.getElementById('chatContainer');
+            if (chatContainer) {
+                chatContainer.addEventListener('wheel', handleUserScrollAction, { passive: true });
+                chatContainer.addEventListener('touchmove', handleUserScrollAction, { passive: true });
+                chatContainer.addEventListener('scroll', () => {
+                    const isAtBottom = chatContainer.scrollHeight - chatContainer.scrollTop - chatContainer.clientHeight <= 80;
+                    // 1. 一旦用户自己滚到底部或通过点击回到底部，即刻恢复自动滚屏
+                    if (isAtBottom) {
+                        shouldAutoScroll = true;
+                    }
+                    updateScrollDownBtnVisibility();
+                });
+            }
+        });
     </script>
     <div class="img-lightbox" id="imgLightbox" onclick="closeImgLightbox()">
         <span class="img-lightbox-close" onclick="event.stopPropagation();closeImgLightbox()">✕</span>
