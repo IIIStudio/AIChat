@@ -995,8 +995,8 @@
         .mermaid-tool-copy { margin-left: auto; font-size: 11px; color: var(--text-muted); cursor: pointer; display: inline-flex; align-items: center; gap: 4px; transition: color 0.15s; }
         .mermaid-tool-copy:hover { color: var(--text-main); }
         .mermaid-preview { width: 100%; max-width: 100%; min-width: 0; padding: 12px; box-sizing: border-box; overflow-x: auto; display: flex; justify-content: center; }
-        .mermaid { display: flex; justify-content: center; width: 100%; }
-        .mermaid svg { margin: 0 auto; display: block; max-width: 100%; }
+        div.mermaid { display: flex; justify-content: center; width: 100%; }
+        div.mermaid svg { margin: 0 auto; display: block; max-width: 100%; }
         .mermaid-code { width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box; }
         .mermaid-code pre { margin: 0; border: none; border-radius: 0; background: var(--bg-main); }
         .mermaid-source-text { display: block; padding: 12px; font-size: 12px; line-height: 1.6; overflow-x: auto; }
@@ -1984,10 +1984,13 @@
                         </span>
                         <div class="thinking-dropdown" id="thinkingDropdown"></div>
                     </div>
-                    <div class="search-switcher">
+                    <div class="search-switcher" style="display:flex;align-items:center;gap:6px;">
                         <span class="search-info" id="searchInfo" onclick="event.stopPropagation(); toggleSearchState()" title="网络搜索">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
                             <span id="searchLabel">搜索关</span>
+                        </span>
+                        <span class="search-panel-toggle" id="searchPanelToggle" onclick="event.stopPropagation(); handleSearchPanelClick()" title="查看网络搜索详情" style="display:none;cursor:pointer;color:var(--text-muted);align-items:center;padding:4px;border-radius:6px;transition:all 0.15s;" onmouseover="this.style.color='var(--text-main)';this.style.background='var(--bg-hover)'" onmouseout="this.style.color='';this.style.background=''">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line></svg>
                         </span>
                     </div>
                     <div class="action-group">
@@ -2907,6 +2910,15 @@
         document.addEventListener('click', (e) => {
             if (!e.target.closest('.model-switcher') && !e.target.closest('.model-dropdown')) closeModelDropdown();
             if (!e.target.closest('.thinking-switcher') && !e.target.closest('.thinking-dropdown')) closeThinkingDropdown();
+            
+            // 【思考过程/系统】【折叠控制】通过事件委托统一处理所有思考横条的点击折叠/展开
+            const bar = e.target.closest('.thought-bar');
+            if (bar) {
+                const process = bar.closest('.thought-process');
+                if (process) {
+                    process.classList.toggle('collapsed');
+                }
+            }
         });
 
         // ============================================================
@@ -4548,7 +4560,7 @@
                     ? '<span class="thinking-dots"><span></span><span></span><span></span></span><span class="thought-label">思考中</span>'
                     : '<span class="thought-label">思考过程</span><svg class="thought-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>';
                 thoughtDiv.innerHTML = `
-                    <div class="thought-bar" onclick="this.parentElement.classList.toggle('collapsed')">
+                    <div class="thought-bar">
                         ${barInner}
                     </div>
                     <div class="thought-content">${thoughtHtml}</div>
@@ -5403,6 +5415,10 @@
                             }
                             // 5.累积并增量渲染正文内容
                             if (deltaObj.content) {
+                                // 【流式渲染/系统】【正文渲染】一旦开始收到正文，说明思考阶段已结束，立即移除“思考中”动效
+                                if (thoughtProcessEl && thoughtProcessEl.classList.contains('thinking') && !thoughtStarted) {
+                                    thoughtProcessEl.remove();
+                                }
                                 full += deltaObj.content;
                                 if (contentParser) window.smd.parser_write(contentParser, unwrapMathFromCode(deltaObj.content));
                                 else el.textContent = full;
@@ -5452,8 +5468,14 @@
             // 7.结束流，刷新剩余未闭合的 markdown 标记
             if (contentParser) window.smd.parser_end(contentParser);
             if (thoughtParser) window.smd.parser_end(thoughtParser);
-            // 8.移除思考中样式
-            if (thoughtProcessEl) thoughtProcessEl.classList.remove('thinking');
+            // 【流式渲染/系统】【思考清除】8. 结束流后，若从未输出过真实思考内容，则直接移去思考动效元素
+            if (thoughtProcessEl) {
+                if (!thoughtStarted) {
+                    thoughtProcessEl.remove();
+                } else {
+                    thoughtProcessEl.classList.remove('thinking');
+                }
+            }
             // 9.流结束后最终代码高亮、数学公式与 Mermaid 渲染（含最后一个代码块）
             highlightCodeBlocks(el);
             renderMath(el);
@@ -5505,7 +5527,7 @@
         }
 
         /**
-         * 【网络搜索/TinyFish】【显示面板】展开或折叠网络搜索详情侧边栏
+         * 【网络搜索/TinyFish】【显示面板】展开或折叠网络搜索详情侧边栏并持久化状态
          * @param {boolean} show - 是否显示
          */
         function toggleSearchSidebar(show) {
@@ -5513,8 +5535,33 @@
             if (!sidebar) return;
             if (show) {
                 sidebar.classList.remove('hidden');
+                localStorage.setItem('searchSidebarExpanded', 'true');
             } else {
                 sidebar.classList.add('hidden');
+                localStorage.setItem('searchSidebarExpanded', 'false');
+            }
+            // 【网络搜索/TinyFish】【显示面板】更新输入框旁的详情面板按钮状态
+            const toggleBtn = document.getElementById('searchPanelToggle');
+            if (toggleBtn) {
+                if (show) {
+                    toggleBtn.style.color = 'var(--text-main)';
+                    toggleBtn.style.background = 'var(--bg-active-chat)';
+                } else {
+                    toggleBtn.style.color = '';
+                    toggleBtn.style.background = '';
+                }
+            }
+        }
+
+        /**
+         * 【网络搜索/TinyFish】【显示面板】手动点击输入框旁的详情面板按钮时的展开/隐藏响应
+         * @returns {void}
+         */
+        function handleSearchPanelClick() {
+            const sidebar = document.getElementById('searchSidebar');
+            if (sidebar) {
+                const isHidden = sidebar.classList.contains('hidden');
+                toggleSearchSidebar(isHidden);
             }
         }
 
@@ -5693,10 +5740,14 @@
                 }
             });
 
-            // 【网络搜索/TinyFish】【恢复历史】4. 如果重建出了合法的搜索流程卡片，则自动展示侧边栏，否则隐藏
+            // 【网络搜索/TinyFish】【恢复历史】4. 如果重建出了合法的搜索流程卡片，则显示按钮并根据持久化偏好展开/折叠侧边栏
+            const toggleBtn = document.getElementById('searchPanelToggle');
             if (hasValidSearch) {
-                toggleSearchSidebar(true);
+                if (toggleBtn) toggleBtn.style.display = 'inline-flex';
+                const isExpanded = localStorage.getItem('searchSidebarExpanded') !== 'false';
+                toggleSearchSidebar(isExpanded);
             } else {
+                if (toggleBtn) toggleBtn.style.display = 'none';
                 toggleSearchSidebar(false);
             }
         }
