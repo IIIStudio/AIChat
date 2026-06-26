@@ -1150,6 +1150,124 @@
         .thinking-dropdown-item .thinking-hint { color: var(--text-muted); font-weight: normal; font-size: 11px; }
         [data-mode="gen"] .thinking-switcher { display: none !important; }
 
+        /* --- 网络搜索切换器 --- */
+        .search-switcher { position: relative; }
+        .search-info { cursor: pointer; padding: 4px 8px; border-radius: 6px; transition: background 0.2s; user-select: none; font-size: 13px; color: var(--text-muted); display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+        .search-info:hover { background: rgba(128,128,128,0.1); color: var(--text-main); }
+        .search-info.active { color: #2a75e7; font-weight: 500; }
+        .search-info svg { flex-shrink: 0; }
+        [data-mode="gen"] .search-switcher { display: none !important; }
+
+        /* --- 右侧搜索侧边栏 --- */
+        .search-sidebar {
+            width: 350px;
+            height: 100%;
+            background-color: var(--bg-sidebar);
+            border-left: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            transition: width 0.3s ease, opacity 0.3s ease;
+            overflow: hidden;
+            flex-shrink: 0;
+            z-index: 10;
+        }
+        .search-sidebar.hidden {
+            width: 0;
+            border-left: none;
+            opacity: 0;
+        }
+        .search-sidebar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border-color);
+            white-space: nowrap;
+        }
+        .search-sidebar-close {
+            font-size: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            color: var(--text-muted);
+            transition: color 0.15s;
+            line-height: 1;
+        }
+        .search-sidebar-close:hover {
+            color: var(--text-main);
+        }
+        .search-sidebar-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .search-sidebar-empty {
+            color: var(--text-muted);
+            font-size: 13px;
+            text-align: center;
+            padding-top: 40px;
+        }
+        .search-step-card {
+            background: var(--bg-surface, rgba(128,128,128,0.05));
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 13px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .search-step-title {
+            font-weight: 600;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .search-step-title svg {
+            flex-shrink: 0;
+        }
+        .search-step-detail {
+            color: var(--text-muted);
+            font-size: 12px;
+            word-break: break-all;
+            white-space: pre-wrap;
+        }
+        .search-step-url-list {
+            margin-top: 4px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .search-step-url-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            font-size: 11px;
+            background: rgba(128,128,128,0.08);
+            padding: 6px 8px;
+            border-radius: 4px;
+        }
+        .search-step-url-link {
+            color: #2a75e7;
+            text-decoration: none;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            flex: 1;
+        }
+        .search-step-url-link:hover {
+            text-decoration: underline;
+        }
+        .search-step-url-status {
+            color: var(--text-muted);
+            font-size: 10px;
+            white-space: nowrap;
+        }
+
         .model-info-text { white-space: nowrap; line-height: 18px; }
         .model-logo { width: 18px; height: 18px; border-radius: 4px; flex-shrink: 0; object-fit: contain; }
         [data-theme="dark"] .model-logo { filter: invert(0.85) hue-rotate(180deg) brightness(1.2); }
@@ -1349,6 +1467,31 @@
 
             body {
                 flex-direction: column;
+            }
+
+            /* 右侧搜索侧边栏在移动端 */
+            .search-sidebar {
+                position: fixed;
+                top: 0;
+                right: 0;
+                width: 300px;
+                max-width: 85vw;
+                height: 100vh;
+                z-index: 200;
+                transform: translateX(100%);
+                transition: transform 0.3s ease;
+                box-shadow: -2px 0 20px rgba(0,0,0,0.15);
+                border-left: 1px solid var(--border-color);
+            }
+            .search-sidebar:not(.hidden) {
+                transform: translateX(0);
+                width: 300px;
+                opacity: 1;
+            }
+            .search-sidebar.hidden {
+                transform: translateX(100%);
+                width: 300px;
+                opacity: 0;
             }
 
             /* 侧边栏：移动端默认隐藏，滑出覆盖 */
@@ -1841,6 +1984,12 @@
                         </span>
                         <div class="thinking-dropdown" id="thinkingDropdown"></div>
                     </div>
+                    <div class="search-switcher">
+                        <span class="search-info" id="searchInfo" onclick="event.stopPropagation(); toggleSearchState()" title="网络搜索">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+                            <span id="searchLabel">搜索关</span>
+                        </span>
+                    </div>
                     <div class="action-group">
                         <button class="action-btn upload-action" onclick="document.getElementById('fileInput').click()" title="上传文件">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
@@ -1854,6 +2003,20 @@
             </div>
         </div>
 
+    </div>
+
+    <!-- 右侧网络搜索过程侧边栏 -->
+    <div class="search-sidebar hidden" id="searchSidebar">
+        <div class="search-sidebar-header">
+            <span style="font-weight:600;font-size:14px;display:flex;align-items:center;gap:6px;color:var(--text-main);">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                网络搜索过程
+            </span>
+            <span class="search-sidebar-close" onclick="toggleSearchSidebar(false)" title="关闭">×</span>
+        </div>
+        <div class="search-sidebar-content thin-scrollbar" id="searchSidebarContent">
+            <div class="search-sidebar-empty">当前会话未触发网络搜索。</div>
+        </div>
     </div>
 
     <div class="modal-overlay" id="settingsModal">
@@ -2908,6 +3071,23 @@
         //  设置面板 — 运营商编辑
         // ============================================================
         function flushEditingProvider() {
+            if (editingProviderId === '__web_search__') {
+                const provEl = document.getElementById('editSearchProvider');
+                const urlEl = document.getElementById('editSearchUrl');
+                const keyEl = document.getElementById('editSearchKey');
+                const locEl = document.getElementById('editSearchLocation');
+                const langEl = document.getElementById('editSearchLanguage');
+                const countEl = document.getElementById('editSearchFetchCount');
+                
+                if (provEl) webSearchSettings.provider = provEl.value;
+                if (urlEl) webSearchSettings.apiUrl = urlEl.value.trim();
+                if (keyEl) webSearchSettings.apiKey = keyEl.value.trim();
+                if (locEl) webSearchSettings.location = locEl.value.trim() || 'US';
+                if (langEl) webSearchSettings.language = langEl.value.trim() || 'en';
+                if (countEl) webSearchSettings.fetchCount = parseInt(countEl.value, 10) || 2;
+                return;
+            }
+
             const p = providers.find(p => p.id === editingProviderId);
             if (!p) return;
             const nameEl = document.getElementById('editPname');
@@ -2932,11 +3112,49 @@
                 item.onclick = () => selectProviderForEdit(p.id);
                 list.appendChild(item);
             });
+
+            // 添加特殊“网络搜索”页签
+            const searchItem = document.createElement('div');
+            const isEditingSearch = editingProviderId === '__web_search__';
+            searchItem.className = 'provider-nav-item' + (isEditingSearch ? ' selected' : '');
+            searchItem.innerHTML = `<span style="display:flex;align-items:center;gap:6px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg> 网络搜索配置</span>`;
+            searchItem.title = '网络搜索配置';
+            searchItem.onclick = () => selectProviderForEdit('__web_search__');
+            list.appendChild(searchItem);
         }
 
         function renderSettingsRight() {
             const panel = document.getElementById('settingsRightPanel');
             if (!panel) return;
+
+            if (editingProviderId === '__web_search__') {
+                const s = webSearchSettings;
+                panel.innerHTML = `
+                    <div style="font-weight:600;font-size:14px;margin-bottom:12px;border-bottom:1px solid var(--border-color);padding-bottom:6px;">网络搜索配置</div>
+                    <label>搜索服务供应商</label>
+                    <select id="editSearchProvider" style="width:100%;margin-bottom:10px;padding:6px;border:1px solid var(--border-color);border-radius:6px;background:var(--bg-main);color:var(--text-main);">
+                        <option value="tinyfish" ${s.provider === 'tinyfish' ? 'selected' : ''}>TinyFish</option>
+                    </select>
+                    <label>API URL</label>
+                    <input type="text" id="editSearchUrl" value="${escapeHtml(s.apiUrl || '')}" placeholder="https://agent.tinyfish.ai">
+                    <label>API Key</label>
+                    <input type="password" id="editSearchKey" value="${escapeHtml(s.apiKey || '')}" placeholder="sk-tinyfish-...">
+                    <div style="display:flex;gap:10px;">
+                        <div style="flex:1;">
+                            <label>地区 (Location)</label>
+                            <input type="text" id="editSearchLocation" value="${escapeHtml(s.location || 'US')}" placeholder="US">
+                        </div>
+                        <div style="flex:1;">
+                            <label>语言 (Language)</label>
+                            <input type="text" id="editSearchLanguage" value="${escapeHtml(s.language || 'en')}" placeholder="en">
+                        </div>
+                    </div>
+                    <label>提取网页内容数量 (Fetch Count, 1-5)</label>
+                    <input type="number" id="editSearchFetchCount" value="${s.fetchCount || 2}" min="1" max="5" placeholder="2">
+                `;
+                return;
+            }
+
             const p = providers.find(p => p.id === editingProviderId);
             if (!p) {
                 panel.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding-top:60px;">请从左侧选择一个运营商</div>';
@@ -3128,6 +3346,13 @@
             }
             providersBackup = null;
             saveProvidersToStorage();
+
+            // 保存网络搜索配置
+            try {
+                localStorage.setItem('webSearchSettings', JSON.stringify(webSearchSettings));
+            } catch(e) {}
+            updateSearchBtnUI();
+
             updateModelDisplay();
             renderModelDropdown();
             document.getElementById('settingsModal').style.display = 'none';
@@ -3237,6 +3462,14 @@
         //  初始化入口
         // ============================================================
         window.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const saved = localStorage.getItem('webSearchSettings');
+                if (saved) {
+                    webSearchSettings = { ...webSearchSettings, ...JSON.parse(saved) };
+                }
+            } catch(e) {}
+            updateSearchBtnUI();
+
             if (window.mermaid) {
                 const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
                 mermaid.initialize({
@@ -3257,6 +3490,45 @@
             updateSendBtnState(); // 初始化发送按钮状态
             switchChat(getCurrentId());
         });
+
+        // ============================================================
+        //  网络搜索配置 — 数据管理
+        // ============================================================
+        let webSearchSettings = {
+            enabled: false,
+            provider: 'tinyfish',
+            apiKey: '',
+            apiUrl: 'https://agent.tinyfish.ai',
+            location: 'US',
+            language: 'en',
+            fetchCount: 2
+        };
+
+        function toggleSearchState() {
+            webSearchSettings.enabled = !webSearchSettings.enabled;
+            try {
+                localStorage.setItem('webSearchSettings', JSON.stringify(webSearchSettings));
+            } catch(e) {}
+            updateSearchBtnUI();
+            if (webSearchSettings.enabled) {
+                showToast('已启用网络搜索');
+            } else {
+                showToast('已关闭网络搜索');
+            }
+        }
+
+        function updateSearchBtnUI() {
+            const btn = document.getElementById('searchInfo');
+            const label = document.getElementById('searchLabel');
+            if (!btn || !label) return;
+            if (webSearchSettings.enabled) {
+                btn.classList.add('active');
+                label.textContent = '搜索开';
+            } else {
+                btn.classList.remove('active');
+                label.textContent = '搜索关';
+            }
+        }
 
         // ============================================================
         //  参数预设 — 数据管理
@@ -3986,6 +4258,10 @@
             } else {
                 welcomeScreen.style.display = 'none';
                 session.messages.forEach((msg, idx) => {
+                    // 【网络搜索/TinyFish】【消息渲染】跳过中间过渡的工具调用、系统角色消息或无内容的过渡助手消息，只渲染用户和最终的助手回复
+                    if (msg.role === 'tool' || msg.role === 'system' || (msg.role === 'assistant' && !msg.content && msg.tool_calls && msg.tool_calls.length > 0)) {
+                        return;
+                    }
                     let displayContent, imageUrl;
                     let displayModel = msg.model;
                     let displayThought = msg.thought;
@@ -4024,6 +4300,8 @@
                 });
             }
             updateMessageAnchors();
+            // 【网络搜索/TinyFish】【恢复历史】每次重绘聊天区时，根据最新消息历史恢复右侧搜索面板状态
+            restoreSearchProcess();
         }
 
         function regenerateMessage(btn) {
@@ -4173,8 +4451,11 @@
             if (!session) return;
             
             if (block.classList.contains('user-block')) {
-                // 删除用户消息及其后的助手回复
-                const removeCount = (idx + 1 < session.messages.length && session.messages[idx + 1].role === 'assistant') ? 2 : 1;
+                // 【会话管理/系统】【安全删除】删除用户消息以及其后关联的所有过渡消息和助手回答，直至遇到下一条用户消息
+                let removeCount = 1;
+                while (idx + removeCount < session.messages.length && session.messages[idx + removeCount].role !== 'user') {
+                    removeCount++;
+                }
                 session.messages.splice(idx, removeCount);
             } else {
                 const msg = session.messages[idx];
@@ -4190,6 +4471,15 @@
                         msg.displayVersionIdx = 0;
                         if (msg.versions.length === 0) delete msg.versions;
                         if (msg.displayVersionIdx === 0) delete msg.displayVersionIdx;
+                        
+                        // 【会话管理/系统】【安全删除】退回上一个版本时，连带清除当前最新版本生成期间的过渡工具调用消息
+                        let startDelIdx = idx;
+                        while (startDelIdx > 0 && session.messages[startDelIdx - 1].role !== 'user') {
+                            startDelIdx--;
+                        }
+                        if (startDelIdx < idx) {
+                            session.messages.splice(startDelIdx, idx - startDelIdx);
+                        }
                     } else {
                         // 删除旧版本
                         msg.versions.splice(dv - 1, 1);
@@ -4202,8 +4492,13 @@
                     showToast('版本已删除');
                     return;
                 }
-                // 无版本历史，删除整条助手消息
-                session.messages.splice(idx, 1);
+                // 无版本历史，删除整条助手消息及相关的过渡工具消息
+                let startDelIdx = idx;
+                while (startDelIdx > 0 && session.messages[startDelIdx - 1].role !== 'user') {
+                    startDelIdx--;
+                }
+                // 【会话管理/系统】【安全删除】删除当前助手回答并连带清理对应的所有过渡工具调用消息
+                session.messages.splice(startDelIdx, idx - startDelIdx + 1);
             }
             
             if (session.messages.length === 0) {
@@ -4943,7 +5238,6 @@
 
                 const wrapper = document.createElement('div');
                 wrapper.className = 'mermaid-wrapper';
-
                 // 1. 创建工具栏
                 const toolbar = document.createElement('div');
                 toolbar.className = 'mermaid-toolbar';
@@ -5039,6 +5333,7 @@
             const reader = body.getReader();
             const decoder = new TextDecoder();
             let full = '', thoughtFull = '', buf = '';
+            let toolCalls = []; // 【网络搜索/TinyFish】【智能代理】收集流式 tool_calls 增量
             // 1.定位思考过程展示元素与容器
             const thoughtEl = el.closest('.message-block')?.querySelector('.thought-content');
             const thoughtProcessEl = el.closest('.message-block')?.querySelector('.thought-process');
@@ -5093,6 +5388,26 @@
                                 if (contentParser) window.smd.parser_write(contentParser, unwrapMathFromCode(deltaObj.content));
                                 else el.textContent = full;
                             }
+                            // 【网络搜索/TinyFish】【智能代理】收集流式 tool_calls 增量数据
+                            if (deltaObj.tool_calls) {
+                                deltaObj.tool_calls.forEach(tc => {
+                                    const idx = tc.index;
+                                    if (!toolCalls[idx]) {
+                                        toolCalls[idx] = {
+                                            id: tc.id || '',
+                                            type: tc.type || 'function',
+                                            function: {
+                                                name: tc.function?.name || '',
+                                                arguments: tc.function?.arguments || ''
+                                            }
+                                        };
+                                    } else {
+                                        if (tc.id) toolCalls[idx].id = tc.id;
+                                        if (tc.function?.name) toolCalls[idx].function.name = tc.function.name;
+                                        if (tc.function?.arguments) toolCalls[idx].function.arguments += tc.function.arguments;
+                                    }
+                                });
+                            }
                         } catch(e) {}
                     }
                     // 6.节流着色：对已完成代码块（跳过最后一个可能未完成的）着色
@@ -5122,7 +5437,7 @@
                 renderMath(thoughtEl);
                 renderMermaid(thoughtEl);
             }
-            return { content: full, thought: thoughtFull };
+            return { content: full, thought: thoughtFull, toolCalls: toolCalls.filter(Boolean) };
         }
 
         // ============================================================
@@ -5163,6 +5478,301 @@
             }
         }
 
+        /**
+         * 【网络搜索/TinyFish】【显示面板】展开或折叠网络搜索详情侧边栏
+         * @param {boolean} show - 是否显示
+         */
+        function toggleSearchSidebar(show) {
+            const sidebar = document.getElementById('searchSidebar');
+            if (!sidebar) return;
+            if (show) {
+                sidebar.classList.remove('hidden');
+            } else {
+                sidebar.classList.add('hidden');
+            }
+        }
+
+        /**
+         * 【网络搜索/TinyFish】【清空面板】清空网络搜索侧边栏的内容
+         */
+        function clearSearchProcess() {
+            const contentDiv = document.getElementById('searchSidebarContent');
+            if (contentDiv) {
+                contentDiv.innerHTML = '<div class="search-sidebar-empty">当前会话未触发网络搜索。</div>';
+            }
+        }
+
+        /**
+         * 【网络搜索/TinyFish】【渲染状态】向网络搜索侧边栏中追加详细流程卡片
+         * @param {string} toolName - 工具名称
+         * @param {string} title - 卡片标题
+         * @param {string} detail - 详细说明文本
+         * @param {Array} results - 搜索网页结果列表
+         * @param {boolean} isError - 是否为错误状态
+         * @param {Array} urlDetails - 抓取详情列表
+         */
+        /**
+         * 【网络搜索/TinyFish】【渲染状态】向网络搜索侧边栏中追加详细流程卡片
+         * @param {string} toolName - 工具名称
+         * @param {string} title - 卡片标题
+         * @param {string} detail - 详细说明文本
+         * @param {Array} results - 搜索网页结果列表
+         * @param {boolean} isError - 是否为错误状态
+         * @param {Array} urlDetails - 抓取详情列表
+         * @param {boolean} silent - 是否为静默模式，若为 true 则不自动展开侧边栏
+         */
+        function appendSearchProcessCard(toolName, title, detail, results = null, isError = false, urlDetails = null, silent = false) {
+            // 【网络搜索/TinyFish】【渲染状态】如果不为静默模式，确保右侧栏展开
+            if (!silent) {
+                toggleSearchSidebar(true);
+            }
+
+            const contentDiv = document.getElementById('searchSidebarContent');
+            if (!contentDiv) return;
+
+            // 如果存在空提示，清除它
+            const emptyEl = contentDiv.querySelector('.search-sidebar-empty');
+            if (emptyEl) {
+                contentDiv.innerHTML = '';
+            }
+
+            const card = document.createElement('div');
+            card.className = 'search-step-card';
+            if (isError) {
+                card.style.borderColor = '#e06c75';
+                card.style.background = 'rgba(224, 108, 117, 0.05)';
+            }
+
+            // 卡片头部
+            let iconSvg = '';
+            if (toolName === 'web_search') {
+                iconSvg = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-main);"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>`;
+            } else {
+                iconSvg = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-main);"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>`;
+            }
+
+            card.innerHTML = `
+                <div class="search-step-title">
+                    ${iconSvg}
+                    <span>${escapeHtml(title)}</span>
+                </div>
+                <div class="search-step-detail">${escapeHtml(detail)}</div>
+            `;
+
+            // 如果有搜索结果列表
+            if (results && results.length > 0) {
+                const listDiv = document.createElement('div');
+                listDiv.className = 'search-step-url-list';
+                results.forEach((r, idx) => {
+                    const item = document.createElement('div');
+                    item.className = 'search-step-url-item';
+                    item.innerHTML = `
+                        <a href="${escapeHtml(r.url)}" target="_blank" class="search-step-url-link">${idx + 1}. [${escapeHtml(r.site_name || '链接')}] ${escapeHtml(r.title)}</a>
+                        <span class="search-step-url-status">位置 ${r.position || idx + 1}</span>
+                    `;
+                    listDiv.appendChild(item);
+                });
+                card.appendChild(listDiv);
+            }
+
+            // 如果有抓取详情列表
+            if (urlDetails && urlDetails.length > 0) {
+                const listDiv = document.createElement('div');
+                listDiv.className = 'search-step-url-list';
+                urlDetails.forEach((ud, idx) => {
+                    const item = document.createElement('div');
+                    item.className = 'search-step-url-item';
+                    const lenText = ud.length > 0 ? ` (${ud.length} 字符)` : '';
+                    item.innerHTML = `
+                        <a href="${escapeHtml(ud.url)}" target="_blank" class="search-step-url-link" style="max-width: 75%;">${idx + 1}. ${escapeHtml(ud.title || ud.url)}</a>
+                        <span class="search-step-url-status" style="color: ${ud.status === '成功' ? '#98c379' : '#e06c75'}">${escapeHtml(ud.status)}${lenText}</span>
+                    `;
+                    listDiv.appendChild(item);
+                });
+                card.appendChild(listDiv);
+            }
+
+            contentDiv.appendChild(card);
+            // 滚动到底部
+            requestAnimationFrame(() => { contentDiv.scrollTop = contentDiv.scrollHeight; });
+        }
+
+        /**
+         * 【网络搜索/TinyFish】【恢复历史】根据会话消息历史重新渲染右侧网络搜索侧边栏
+         * @returns {void}
+         */
+        function restoreSearchProcess() {
+            clearSearchProcess();
+            const session = sessions.find(s => s.id === getCurrentId());
+            if (!session || !session.messages || session.messages.length === 0) {
+                toggleSearchSidebar(false);
+                return;
+            }
+
+            // 【网络搜索/TinyFish】【恢复历史】1. 筛选出当前会话中所有的工具执行返回消息
+            const toolMsgs = session.messages.filter(m => m.role === 'tool');
+            if (toolMsgs.length === 0) {
+                toggleSearchSidebar(false);
+                return;
+            }
+
+            let hasValidSearch = false;
+            
+            toolMsgs.forEach(toolMsg => {
+                // 【网络搜索/TinyFish】【恢复历史】2. 寻找前置 assistant 消息中的工具调用定义以提取调用参数
+                const relatedAssistant = session.messages.find(m => 
+                    m.role === 'assistant' && 
+                    m.tool_calls && 
+                    m.tool_calls.some(tc => tc.id === toolMsg.tool_call_id)
+                );
+                if (!relatedAssistant) return;
+                
+                const toolCall = relatedAssistant.tool_calls.find(tc => tc.id === toolMsg.tool_call_id);
+                if (!toolCall) return;
+
+                let args = {};
+                try {
+                    args = typeof toolCall.function.arguments === 'string' 
+                        ? JSON.parse(toolCall.function.arguments) 
+                        : toolCall.function.arguments;
+                } catch(e) {}
+
+                let results = null;
+                try {
+                    results = JSON.parse(toolMsg.content);
+                } catch(e) {}
+
+                // 【网络搜索/TinyFish】【恢复历史】3. 根据工具名称静默向侧边栏追加对应的卡片
+                if (toolMsg.name === 'web_search') {
+                    const query = args.query || '';
+                    const detailText = results && results.length > 0 
+                        ? `检索到 ${results.length} 条网页记录：` 
+                        : '未找到相关结果';
+                    appendSearchProcessCard('web_search', `执行搜索: "${query}"`, detailText, results, false, null, true);
+                    hasValidSearch = true;
+                } else if (toolMsg.name === 'fetch_webpage') {
+                    const urls = args.urls || [args.url].filter(Boolean) || [];
+                    const pages = Array.isArray(results) ? results : [];
+                    const processedPages = urls.map(u => {
+                        const p = pages.find(page => page.url === u || page.final_url === u);
+                        return {
+                            url: u,
+                            title: p ? p.title : '未知标题',
+                            status: p && p.text ? '成功' : '失败',
+                            length: p && p.text ? p.text.length : 0
+                        };
+                    });
+                    appendSearchProcessCard('fetch_webpage', '提取网页正文', '成功抓取到网页正文：', null, false, processedPages, true);
+                    hasValidSearch = true;
+                }
+            });
+
+            // 【网络搜索/TinyFish】【恢复历史】4. 如果重建出了合法的搜索流程卡片，则自动展示侧边栏，否则隐藏
+            if (hasValidSearch) {
+                toggleSearchSidebar(true);
+            } else {
+                toggleSearchSidebar(false);
+            }
+        }
+
+        /**
+         * 【网络搜索/TinyFish】【执行搜索】通过 TinyFish 接口检索网络内容并返回链接和摘要
+         * @param {string} query - 搜索关键词
+         * @returns {Promise<Array>} - 搜索结果列表
+         */
+        async function performWebSearchOnly(query) {
+            const s = webSearchSettings;
+            if (!s.apiKey) {
+                throw new Error('未配置 TinyFish API Key');
+            }
+            
+            // 【网络搜索/TinyFish】【执行搜索】1. 更新右侧面板状态
+            appendSearchProcessCard('web_search', `执行搜索: "${query}"`, '正在发起搜索请求...');
+
+            const searchUrl = `${s.apiUrl.replace(/\/+$/, '')}/v1/search?query=${encodeURIComponent(query)}&location=${encodeURIComponent(s.location)}&language=${encodeURIComponent(s.language)}`;
+            const searchRes = await fetch(searchUrl, {
+                headers: {
+                    'X-API-Key': s.apiKey,
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            if (!searchRes.ok) {
+                const errMsg = `搜索失败 (HTTP ${searchRes.status})`;
+                appendSearchProcessCard('web_search', `执行搜索: "${query}"`, errMsg, null, true);
+                throw new Error(errMsg);
+            }
+            
+            const searchData = await searchRes.json();
+            const results = searchData.results || [];
+            
+            // 【网络搜索/TinyFish】【执行搜索】2. 渲染结果列表
+            const detailText = results.length > 0 
+                ? `检索到 ${results.length} 条网页记录：` 
+                : '未找到相关结果';
+            appendSearchProcessCard('web_search', `执行搜索: "${query}"`, detailText, results);
+            
+            return results;
+        }
+
+        /**
+         * 【网络搜索/TinyFish】【执行抓取】通过 TinyFish 接口抓取指定网页列表的正文
+         * @param {Array<string>} urls - 网页链接列表
+         * @returns {Promise<Array>} - 抓取的正文数据列表
+         */
+        async function performWebpageFetchOnly(urls) {
+            const s = webSearchSettings;
+            if (!s.apiKey) {
+                throw new Error('未配置 TinyFish API Key');
+            }
+            
+            // 【网络搜索/TinyFish】【执行抓取】1. 更新右侧面板状态
+            appendSearchProcessCard('fetch_webpage', '提取网页正文', `正在发起内容提取请求...`);
+
+            let pages = [];
+            try {
+                const fetchRes = await fetch(`${s.apiUrl.replace(/\/+$/, '')}/v1/fetch`, {
+                    method: 'POST',
+                    headers: {
+                        'X-API-Key': s.apiKey,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        urls: urls,
+                        format: 'markdown'
+                    })
+                });
+                if (fetchRes.ok) {
+                    const fetchData = await fetchRes.json();
+                    pages = fetchData.results || [];
+                } else {
+                    throw new Error(`提取失败 (HTTP ${fetchRes.status})`);
+                }
+            } catch(e) {
+                console.error('【网络搜索/TinyFish】【网页抓取】内容抓取失败: ', e);
+                appendSearchProcessCard('fetch_webpage', '提取网页正文', `抓取过程中出现异常: ${e.message}`, null, true);
+                throw e;
+            }
+
+            // 【网络搜索/TinyFish】【执行抓取】2. 渲染抓取结果
+            const processedPages = urls.map(u => {
+                const p = pages.find(page => page.url === u || page.final_url === u);
+                return {
+                    url: u,
+                    title: p ? p.title : '未知标题',
+                    status: p && p.text ? '成功' : '失败',
+                    length: p && p.text ? p.text.length : 0
+                };
+            });
+
+            appendSearchProcessCard('fetch_webpage', '提取网页正文', '成功抓取到网页正文：', null, false, processedPages);
+            return pages;
+        }
+
+        /**
+         * 【AI响应/系统】【对话生成】向模型发起对话请求并流式/非流式获取回复，支持智能代理网络搜索工具的自主调用
+         * @returns {Promise<void>}
+         */
         async function fetchAIResponse() {
             const provider = getActiveProvider();
             if (!provider) { setResponding(false); return; }
@@ -5170,80 +5780,206 @@
             const currentSession = sessions.find(s => s.id === getCurrentId());
 
             const preset = getActivePreset();
-            // fakeThought 为特殊标记，appendMessageDOM 检测后显示思考中动效
+            // 【AI响应/系统】【对话生成】fakeThought 为特殊标记，appendMessageDOM 检测后显示思考中动效
             const fakeThought = '__thinking__';
             const msgIdx = currentSession.messages.length;
             const aiMessageElement = appendMessageDOM('assistant', '', fakeThought, null, null, msgIdx);
 
+            let finalReplyText = '';
+            let finalThoughtText = '';
+
             try {
                 currentAbortController = new AbortController();
                 setResponding(true);
+
+                // 【AI响应/系统】【对话生成】初始化消息历史与工具列表
                 let messages = [...currentSession.messages];
                 if (preset && preset.systemPrompt) {
                     messages = [{ role: 'system', content: preset.systemPrompt }, ...messages];
                 }
+
                 const useStream = preset ? preset.stream : false;
-                const body = {
+                let loopCount = 0;
+                const maxLoops = 5;
+
+                // 【AI响应/系统】【工具定义】声明供 AI 自主调用的 TinyFish 搜索与抓取工具
+                const searchTools = [
+                    {
+                        type: "function",
+                        function: {
+                            name: "web_search",
+                            description: "【网络搜索/TinyFish】搜索互联网以获取网页的最新链接和摘要，包含标题、网址、位置等信息",
+                            parameters: {
+                                type: "object",
+                                properties: {
+                                    query: {
+                                        type: "string",
+                                        description: "搜索查询关键词"
+                                    }
+                                },
+                                required: ["query"]
+                            }
+                        }
+                    },
+                    {
+                        type: "function",
+                        function: {
+                            name: "fetch_webpage",
+                            description: "【网络搜索/TinyFish】从给定的 URL 列表中提取并返回 Markdown 格式的网页正文内容，便于细致阅读与分析",
+                            parameters: {
+                                type: "object",
+                                properties: {
+                                    urls: {
+                                        type: "array",
+                                        items: {
+                                            type: "string"
+                                        },
+                                        description: "要抓取的网页链接 URL 数组列表"
+                                    }
+                                },
+                                required: ["urls"]
+                            }
+                        }
+                    }
+                ];
+
+                while (loopCount < maxLoops) {
+                    const body = {
+                        model: activeModel,
+                        messages: messages,
+                        stream: useStream,
+                        temperature: preset ? preset.temperature : 0.7,
+                        top_p: preset ? preset.top_p : 1,
+                        frequency_penalty: preset ? preset.frequency_penalty : 0,
+                        presence_penalty: preset ? preset.presence_penalty : 0
+                    };
+                    if (thinkingLevel && thinkingLevel !== 'auto') body.thinking = thinkingLevel;
+                    if (webSearchSettings.enabled) {
+                        body.tools = searchTools;
+                    }
+
+                    // 【AI响应/系统】【请求模型】发起大模型聊天对话接口请求
+                    const response = await fetch(normalizeApiUrl(provider.apiUrl), {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${provider.apiKey}` },
+                        body: JSON.stringify(body),
+                        signal: currentAbortController?.signal
+                    });
+
+                    if (!response.ok) {
+                        const errText = await response.text();
+                        let errMsg = `HTTP 状态码 ${response.status}`;
+                        try { errMsg = JSON.parse(errText).error?.message || errMsg; } catch(e) {}
+                        throw new Error(errMsg);
+                    }
+
+                    let aiReply = '', realThought = null, toolCalls = [];
+                    if (useStream && response.body) {
+                        // 【AI响应/系统】【读取响应】流式读取 SSE 响应数据并提取 tool_calls 列表
+                        const r = await readSSEStream(response.body, aiMessageElement);
+                        aiReply = r.content;
+                        realThought = r.thought || null;
+                        toolCalls = r.toolCalls || [];
+                    } else {
+                        // 【AI响应/系统】【读取响应】非流式直接读取响应体并提取 tool_calls 列表
+                        const data = await response.json();
+                        aiReply = data.choices[0].message.content || '';
+                        realThought = data.choices[0].message.reasoning_content || null;
+                        toolCalls = data.choices[0].message.tool_calls || [];
+                    }
+
+                    // 【AI响应/系统】【工具决策】判断 AI 是否决策并生成了工具调用请求
+                    if (toolCalls && toolCalls.length > 0) {
+                        // 【AI响应/系统】【工具执行】大模型决策发起工具调用，将 assistant 消息与调用信息追加至会话历史中
+                        const assistantMsg = {
+                            role: "assistant",
+                            content: aiReply || null,
+                            tool_calls: toolCalls,
+                            model: activeModel,
+                            presetId: activePresetId
+                        };
+                        messages.push(assistantMsg);
+                        currentSession.messages.push(assistantMsg);
+
+                        // 【AI响应/系统】【工具执行】遍历并并发或依次执行所有发起的工具调用
+                        for (const tool of toolCalls) {
+                            let resultStr = '';
+                            try {
+                                let args = tool.function.arguments;
+                                if (typeof args === 'string') {
+                                    args = JSON.parse(args);
+                                }
+                                if (tool.function.name === 'web_search') {
+                                    const query = args.query;
+                                    const results = await performWebSearchOnly(query);
+                                    resultStr = JSON.stringify(results);
+                                } else if (tool.function.name === 'fetch_webpage') {
+                                    const urls = args.urls || [args.url].filter(Boolean);
+                                    const pages = await performWebpageFetchOnly(urls);
+                                    resultStr = JSON.stringify(pages);
+                                } else {
+                                    resultStr = "未知的工具名称";
+                                }
+                            } catch (err) {
+                                resultStr = `工具执行失败: ${err.message}`;
+                            }
+
+                            // 【AI响应/系统】【工具执行】将工具调用的执行返回结果追加至会话历史中
+                            const toolMsg = {
+                                role: "tool",
+                                tool_call_id: tool.id,
+                                name: tool.function.name,
+                                content: resultStr
+                            };
+                            messages.push(toolMsg);
+                            currentSession.messages.push(toolMsg);
+                        }
+
+                        saveSessionsToStorage();
+                        loopCount++;
+                        
+                        // 【AI响应/系统】【工具执行】更新聊天气泡中的过渡状态文字
+                        aiMessageElement.innerHTML = `<span style="color:var(--text-muted);font-size:13px;display:flex;align-items:center;gap:6px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-muted);"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg> 搜索完毕，正在解析数据并生成回答...</span>`;
+                        continue;
+                    }
+
+                    // 【AI响应/系统】【对话生成】大模型未决策工具调用，代表生成最终回答，跳出循环
+                    finalReplyText = aiReply;
+                    finalThoughtText = realThought || '';
+                    break;
+                }
+
+                // 【AI响应/系统】【保存消息】将大模型最终文本输出追加至消息列表中并保存
+                currentSession.messages.push({
+                    role: "assistant",
+                    content: finalReplyText,
+                    thought: finalThoughtText,
                     model: activeModel,
-                    messages: messages,
-                    stream: useStream,
-                    temperature: preset ? preset.temperature : 0.7,
-                    top_p: preset ? preset.top_p : 1,
-                    frequency_penalty: preset ? preset.frequency_penalty : 0,
-                    presence_penalty: preset ? preset.presence_penalty : 0
-                };
-                // 思考等级：auto 时不下发字段，交由模型默认；其余等级写入 thinking 字段
-                if (thinkingLevel && thinkingLevel !== 'auto') body.thinking = thinkingLevel;
-                const response = await fetch(normalizeApiUrl(provider.apiUrl), {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${provider.apiKey}` },
-                    body: JSON.stringify(body),
-                    signal: currentAbortController?.signal
+                    presetId: activePresetId
                 });
 
-                if (!response.ok) {
-                    const errText = await response.text();
-                    let errMsg = `HTTP 状态码 ${response.status}`;
-                    try { errMsg = JSON.parse(errText).error?.message || errMsg; } catch(e) {}
-                    throw new Error(errMsg);
-                }
-
-                let aiReply = '', realThought = null;
-                if (useStream && response.body) {
-                    // 流式：readSSEStream 返回 { content, thought }，abort 时也返回已收集部分
-                    const r = await readSSEStream(response.body, aiMessageElement);
-                    aiReply = r.content;
-                    realThought = r.thought || null;
-                } else {
-                    // 非流式：从 message 读取正文与 reasoning_content
-                    const data = await response.json();
-                    aiReply = data.choices[0].message.content;
-                    realThought = data.choices[0].message.reasoning_content || null;
-                }
-                // 有真实思考内容则用真实内容，否则存空（避免动效 HTML 持久化）
-                currentSession.messages.push({ role: "assistant", content: aiReply, thought: realThought || '', model: activeModel, presetId: activePresetId });
                 if (pendingVersions !== null) {
                     currentSession.messages[currentSession.messages.length - 1].versions = pendingVersions;
                     pendingVersions = null;
                 }
+
                 saveSessionsToStorage();
                 renderChatArea();
 
             } catch (error) {
-                // 用户主动中止：保存已收到的部分内容，清理思考状态
+                // 【AI响应/系统】【对话生成】捕获生成异常并做出容错处理
                 if (error.name === 'AbortError') {
-                    if (aiReply || realThought) {
-                        currentSession.messages.push({ role: "assistant", content: aiReply || '(已中止)', thought: realThought || '', model: activeModel, presetId: activePresetId });
+                    if (finalReplyText || finalThoughtText) {
+                        currentSession.messages.push({ role: "assistant", content: finalReplyText || '(已中止)', thought: finalThoughtText || '', model: activeModel, presetId: activePresetId });
                         pendingVersions = null;
                         saveSessionsToStorage();
                     }
-                    // 无论是否有内容都重建，清除思考中动效
                     renderChatArea();
                     return;
                 }
                 const msg = error.message || '';
                 if (msg.toLowerCase().includes('image') || msg.includes('图片')) {
-                    // 尝试过滤图片内容后重试
+                    // 【AI响应/系统】【对话生成】容错处理：当模型不支持图片时，过滤图片字段后重试
                     let filtered = false;
                     currentSession.messages.forEach(m => {
                         if (m.role === 'user' && Array.isArray(m.content)) {
@@ -5256,8 +5992,7 @@
                     });
                     if (filtered) {
                         saveSessionsToStorage();
-                        // 插入提示
-                        const tipMsg = '⚠️ 该模型不支持图片输入，已自动转为纯文字发送';
+                        const tipMsg = '提示：该模型不支持图片输入，已自动转为纯文字发送';
                         currentSession.messages.push({ role: "assistant", content: tipMsg, presetId: activePresetId });
                         saveSessionsToStorage();
                         renderChatArea();
@@ -5279,7 +6014,7 @@
             } finally {
                 currentAbortController = null;
                 setResponding(false);
-                // 请求完成后自动滚动到底部
+                // 【AI响应/系统】【对话生成】滚动容器到聊天底部
                 requestAnimationFrame(() => { chatContainer.scrollTop = chatContainer.scrollHeight; });
             }
         }
@@ -5300,6 +6035,10 @@
 
             const hasImage = pendingFiles.length > 0;
             if (!text && !hasImage) return;
+
+            // 【网络搜索/TinyFish】【重置面板】在发送新消息前重置并隐藏右侧侧边栏展示状态
+            clearSearchProcess();
+            toggleSearchSidebar(false);
 
             const provider = getActiveProvider();
             if (!provider || !provider.apiUrl || !provider.apiKey || !activeModel) {
@@ -5360,7 +6099,7 @@
 
             if (!skipUserMsg) {
                 // 显示用户消息
-                appendMessageDOM('user', `🎨 ${prompt}`, null, null, null, currentSession.messages.length);
+                appendMessageDOM('user', prompt, null, null, null, currentSession.messages.length);
                 currentSession.messages.push({ role: "user", content: prompt });
                 saveSessionsToStorage();
             }
@@ -5369,7 +6108,7 @@
             userInput.style.height = '24px';
 
             const msgIdx = currentSession.messages.length;
-            const aiMsgEl = appendMessageDOM('assistant', '🎨 正在生成图片...', null, null, null, msgIdx);
+            const aiMsgEl = appendMessageDOM('assistant', '正在生成图片...', null, null, null, msgIdx);
 
             try {
                 currentAbortController = new AbortController();
@@ -5444,10 +6183,10 @@
                     if (resultHtml) {
                         resultHtml = '<div class="generated-images">' + resultHtml + '</div>';
                     } else {
-                        resultHtml = '⚠️ 已生成但无法显示图片';
+                        resultHtml = '已生成但无法显示图片';
                     }
                 } else {
-                    resultHtml = '⚠️ 未能生成图片，请检查参数后重试';
+                    resultHtml = '未能生成图片，请检查参数后重试';
                 }
 
                 // 持久化（使用占位符版本，images 数组单独存储）
