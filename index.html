@@ -163,10 +163,10 @@
         .chat-checkbox.checked { background: var(--black-btn); border-color: var(--black-btn); }
         .chat-checkbox.checked::after { content: ''; width: 5px; height: 9px; border: solid var(--text-on-dark); border-width: 0 2px 2px 0; transform: rotate(45deg); margin-bottom: 2px; }
         /* 多选操作栏 */
-        .multi-select-bar { display: none; align-items: center; gap: 8px; padding: 8px 12px; background: var(--bg-surface); border-top: 1px solid var(--border-color); }
+        .multi-select-bar { display: none; flex-wrap: wrap; align-items: center; gap: 4px; padding: 6px 8px; background: var(--bg-hover); border-radius: 8px; margin-bottom: 6px; }
         .multi-select-bar.show { display: flex; }
-        .multi-select-bar .ms-count { font-size: 12px; color: var(--text-muted); margin-right: auto; }
-        .multi-select-bar .ms-btn { font-size: 12px; padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border-color); background: transparent; color: var(--text-muted); cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+        .multi-select-bar .ms-count { font-size: 12px; color: var(--text-muted); margin-right: auto; white-space: nowrap; }
+        .multi-select-bar .ms-btn { font-size: 12px; padding: 3px 8px; border-radius: 5px; border: 1px solid var(--border-color); background: var(--bg-surface); color: var(--text-muted); cursor: pointer; transition: all 0.15s; white-space: nowrap; }
         .multi-select-bar .ms-btn:hover { color: var(--text-main); border-color: var(--text-main); }
         .multi-select-bar .ms-btn.danger:hover { color: #cc4444; border-color: #cc4444; }
         
@@ -1685,15 +1685,16 @@
             </div>
         </div>
 
-        <div class="chat-list thin-scrollbar" id="chatList"></div>
-
         <div class="multi-select-bar" id="multiSelectBar">
             <span class="ms-count" id="msCount">已选 0 项</span>
+            <button class="ms-btn" onclick="selectAll()">全选</button>
             <button class="ms-btn" onclick="batchPin()">置顶</button>
             <button class="ms-btn" onclick="batchUnpin()">取消置顶</button>
             <button class="ms-btn danger" onclick="batchDelete()">删除</button>
             <button class="ms-btn" onclick="toggleMultiSelect()">取消</button>
         </div>
+
+        <div class="chat-list thin-scrollbar" id="chatList"></div>
     </div>
 
     <div class="main-content">
@@ -3674,6 +3675,17 @@
             if (!multiSelectMode) selectedSessions.clear();
             document.getElementById('sidebar').classList.toggle('multi-select-mode', multiSelectMode);
             document.getElementById('multiSelectBar').classList.toggle('show', multiSelectMode);
+            renderSidebar();
+            updateMultiSelectCount();
+        }
+
+        // 全选/取消全选：当前模式所有会话
+        function selectAll() {
+            const modeType = imageGenMode ? 'gen' : 'chat';
+            const modeSessions = sessions.filter(s => s.type === modeType);
+            const allSelected = modeSessions.every(s => selectedSessions.has(s.id));
+            if (allSelected) modeSessions.forEach(s => selectedSessions.delete(s.id));
+            else modeSessions.forEach(s => selectedSessions.add(s.id));
             renderSidebar();
             updateMultiSelectCount();
         }
