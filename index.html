@@ -1042,16 +1042,26 @@
         .message-content h4, .thought-content h4 { font-size: 1.1em; font-weight: 600; margin: 10px 0 4px; }
         .message-content h5, .thought-content h5 { font-size: 1em; font-weight: 600; margin: 8px 0 2px; }
         .message-content h6, .thought-content h6 { font-size: 0.9em; font-weight: 600; margin: 8px 0 2px; color: var(--text-muted); }
-        .message-content pre, .thought-content pre { background: var(--bg-gray); border-radius: 10px; padding: 12px 16px; overflow-x: auto; font-size: 13px; line-height: 1.5; margin: 10px 0; border: 1px solid var(--border-light); }
+        .message-content pre, .thought-content pre { background: var(--bg-gray); border-radius: 10px; padding: 12px 14px; overflow-x: auto; font-size: 13px; line-height: 1.55; margin: 10px 0; border: 1px solid var(--border-light); }
         .message-content code, .thought-content code { font-family: "SF Mono", "Fira Code", "Fira Mono", monospace; font-size: 13px; }
         .message-content :not(pre) > code, .thought-content :not(pre) > code { background: var(--bg-gray); padding: 2px 6px; border-radius: 4px; font-size: 0.88em; font-weight: 500; }
         .message-content pre code, .thought-content pre code { background: none; padding: 0; font-weight: 400; }
         /* 代码块包装器：语言标记 + 复制按钮 */
-        .code-block-wrapper { margin: 10px 0; border-radius: 10px; overflow: hidden; border: 1px solid var(--border-light); }
-        .code-block-header { display: flex; justify-content: space-between; align-items: center; padding: 6px 14px; background: var(--bg-gray); border-bottom: 1px solid var(--border-light); font-size: 12px; }
-        .code-lang { color: var(--text-muted); font-family: "SF Mono", "Fira Code", monospace; text-transform: lowercase; }
-        .code-copy-btn { color: var(--text-muted); cursor: pointer; padding: 2px 8px; border-radius: 4px; transition: all 0.15s; font-size: 12px; display: inline-flex; align-items: center; gap: 4px; }
-        .code-copy-btn:hover { color: var(--text-main); background: var(--bg-hover); }
+        .code-block-wrapper,
+        .mermaid-wrapper { width: 100%; max-width: 100%; margin: 10px 0; border-radius: 10px; overflow: hidden; border: 1px solid var(--border-light); background: var(--bg-gray); box-sizing: border-box; }
+        .mermaid-wrapper { display: flex; flex-direction: column; }
+        .code-block-header,
+        .mermaid-toolbar { display: flex; align-items: center; min-height: 34px; padding: 6px 14px; background: var(--bg-gray); border-bottom: 1px solid var(--border-light); font-size: 12px; gap: 8px; user-select: none; box-sizing: border-box; }
+        .code-lang { color: var(--text-muted); font-family: "SF Mono", "Fira Code", monospace; text-transform: lowercase; margin-right: auto; }
+        .code-block-actions { display: inline-flex; align-items: center; gap: 8px; margin-left: auto; }
+        .code-copy-btn,
+        .code-run-btn,
+        .mermaid-tool-btn,
+        .mermaid-tool-copy { color: var(--text-muted); cursor: pointer; padding: 3px 8px; border-radius: 4px; transition: color 0.15s, background 0.15s; font-size: 12px; display: inline-flex; align-items: center; gap: 4px; line-height: 1; white-space: nowrap; }
+        .code-copy-btn:hover,
+        .code-run-btn:hover,
+        .mermaid-tool-btn:hover,
+        .mermaid-tool-copy:hover { color: var(--text-main); background: var(--bg-hover); }
         .code-copy-btn.copied { color: #2da44e; }
         .code-block-wrapper > pre { margin: 0; border: none; border-radius: 0; }
         .message-content blockquote, .thought-content blockquote { border-left: 3px solid var(--border-color); padding: 4px 12px; margin: 8px 0; color: var(--text-muted); background: var(--bg-hover); border-radius: 0 6px 6px 0; }
@@ -1068,19 +1078,14 @@
         .message-content hr, .thought-content hr { border: none; height: 1px; background: var(--border-color); margin: 16px 0; }
         .message-content img, .thought-content img { max-width: 100%; border-radius: 8px; margin: 8px 0; }
         .message-content strong, .thought-content strong { font-weight: 700; color: var(--text-main); }
-        .mermaid-wrapper { width: 100%; max-width: 100%; background: var(--bg-gray); border-radius: 8px; border: 1px solid var(--border-color); margin: 10px 0; display: flex; flex-direction: column; box-sizing: border-box; overflow: hidden; }
-        .mermaid-toolbar { display: flex; align-items: center; background: var(--bg-hover); padding: 6px 12px; border-bottom: 1px solid var(--border-color); user-select: none; gap: 8px; }
-        .mermaid-tool-btn { font-size: 12px; color: var(--text-muted); cursor: pointer; padding: 3px 8px; border-radius: 4px; transition: all 0.15s; }
-        .mermaid-tool-btn:hover { color: var(--text-main); background: var(--bg-gray); }
         .mermaid-tool-btn.active { color: var(--text-main); background: var(--bg-active-chat); font-weight: 500; }
-        .mermaid-tool-copy { margin-left: auto; font-size: 11px; color: var(--text-muted); cursor: pointer; display: inline-flex; align-items: center; gap: 4px; transition: color 0.15s; }
-        .mermaid-tool-copy:hover { color: var(--text-main); }
-        .mermaid-preview { width: 100%; max-width: 100%; min-width: 0; padding: 12px; box-sizing: border-box; overflow-x: auto; display: flex; justify-content: center; }
+        .mermaid-tool-copy { margin-left: auto; }
+        .mermaid-preview { width: 100%; max-width: 100%; min-width: 0; padding: 12px 14px; box-sizing: border-box; overflow-x: auto; display: flex; justify-content: center; background: var(--bg-gray); }
         div.mermaid { display: flex; justify-content: center; width: 100%; }
         div.mermaid svg { margin: 0 auto; display: block; max-width: 100%; }
         .mermaid-code { width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box; }
-        .mermaid-code pre { margin: 0; border: none; border-radius: 0; background: var(--bg-main); }
-        .mermaid-source-text { display: block; padding: 12px; font-size: 12px; line-height: 1.6; overflow-x: auto; }
+        .mermaid-code pre { margin: 0; border: none; border-radius: 0; background: var(--bg-gray); }
+        .mermaid-source-text { display: block; padding: 12px 14px; font-size: 13px; line-height: 1.55; overflow-x: auto; }
         .message-content .katex-display, .thought-content .katex-display { margin: 12px 0; overflow-x: auto; overflow-y: hidden; padding: 4px 0; }
         .message-content .katex, .thought-content .katex { font-size: 1.05em; }
 
@@ -1834,6 +1839,13 @@
             .message-content pre, .thought-content pre {
                 padding: 10px 12px;
                 font-size: 12px;
+            }
+            .code-block-header, .mermaid-toolbar {
+                padding: 6px 12px;
+                flex-wrap: wrap;
+            }
+            .code-copy-btn, .code-run-btn, .mermaid-tool-btn, .mermaid-tool-copy {
+                font-size: 11px;
             }
 
             /* 搜索弹窗 */
@@ -5289,9 +5301,7 @@
 
             chatInner.appendChild(blockDiv);
             // 代码高亮、数学公式与 Mermaid 渲染（思考段与正文段统一处理）
-            highlightCodeBlocks(blockDiv);
-            renderMath(blockDiv);
-            renderMermaid(blockDiv);
+            renderCompletedMarkdownBlocks(blockDiv);
             // 【聊天/滚动控制】添加新消息后自动滚动到底部，主题重绘期间跳过该副作用
             if (!suppressMessageAutoScroll) {
                 shouldAutoScroll = true;
@@ -5682,6 +5692,53 @@
         });
 
         /**
+         * 【流式渲染/系统】【围栏统计】统计 Markdown 代码围栏数量
+         * @param {string} text - 原始 Markdown 文本
+         * @returns {number} - 三反引号代码围栏出现次数
+         */
+        function getCodeFenceCount(text) {
+            if (!text) return 0;
+            return (text.match(/```/g) || []).length;
+        }
+
+        /**
+         * 【流式渲染/系统】【闭合触发】判断是否需要渲染刚闭合的代码块
+         * @param {string} rawText - 当前已经接收的完整 Markdown 文本
+         * @param {number} renderedFenceCount - 上一次已经触发渲染的围栏数量
+         * @returns {boolean} - 是否存在新闭合的代码块
+         */
+        function shouldRenderClosedCodeFence(rawText, renderedFenceCount) {
+            const fenceCount = getCodeFenceCount(rawText);
+            return fenceCount > renderedFenceCount && fenceCount % 2 === 0;
+        }
+
+        /**
+         * 【流式渲染/系统】【语言识别】获取代码块语言
+         * @param {HTMLElement} codeEl - 待识别的 code 元素
+         * @returns {string|null} - 代码语言名称，无法识别时返回 null
+         */
+        function getCodeBlockLanguage(codeEl) {
+            if (!codeEl) return null;
+            const classNames = Array.from(codeEl.classList || []);
+            const languageClass = classNames.find(name => name.startsWith('language-'));
+            if (languageClass) return languageClass.replace(/^language-/, '').toLowerCase();
+            const rawClass = classNames.find(name => !['hljs', 'mermaid-raw', 'mermaid-source-text'].includes(name));
+            return rawClass ? rawClass.toLowerCase() : null;
+        }
+
+        /**
+         * 【流式渲染/系统】【增量渲染】渲染已闭合的 Markdown 增强内容
+         * @param {HTMLElement} container - 待处理的消息容器
+         * @param {boolean} skipLast - 是否跳过最后一个未闭合代码块
+         * @returns {void}
+         */
+        function renderCompletedMarkdownBlocks(container, skipLast = false) {
+            renderMermaid(container, skipLast);
+            highlightCodeBlocks(container, skipLast);
+            renderMath(container);
+        }
+
+        /**
          * 【流式渲染/系统】【辅助函数】判断代码块是否已闭合
          * @param {HTMLElement} codeEl - 待判断的 code 元素
          * @returns {boolean} - 是否已闭合
@@ -5697,7 +5754,7 @@
             if (container) {
                 const raw = container.getAttribute('data-raw') || '';
                 // 3. 统计代码块定界符的数量
-                const count = (raw.match(/```/g) || []).length;
+                const count = getCodeFenceCount(raw);
                 // 4. 如果定界符数量为偶数，说明当前消息的所有代码块均已闭合
                 if (count > 0 && count % 2 === 0) {
                     return true;
@@ -5709,10 +5766,12 @@
         // ============================================================
         //  代码高亮 — 统一处理 marked 与 smd 两条路径的代码块
         // ============================================================
-        // 对容器内 <pre><code> 元素调用 hljs 着色，并添加语言标记与复制按钮
-        // 传参：container 为待处理的 DOM 容器
-        //       skipLast 为 true 时跳过最后一个未闭合的代码块（流式中可能未完成）
-        // 返回：无
+        /**
+         * 【流式渲染/系统】【代码高亮】处理代码块高亮、语言标签和操作按钮
+         * @param {HTMLElement} container - 待处理的 DOM 容器
+         * @param {boolean} skipLast - 是否跳过最后一个未闭合代码块
+         * @returns {void}
+         */
         function highlightCodeBlocks(container, skipLast = false) {
             if (!container || !window.hljs) return;
             // 1.收集未着色的代码块
@@ -5724,9 +5783,8 @@
                 if (skipLast && i === end - 1 && !isCodeBlockClosed(el)) {
                     continue;
                 }
-                // 3.提取语言名：兼容 marked 的 language-xxx 和 smd 的直接语言名
-                const langMatch = el.className.match(/(?:language-)?(\w+)/);
-                const lang = langMatch ? langMatch[1] : null;
+                // 3. 提取语言名：兼容 marked 的 language-xxx 和 smd 的直接语言名
+                const lang = getCodeBlockLanguage(el);
                 try {
                     if (lang && hljs.getLanguage(lang)) {
                         el.innerHTML = hljs.highlight(el.textContent, { language: lang }).value;
@@ -5746,6 +5804,8 @@
                     const langLabel = document.createElement('span');
                     langLabel.className = 'code-lang';
                     langLabel.textContent = lang || '代码';
+                    const actions = document.createElement('div');
+                    actions.className = 'code-block-actions';
                     // 6.复制按钮
                     const copyBtn = document.createElement('span');
                     copyBtn.className = 'code-copy-btn';
@@ -5768,25 +5828,16 @@
                         const runBtn = document.createElement('span');
                         runBtn.className = 'code-run-btn';
                         runBtn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:2px;"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>运行';
-                        runBtn.style.cursor = 'pointer';
-                        runBtn.style.color = 'var(--text-muted)';
-                        runBtn.style.display = 'inline-flex';
-                        runBtn.style.alignItems = 'center';
-                        runBtn.style.gap = '2px';
-                        runBtn.style.marginRight = '12px';
-                        runBtn.style.fontSize = '11px';
-                        runBtn.style.transition = 'color 0.15s';
-                        runBtn.onmouseover = () => runBtn.style.color = 'var(--text-main)';
-                        runBtn.onmouseout = () => runBtn.style.color = 'var(--text-muted)';
                         runBtn.onclick = () => {
                             // 调用执行器打开沙箱
                             const htmlContent = el.textContent;
                             openHtmlExecutor(htmlContent);
                         };
-                        header.appendChild(runBtn);
+                        actions.appendChild(runBtn);
                     }
                     
-                    header.appendChild(copyBtn);
+                    actions.appendChild(copyBtn);
+                    header.appendChild(actions);
                     // 7.将 pre 移入 wrapper，替换原位置
                     pre.parentNode.insertBefore(wrapper, pre);
                     wrapper.appendChild(header);
@@ -5848,6 +5899,7 @@
                             { left: '\\(', right: '\\)', display: false },
                             { left: '$', right: '$', display: false }
                         ],
+                        ignoredTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code', 'option', 'svg'],
                         throwOnError: false
                     });
                 } catch(e) {}
@@ -5878,9 +5930,15 @@
             }
         };
 
+        /**
+         * 【流式渲染/系统】【图表渲染】将已闭合的 Mermaid 代码块替换为图表预览
+         * @param {HTMLElement} container - 待处理的消息容器
+         * @param {boolean} skipLast - 是否跳过最后一个未闭合 Mermaid 代码块
+         * @returns {void}
+         */
         function renderMermaid(container, skipLast = false) {
             if (!container || !window.mermaid) return;
-            const codeEls = Array.from(container.querySelectorAll('pre > code.mermaid-raw, pre > code.language-mermaid'));
+            const codeEls = Array.from(container.querySelectorAll('pre > code.mermaid-raw, pre > code.language-mermaid, pre > code.mermaid'));
             if (codeEls.length === 0) return;
 
             const end = codeEls.length;
@@ -5888,6 +5946,7 @@
                 const el = codeEls[i];
                 const pre = el.parentElement;
                 if (!pre || pre.tagName !== 'PRE') continue;
+                if (pre.closest('.mermaid-code')) continue;
                 if (pre.closest('.mermaid-wrapper')) continue;
 
                 // 【流式渲染/系统】【增量渲染】skipLast 模式下，若为最后一个 Mermaid 块且尚未闭合，则跳过中途渲染
@@ -5986,8 +6045,10 @@
                     theme: isDark ? 'dark' : 'default',
                     securityLevel: 'loose'
                 });
-                mermaid.run({
-                    nodes: Array.from(container.querySelectorAll('.mermaid'))
+                const nodes = Array.from(container.querySelectorAll('.mermaid:not([data-processed="true"])'));
+                if (nodes.length === 0) return;
+                Promise.resolve(mermaid.run({ nodes })).catch(err => {
+                    console.error("Mermaid 渲染错误: ", err);
                 });
             } catch (err) {
                 console.error("Mermaid 渲染错误: ", err);
@@ -6021,8 +6082,10 @@
                 el.style.whiteSpace = 'pre-wrap';
                 if (thoughtEl) thoughtEl.style.whiteSpace = 'pre-wrap';
             }
-            // 3.流式着色节流：每 600ms 对已完成代码块着色一次
+            // 3.流式增强节流：每 600ms 对已完成代码块补充渲染一次
             let lastHighlightTime = 0;
+            let contentRenderedFenceCount = 0;
+            let thoughtRenderedFenceCount = 0;
             try {
                 while (true) {
                     const { done, value } = await reader.read();
@@ -6055,6 +6118,10 @@
                                     thoughtEl.setAttribute('data-raw', thoughtFull);
                                     if (thoughtParser) window.smd.parser_write(thoughtParser, unwrapMathFromCode(deltaObj.reasoning_content));
                                     else thoughtEl.textContent = thoughtFull;
+                                    if (shouldRenderClosedCodeFence(thoughtFull, thoughtRenderedFenceCount)) {
+                                        thoughtRenderedFenceCount = getCodeFenceCount(thoughtFull);
+                                        renderCompletedMarkdownBlocks(thoughtEl, true);
+                                    }
                                 }
                             }
                             // 5.累积并增量渲染正文内容
@@ -6067,6 +6134,10 @@
                                 el.setAttribute('data-raw', full);
                                 if (contentParser) window.smd.parser_write(contentParser, unwrapMathFromCode(deltaObj.content));
                                 else el.textContent = full;
+                                if (shouldRenderClosedCodeFence(full, contentRenderedFenceCount)) {
+                                    contentRenderedFenceCount = getCodeFenceCount(full);
+                                    renderCompletedMarkdownBlocks(el, true);
+                                }
                             }
                             // 【网络搜索/TinyFish】【智能代理】收集流式 tool_calls 增量数据
                             if (deltaObj.tool_calls) {
@@ -6094,13 +6165,9 @@
                     const now = Date.now();
                     if (useSmd && now - lastHighlightTime > 600) {
                         lastHighlightTime = now;
-                        highlightCodeBlocks(el, true);
-                        renderMath(el);
-                        renderMermaid(el, true);
+                        renderCompletedMarkdownBlocks(el, true);
                         if (thoughtEl) {
-                            highlightCodeBlocks(thoughtEl, true);
-                            renderMath(thoughtEl);
-                            renderMermaid(thoughtEl, true);
+                            renderCompletedMarkdownBlocks(thoughtEl, true);
                         }
                     }
                     // 流式输出时持续滚动到底部（受自动滚动标志控制）
@@ -6124,13 +6191,9 @@
                 }
             }
             // 9.流结束后最终代码高亮、数学公式与 Mermaid 渲染（含最后一个代码块）
-            highlightCodeBlocks(el);
-            renderMath(el);
-            renderMermaid(el);
+            renderCompletedMarkdownBlocks(el);
             if (thoughtEl) {
-                highlightCodeBlocks(thoughtEl);
-                renderMath(thoughtEl);
-                renderMermaid(thoughtEl);
+                renderCompletedMarkdownBlocks(thoughtEl);
             }
             return { content: full, thought: thoughtFull, toolCalls: toolCalls.filter(Boolean) };
         }
