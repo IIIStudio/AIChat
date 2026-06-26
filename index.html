@@ -4789,52 +4789,57 @@
             }
             // 3.流式着色节流：每 600ms 对已完成代码块着色一次
             let lastHighlightTime = 0;
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-                buf += decoder.decode(value, { stream: true });
-                const lines = buf.split('\n');
-                buf = lines.pop() || '';
-                for (const line of lines) {
-                    if (!line.startsWith('data: ')) continue;
-                    const payload = line.slice(6).trim();
-                    if (!payload || payload === '[DONE]') continue;
-                    try {
-                        const deltaObj = JSON.parse(payload).choices?.[0]?.delta;
-                        if (!deltaObj) continue;
-                        // 4.累积并增量渲染思考内容
-                        if (deltaObj.reasoning_content) {
-                            // 首次收到思考内容时：把"思考中"动效替换为"思考过程"标题
-                            if (!thoughtStarted) {
-                                thoughtStarted = true;
-                                if (thoughtEl) thoughtEl.innerHTML = '';
-                                if (thoughtProcessEl) {
-                                    thoughtProcessEl.classList.add('thinking');
-                                    // 更新 bar：跳动点→折叠箭头，标签改为"思考过程"
-                                    const bar = thoughtProcessEl.querySelector('.thought-bar');
-                                    if (bar) bar.innerHTML = '<span class="thought-label">思考过程</span><svg class="thought-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>';
+            try {
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    buf += decoder.decode(value, { stream: true });
+                    const lines = buf.split('\n');
+                    buf = lines.pop() || '';
+                    for (const line of lines) {
+                        if (!line.startsWith('data: ')) continue;
+                        const payload = line.slice(6).trim();
+                        if (!payload || payload === '[DONE]') continue;
+                        try {
+                            const deltaObj = JSON.parse(payload).choices?.[0]?.delta;
+                            if (!deltaObj) continue;
+                            // 4.累积并增量渲染思考内容
+                            if (deltaObj.reasoning_content) {
+                                // 首次收到思考内容时：把"思考中"动效替换为"思考过程"标题
+                                if (!thoughtStarted) {
+                                    thoughtStarted = true;
+                                    if (thoughtEl) thoughtEl.innerHTML = '';
+                                    if (thoughtProcessEl) {
+                                        thoughtProcessEl.classList.add('thinking');
+                                        // 更新 bar：跳动点→折叠箭头，标签改为"思考过程"
+                                        const bar = thoughtProcessEl.querySelector('.thought-bar');
+                                        if (bar) bar.innerHTML = '<span class="thought-label">思考过程</span><svg class="thought-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>';
+                                    }
                                 }
+                                thoughtFull += deltaObj.reasoning_content;
+                                if (thoughtParser) window.smd.parser_write(thoughtParser, unwrapMathFromCode(deltaObj.reasoning_content));
+                                else if (thoughtEl) thoughtEl.textContent = thoughtFull;
                             }
-                            thoughtFull += deltaObj.reasoning_content;
-                            if (thoughtParser) window.smd.parser_write(thoughtParser, unwrapMathFromCode(deltaObj.reasoning_content));
-                            else if (thoughtEl) thoughtEl.textContent = thoughtFull;
-                        }
-                        // 5.累积并增量渲染正文内容
-                        if (deltaObj.content) {
-                            full += deltaObj.content;
-                            if (contentParser) window.smd.parser_write(contentParser, unwrapMathFromCode(deltaObj.content));
-                            else el.textContent = full;
-                        }
-                    } catch(e) {}
+                            // 5.累积并增量渲染正文内容
+                            if (deltaObj.content) {
+                                full += deltaObj.content;
+                                if (contentParser) window.smd.parser_write(contentParser, unwrapMathFromCode(deltaObj.content));
+                                else el.textContent = full;
+                            }
+                        } catch(e) {}
+                    }
+                    // 6.节流着色：对已完成代码块（跳过最后一个可能未完成的）着色
+                    const now = Date.now();
+                    if (useSmd && now - lastHighlightTime > 600) {
+                        lastHighlightTime = now;
+                        highlightCodeBlocks(el, true);
+                    }
+                    // 流式输出时持续滚动到底部
+                    requestAnimationFrame(() => { chatContainer.scrollTop = chatContainer.scrollHeight; });
                 }
-                // 6.节流着色：对已完成代码块（跳过最后一个可能未完成的）着色
-                const now = Date.now();
-                if (useSmd && now - lastHighlightTime > 600) {
-                    lastHighlightTime = now;
-                    highlightCodeBlocks(el, true);
-                }
-                // 流式输出时持续滚动到底部
-                requestAnimationFrame(() => { chatContainer.scrollTop = chatContainer.scrollHeight; });
+            } catch(streamErr) {
+                // abort 或其他错误：确保已收集内容能返回
+                if (streamErr.name !== 'AbortError') throw streamErr;
             }
             // 7.结束流，刷新剩余未闭合的 markdown 标记
             if (contentParser) window.smd.parser_end(contentParser);
@@ -4931,9 +4936,9 @@
                     throw new Error(errMsg);
                 }
 
-                let aiReply, realThought = null;
+                let aiReply = '', realThought = null;
                 if (useStream && response.body) {
-                    // 流式：readSSEStream 返回 { content, thought }
+                    // 流式：readSSEStream 返回 { content, thought }，abort 时也返回已收集部分
                     const r = await readSSEStream(response.body, aiMessageElement);
                     aiReply = r.content;
                     realThought = r.thought || null;
@@ -4953,15 +4958,15 @@
                 renderChatArea();
 
             } catch (error) {
-                // 用户主动中止：保存已收到的内容，不报错
+                // 用户主动中止：保存已收到的部分内容，清理思考状态
                 if (error.name === 'AbortError') {
-                    if (full || (typeof aiReply !== 'undefined' && aiReply)) {
-                        const partialContent = typeof aiReply !== 'undefined' ? aiReply : full;
-                        currentSession.messages.push({ role: "assistant", content: partialContent, thought: realThought || '', model: activeModel, presetId: activePresetId });
+                    if (aiReply || realThought) {
+                        currentSession.messages.push({ role: "assistant", content: aiReply || '(已中止)', thought: realThought || '', model: activeModel, presetId: activePresetId });
                         pendingVersions = null;
                         saveSessionsToStorage();
-                        renderChatArea();
                     }
+                    // 无论是否有内容都重建，清除思考中动效
+                    renderChatArea();
                     return;
                 }
                 const msg = error.message || '';
