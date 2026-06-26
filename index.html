@@ -10,7 +10,7 @@
     <script src="https://cdn.jsdmirror.com/npm/marked/marked.min.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdmirror.com/npm/katex/dist/katex.min.css">
     <script src="https://cdn.jsdmirror.com/npm/katex/dist/katex.min.js"></script>
-    <script src="https://cdn.jsdmirror.com/npm/marked-katex-extension/lib/index.umd.js"></script>
+    <script src="https://cdn.jsdmirror.com/npm/katex/dist/contrib/auto-render.min.js"></script>
     <script type="module">
         // streaming-markdown 用于流式增量渲染，暴露到 window 供非模块脚本调用
         import * as smd from "https://cdn.jsdmirror.com/npm/streaming-markdown/smd.min.js";
@@ -1867,11 +1867,6 @@
     </div>
 
     <script>
-        // 配置 marked 的 KaTeX 扩展，使 marked.parse 直接输出渲染后的公式 HTML
-        // 在 marked 解析阶段保护 $...$、$$...$$ 公式，避免被斜体/粗体规则破坏
-        if (window.marked && window.markedKatex) {
-            marked.use(markedKatex({ throwOnError: false }));
-        }
         // ============================================================
         //  同步初始化：防止刷新时闪烁（先于任何 DOM 渲染）
         // ============================================================
@@ -4034,7 +4029,7 @@
                         <span>思考过程</span>
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
                     </summary>
-                    <div class="thought-content">${marked.parse(thought)}</div>
+                    <div class="thought-content">${marked.parse(unwrapMathFromCode(thought))}</div>
                 `;
                 blockDiv.appendChild(thoughtDiv);
             }
@@ -4047,7 +4042,7 @@
             contentDiv.setAttribute('data-raw', content);
             if (msgIndex != null) contentDiv.setAttribute('data-index', msgIndex);
             if (role === 'assistant' && content) {
-                let displayHtml = isHtml ? content : marked.parse(content).trim();
+                let displayHtml = isHtml ? content : marked.parse(unwrapMathFromCode(content)).trim();
                 // 生图占位符替换：src="" data-gen-idx="N" data-gen-src="" → src="data:..."
                 if (isHtml && genImages && genImages.length > 0) {
                     genImages.forEach((img, i) => {
@@ -4492,15 +4487,34 @@
         });
 
         // ============================================================
-        //  数学公式渲染 — 处理 streaming-markdown 生成的公式元素
+        //  数学公式预处理 — 剥离包裹公式的反引号
         // ============================================================
-        // 对容器内 smd 生成的 <equation-inline>/<equation-block> 调用 KaTeX 渲染
-        // marked 路径已由 marked-katex-extension 在 parse 阶段直接输出公式 HTML，无需此处处理
+        // 模型常以 `$...$` 或 `$$...$$` 形式输出公式，反引号会被 markdown
+        // 解析为行内代码 <code>，导致 KaTeX 扩展无法识别其中的 $ 定界符
+        // 此函数把包裹公式的反引号剥离，使 $...$ / $$...$$ 暴露给公式解析器
+        // 传参：text 为原始 markdown 文本
+        // 返回：剥离反引号后的文本
+        function unwrapMathFromCode(text) {
+            if (!text) return text;
+            // 匹配 `$$...$$` 或 `$...$` 形式，反引号紧贴 $ 前后
+            // 注意 $$ 优先于 $ 匹配，避免误拆
+            return text
+                .replace(/`(\$\$[^`]*?\$\$)`/g, '$1')
+                .replace(/`(\$[^`]*?\$)`/g, '$1');
+        }
+
+        // ============================================================
+        //  数学公式渲染 — 统一处理 smd 与 marked 两条路径
+        // ============================================================
+        // 对容器内公式调用 KaTeX 渲染，兼容两种来源：
+        // 1. streaming-markdown 生成的 <equation-inline>/<equation-block> 自定义元素
+        // 2. marked 输出 DOM 中残留的 $...$、$$...$$、\(...\)、\[...\] 定界符
+        //    用 KaTeX auto-render 扫描文本节点渲染，不受 markdown 解析阶段限制
         // 传参：container 为待渲染的 DOM 容器
         // 返回：无
         function renderMath(container) {
             if (!container || !window.katex) return;
-            // 渲染 smd 生成的 equation 自定义元素，已处理的跳过
+            // 1.渲染 smd 生成的 equation 自定义元素，已处理的跳过
             container.querySelectorAll('equation-inline:not([data-katex])').forEach(el => {
                 const tex = el.textContent;
                 if (tex) {
@@ -4515,6 +4529,20 @@
                     el.setAttribute('data-katex', '1');
                 }
             });
+            // 2.用 auto-render 扫描 marked 路径残留的定界符公式
+            if (window.renderMathInElement) {
+                try {
+                    renderMathInElement(container, {
+                        delimiters: [
+                            { left: '$$', right: '$$', display: true },
+                            { left: '\\[', right: '\\]', display: true },
+                            { left: '\\(', right: '\\)', display: false },
+                            { left: '$', right: '$', display: false }
+                        ],
+                        throwOnError: false
+                    });
+                } catch(e) {}
+            }
         }
 
         // ============================================================
@@ -4554,16 +4582,16 @@
                     try {
                         const deltaObj = JSON.parse(payload).choices?.[0]?.delta;
                         if (!deltaObj) continue;
-                        // 3.累积并增量渲染思考内容
+                        // 3.累积并增量渲染思考内容（预处理剥离公式反引号）
                         if (deltaObj.reasoning_content) {
                             thoughtFull += deltaObj.reasoning_content;
-                            if (thoughtParser) window.smd.parser_write(thoughtParser, deltaObj.reasoning_content);
+                            if (thoughtParser) window.smd.parser_write(thoughtParser, unwrapMathFromCode(deltaObj.reasoning_content));
                             else if (thoughtEl) thoughtEl.textContent = thoughtFull;
                         }
-                        // 4.累积并增量渲染正文内容
+                        // 4.累积并增量渲染正文内容（预处理剥离公式反引号）
                         if (deltaObj.content) {
                             full += deltaObj.content;
-                            if (contentParser) window.smd.parser_write(contentParser, deltaObj.content);
+                            if (contentParser) window.smd.parser_write(contentParser, unwrapMathFromCode(deltaObj.content));
                             else el.textContent = full;
                         }
                     } catch(e) {}
