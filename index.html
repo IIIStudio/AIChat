@@ -8,6 +8,11 @@
     <link rel="icon" type="image/png" href="image/1.png">
     <title>AI Chat — 多模型对话 & 生图网页</title>
     <script src="https://cdn.jsdmirror.com/npm/marked/marked.min.js"></script>
+    <script type="module">
+        // streaming-markdown 用于流式增量渲染，暴露到 window 供非模块脚本调用
+        import * as smd from "https://cdn.jsdmirror.com/npm/streaming-markdown/smd.min.js";
+        window.smd = smd;
+    </script>
     <style>
         :root {
             --bg-main: #ffffff;
@@ -247,7 +252,6 @@
             border-left: 2px solid var(--border-color);
             line-height: 1.6;
             margin-top: 8px;
-            white-space: pre-wrap;
         }
 
         .message { display: flex; flex-direction: column; max-width: 100%; }
@@ -898,16 +902,16 @@
         .image-preview-remove:hover { color: #cc4444; border-color: #cc4444; }
         .user-image { max-width: 200px; max-height: 200px; border-radius: 12px; display: block; margin-top: 6px; cursor: pointer; }
 
-        /* Markdown 渲染 */
-        .message-content p { margin: 4px 0; }
-        .message-content pre { background: var(--bg-gray); border-radius: 8px; padding: 12px 16px; overflow-x: auto; font-size: 13px; line-height: 1.5; margin: 8px 0; }
-        .message-content code { font-family: "SF Mono", "Fira Code", "Fira Mono", monospace; font-size: 13px; }
-        .message-content p code { background: var(--bg-gray); padding: 1px 5px; border-radius: 4px; font-size: 13px; }
-        .message-content pre code { background: none; padding: 0; }
-        .message-content table { border-collapse: collapse; margin: 8px 0; }
-        .message-content th, .message-content td { border: 1px solid var(--border-color); padding: 6px 12px; font-size: 13px; }
-        .message-content th { background: var(--bg-gray); }
-        .message-content ul, .message-content ol { padding-left: 20px; }
+        /* Markdown 渲染（正文与思考过程共用） */
+        .message-content p, .thought-content p { margin: 4px 0; }
+        .message-content pre, .thought-content pre { background: var(--bg-gray); border-radius: 8px; padding: 12px 16px; overflow-x: auto; font-size: 13px; line-height: 1.5; margin: 8px 0; }
+        .message-content code, .thought-content code { font-family: "SF Mono", "Fira Code", "Fira Mono", monospace; font-size: 13px; }
+        .message-content p code, .thought-content p code { background: var(--bg-gray); padding: 1px 5px; border-radius: 4px; font-size: 13px; }
+        .message-content pre code, .thought-content pre code { background: none; padding: 0; }
+        .message-content table, .thought-content table { border-collapse: collapse; margin: 8px 0; }
+        .message-content th, .message-content td, .thought-content th, .thought-content td { border: 1px solid var(--border-color); padding: 6px 12px; font-size: 13px; }
+        .message-content th, .thought-content th { background: var(--bg-gray); }
+        .message-content ul, .message-content ol, .thought-content ul, .thought-content ol { padding-left: 20px; }
 
         /* --- 消息折叠 --- */
         .collapse-wrapper { position: relative; }
@@ -1486,7 +1490,7 @@
             }
 
             /* Markdown 代码块 */
-            .message-content pre {
+            .message-content pre, .thought-content pre {
                 padding: 10px 12px;
                 font-size: 12px;
             }
@@ -4022,7 +4026,7 @@
                         <span>思考过程</span>
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
                     </summary>
-                    <div class="thought-content">${escapeHtml(thought)}</div>
+                    <div class="thought-content">${marked.parse(thought)}</div>
                 `;
                 blockDiv.appendChild(thoughtDiv);
             }
@@ -4482,14 +4486,25 @@
         // ============================================================
         // 读取 SSE 流，分别累积正文 content 与思考 reasoning_content
         // 传参：body 为响应流，el 为正文展示元素
-        // 返回：{ content, thought }，thought 为空字符串表示无思考内容
+        // 返回：{ content, thought }，为原始 markdown 文本用于持久化
+        // 优先使用 streaming-markdown 增量渲染，库未就绪时回退纯文本
         async function readSSEStream(body, el) {
-            el.style.whiteSpace = 'pre-wrap';
             const reader = body.getReader();
             const decoder = new TextDecoder();
             let full = '', thoughtFull = '', buf = '';
-            // 1.定位思考过程展示元素，用于流式回填 reasoning_content
+            // 1.定位思考过程展示元素
             const thoughtEl = el.closest('.message-block')?.querySelector('.thought-content');
+            // 2.创建流式 markdown 解析器：正文与思考各一个
+            const useSmd = !!window.smd;
+            let contentParser = null, thoughtParser = null;
+            if (useSmd) {
+                contentParser = window.smd.parser(window.smd.default_renderer(el));
+                if (thoughtEl) thoughtParser = window.smd.parser(window.smd.default_renderer(thoughtEl));
+            } else {
+                // 回退：纯文本需要保留换行
+                el.style.whiteSpace = 'pre-wrap';
+                if (thoughtEl) thoughtEl.style.whiteSpace = 'pre-wrap';
+            }
             while (true) {
                 const { done, value } = await reader.read();
                 if (done) break;
@@ -4503,21 +4518,26 @@
                     try {
                         const deltaObj = JSON.parse(payload).choices?.[0]?.delta;
                         if (!deltaObj) continue;
-                        // 2.累积思考内容并实时更新思考区
+                        // 3.累积并增量渲染思考内容
                         if (deltaObj.reasoning_content) {
                             thoughtFull += deltaObj.reasoning_content;
-                            if (thoughtEl) thoughtEl.textContent = thoughtFull;
+                            if (thoughtParser) window.smd.parser_write(thoughtParser, deltaObj.reasoning_content);
+                            else if (thoughtEl) thoughtEl.textContent = thoughtFull;
                         }
-                        // 3.累积正文内容并实时更新正文区
+                        // 4.累积并增量渲染正文内容
                         if (deltaObj.content) {
                             full += deltaObj.content;
-                            el.textContent = full;
+                            if (contentParser) window.smd.parser_write(contentParser, deltaObj.content);
+                            else el.textContent = full;
                         }
                     } catch(e) {}
                 }
                 // 流式输出时持续滚动到底部
                 requestAnimationFrame(() => { chatContainer.scrollTop = chatContainer.scrollHeight; });
             }
+            // 5.结束流，刷新剩余未闭合的 markdown 标记
+            if (contentParser) window.smd.parser_end(contentParser);
+            if (thoughtParser) window.smd.parser_end(thoughtParser);
             return { content: full, thought: thoughtFull };
         }
 
