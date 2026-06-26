@@ -14,7 +14,7 @@
     <script src="https://cdn.jsdmirror.com/npm/@highlightjs/cdn-assets@11/highlight.min.js"></script>
     <link rel="stylesheet" id="hljsLightTheme" href="https://cdn.jsdmirror.com/npm/highlight.js@11/styles/github.min.css">
     <link rel="stylesheet" id="hljsDarkTheme" href="https://cdn.jsdmirror.com/npm/highlight.js@11/styles/github-dark.min.css" disabled>
-    <script src="https://cdn.jsdmirror.com/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
+    <script src="https://cdn.jsdmirror.com/npm/mermaid@10.9.1/dist/mermaid.min.js" onload="onMermaidLoaded()"></script>
     <script type="module">
         // streaming-markdown 用于流式增量渲染，暴露到 window 供非模块脚本调用
         import * as smd from "https://cdn.jsdmirror.com/npm/streaming-markdown/smd.min.js";
@@ -988,7 +988,8 @@
         .message-content img, .thought-content img { max-width: 100%; border-radius: 8px; margin: 8px 0; }
         .message-content strong, .thought-content strong { font-weight: 700; color: var(--text-main); }
         .mermaid-wrapper { width: 100%; overflow-x: auto; background: var(--bg-gray); border-radius: 6px; padding: 12px; margin: 8px 0; display: flex; justify-content: center; box-sizing: border-box; }
-        .mermaid { display: block; width: 100%; }
+        .mermaid { display: flex; justify-content: center; width: 100%; }
+        .mermaid svg { margin: 0 auto; display: block; }
         .message-content .katex-display, .thought-content .katex-display { margin: 12px 0; overflow-x: auto; overflow-y: hidden; padding: 4px 0; }
         .message-content .katex, .thought-content .katex { font-size: 1.05em; }
 
@@ -3215,6 +3216,20 @@
             reader.readAsText(file);
             input.value = '';
         }
+
+        // Mermaid 异步加载回调：库载入后立即渲染现有聊天区内的 mermaid 代码块
+        window.onMermaidLoaded = function() {
+            if (window.mermaid) {
+                const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+                mermaid.initialize({
+                    startOnLoad: false,
+                    theme: isDark ? 'dark' : 'default',
+                    securityLevel: 'loose'
+                });
+                const chatInner = document.getElementById('chatInner');
+                if (chatInner) renderMermaid(chatInner);
+            }
+        };
 
         // ============================================================
         //  初始化入口
