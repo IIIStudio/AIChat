@@ -1051,7 +1051,7 @@
         .mermaid-wrapper { width: 100%; max-width: 100%; margin: 10px 0; border-radius: 10px; overflow: hidden; border: 1px solid var(--border-light); background: var(--bg-gray); box-sizing: border-box; }
         .mermaid-wrapper { display: flex; flex-direction: column; }
         .code-block-header,
-        .mermaid-toolbar { display: flex; align-items: center; min-height: 34px; padding: 6px 14px; background: var(--bg-gray); border-bottom: 1px solid var(--border-light); font-size: 12px; gap: 8px; user-select: none; box-sizing: border-box; }
+        .mermaid-toolbar { display: flex; align-items: center; min-height: 34px; padding: 6px 14px; background: var(--bg-hover); border-bottom: 1px solid var(--border-color); font-size: 12px; gap: 8px; user-select: none; box-sizing: border-box; }
         .code-lang { color: var(--text-muted); font-family: "SF Mono", "Fira Code", monospace; text-transform: lowercase; margin-right: auto; }
         .code-block-actions { display: inline-flex; align-items: center; gap: 8px; margin-left: auto; }
         .code-copy-btn,
@@ -1062,6 +1062,8 @@
         .code-run-btn:hover,
         .mermaid-tool-btn:hover,
         .mermaid-tool-copy:hover { color: var(--text-main); background: var(--bg-hover); }
+        .code-copy-btn.disabled,
+        .code-run-btn.disabled { opacity: 0.45; cursor: default; pointer-events: none; }
         .code-copy-btn.copied { color: #2da44e; }
         .code-block-wrapper > pre { margin: 0; border: none; border-radius: 0; }
         .message-content blockquote, .thought-content blockquote { border-left: 3px solid var(--border-color); padding: 4px 12px; margin: 8px 0; color: var(--text-muted); background: var(--bg-hover); border-radius: 0 6px 6px 0; }
@@ -1200,7 +1202,7 @@
         .add-provider-btn { align-self: flex-start; background: transparent; border: 1px dashed var(--border-color); color: var(--text-muted); padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 13px; transition: all 0.2s; margin-bottom: 4px; }
         .add-provider-btn:hover { border-color: var(--text-main); color: var(--text-main); }
 
-        .model-switcher { position: relative; }
+        .model-switcher { position: relative; transform: translateY(2px); }
         .model-info { cursor: pointer; padding: 4px 8px; border-radius: 6px; transition: background 0.2s; user-select: none; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; }
         .model-info:hover { background: rgba(128,128,128,0.1); }
         .model-info::after { content: ' ▾'; font-size: 10px; opacity: 0.5; line-height: 1; }
@@ -1221,7 +1223,7 @@
         .model-dropdown-item .provider-name { color: var(--text-muted); font-weight: normal; font-size: 11px; }
 
         /* --- 思考等级切换器 --- */
-        .thinking-switcher { position: relative; }
+        .thinking-switcher { position: relative; transform: translateY(2px); }
         .thinking-info { cursor: pointer; padding: 4px 8px; border-radius: 6px; transition: background 0.2s; user-select: none; font-size: 13px; color: var(--text-muted); display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
         .thinking-info:hover { background: rgba(128,128,128,0.1); color: var(--text-main); }
         .thinking-info::after { content: ' ▾'; font-size: 10px; opacity: 0.5; line-height: 1; }
@@ -1237,7 +1239,7 @@
         [data-mode="gen"] .thinking-switcher { display: none !important; }
 
         /* --- 网络搜索切换器 --- */
-        .search-switcher { position: relative; }
+        .search-switcher { position: relative; transform: translateY(2px); }
         .search-info { cursor: pointer; padding: 4px 8px; border-radius: 6px; transition: background 0.2s; user-select: none; font-size: 13px; color: var(--text-muted); display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
         .search-info:hover { background: rgba(128,128,128,0.1); color: var(--text-main); }
         .search-info.active { color: #2a75e7; font-weight: 500; }
@@ -5727,12 +5729,152 @@
         }
 
         /**
+         * 【流式渲染/系统】【按钮状态】设置代码块按钮是否可用
+         * @param {HTMLElement} button - 待更新的按钮元素
+         * @param {boolean} enabled - 是否可用
+         * @returns {void}
+         */
+        function setCodeActionButtonState(button, enabled) {
+            if (!button) return;
+            button.classList.toggle('disabled', !enabled);
+            button.setAttribute('aria-disabled', enabled ? 'false' : 'true');
+            if (!enabled) button.onclick = null;
+        }
+
+        /**
+         * 【流式渲染/系统】【按钮创建】创建代码块操作按钮
+         * @param {string} action - 操作类型，支持 copy/run
+         * @returns {HTMLSpanElement} - 操作按钮元素
+         */
+        function createCodeActionButton(action) {
+            const button = document.createElement('span');
+            button.dataset.codeAction = action;
+            if (action === 'run') {
+                button.className = 'code-run-btn';
+                button.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:2px;"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>运行';
+            } else {
+                button.className = 'code-copy-btn';
+                button.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> 复制';
+            }
+            setCodeActionButtonState(button, false);
+            return button;
+        }
+
+        /**
+         * 【流式渲染/系统】【按钮绑定】为闭合代码块绑定操作按钮功能
+         * @param {HTMLElement} wrapper - 代码块包装容器
+         * @param {HTMLElement} codeEl - 代码内容元素
+         * @param {string|null} lang - 代码语言
+         * @returns {void}
+         */
+        function bindCodeBlockActionButtons(wrapper, codeEl, lang) {
+            const copyBtn = wrapper.querySelector('[data-code-action="copy"]');
+            setCodeActionButtonState(copyBtn, true);
+            if (copyBtn) {
+                copyBtn.onclick = () => {
+                    const text = codeEl.textContent;
+                    navigator.clipboard.writeText(text).then(() => {
+                        copyBtn.classList.add('copied');
+                        copyBtn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg> 已复制';
+                        setTimeout(() => {
+                            copyBtn.classList.remove('copied');
+                            copyBtn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> 复制';
+                        }, 2000);
+                    }).catch(() => showToast('复制失败'));
+                };
+            }
+            const runBtn = wrapper.querySelector('[data-code-action="run"]');
+            if (runBtn && lang === 'html') {
+                setCodeActionButtonState(runBtn, true);
+                runBtn.onclick = () => {
+                    // 调用执行器打开沙箱
+                    const htmlContent = codeEl.textContent;
+                    openHtmlExecutor(htmlContent);
+                };
+            }
+        }
+
+        /**
+         * 【流式渲染/系统】【外壳渲染】确保代码块眉头、分割线和按钮外观已渲染
+         * @param {HTMLElement} codeEl - 待处理的代码元素
+         * @param {boolean} enabled - 操作按钮是否立即启用
+         * @returns {HTMLElement|null} - 代码块包装容器
+         */
+        function ensureCodeBlockShell(codeEl, enabled = false) {
+            const pre = codeEl?.parentElement;
+            if (!pre || pre.tagName !== 'PRE') return null;
+            if (pre.closest('.mermaid-code') || pre.closest('.mermaid-wrapper')) return null;
+            const lang = getCodeBlockLanguage(codeEl);
+            let wrapper = pre.parentElement?.classList.contains('code-block-wrapper') ? pre.parentElement : null;
+            if (!wrapper) {
+                wrapper = document.createElement('div');
+                wrapper.className = 'code-block-wrapper';
+                pre.parentNode.insertBefore(wrapper, pre);
+                wrapper.appendChild(pre);
+            }
+            let header = wrapper.querySelector('.code-block-header');
+            if (!header) {
+                header = document.createElement('div');
+                header.className = 'code-block-header';
+                wrapper.insertBefore(header, pre);
+            }
+            let langLabel = header.querySelector('.code-lang');
+            if (!langLabel) {
+                langLabel = document.createElement('span');
+                langLabel.className = 'code-lang';
+                header.insertBefore(langLabel, header.firstChild);
+            }
+            langLabel.textContent = lang || '代码';
+            let actions = header.querySelector('.code-block-actions');
+            if (!actions) {
+                actions = document.createElement('div');
+                actions.className = 'code-block-actions';
+                header.appendChild(actions);
+            }
+            const existingRunBtn = actions.querySelector('[data-code-action="run"]');
+            if (lang === 'html' && !existingRunBtn) {
+                actions.insertBefore(createCodeActionButton('run'), actions.firstChild);
+            } else if (lang !== 'html' && existingRunBtn) {
+                existingRunBtn.remove();
+            }
+            if (!actions.querySelector('[data-code-action="copy"]')) {
+                actions.appendChild(createCodeActionButton('copy'));
+            }
+            if (enabled) {
+                bindCodeBlockActionButtons(wrapper, codeEl, lang);
+            } else {
+                actions.querySelectorAll('[data-code-action]').forEach(button => setCodeActionButtonState(button, false));
+            }
+            return wrapper;
+        }
+
+        /**
+         * 【流式渲染/系统】【外壳同步】渲染代码块可见外壳，未闭合时不绑定按钮功能
+         * @param {HTMLElement} container - 待处理的消息容器
+         * @param {boolean} skipLast - 是否把最后一个未闭合代码块视为禁用状态
+         * @returns {void}
+         */
+        function renderCodeBlockShells(container, skipLast = false) {
+            if (!container) return;
+            const codeEls = Array.from(container.querySelectorAll('pre > code:not(.mermaid-source-text)'));
+            const end = codeEls.length;
+            for (let i = 0; i < end; i++) {
+                const el = codeEls[i];
+                const pre = el.parentElement;
+                if (!pre || pre.closest('.mermaid-code') || pre.closest('.mermaid-wrapper')) continue;
+                const isLastOpen = skipLast && i === end - 1 && !isCodeBlockClosed(el);
+                ensureCodeBlockShell(el, !isLastOpen);
+            }
+        }
+
+        /**
          * 【流式渲染/系统】【增量渲染】渲染已闭合的 Markdown 增强内容
          * @param {HTMLElement} container - 待处理的消息容器
          * @param {boolean} skipLast - 是否跳过最后一个未闭合代码块
          * @returns {void}
          */
         function renderCompletedMarkdownBlocks(container, skipLast = false) {
+            renderCodeBlockShells(container, skipLast);
             renderMermaid(container, skipLast);
             highlightCodeBlocks(container, skipLast);
             renderMath(container);
@@ -5775,10 +5917,12 @@
         function highlightCodeBlocks(container, skipLast = false) {
             if (!container || !window.hljs) return;
             // 1.收集未着色的代码块
-            const codeEls = Array.from(container.querySelectorAll('pre > code:not(.hljs)'));
+            const codeEls = Array.from(container.querySelectorAll('pre > code:not(.hljs):not(.mermaid-source-text)'));
             const end = codeEls.length;
             for (let i = 0; i < end; i++) {
                 const el = codeEls[i];
+                const pre = el.parentElement;
+                if (!pre || pre.closest('.mermaid-code') || pre.closest('.mermaid-wrapper')) continue;
                 // 2.skipLast 模式下，若为最后一块且尚未闭合，则跳过（流式输出中可能尚未完成）
                 if (skipLast && i === end - 1 && !isCodeBlockClosed(el)) {
                     continue;
@@ -5793,56 +5937,8 @@
                     }
                     el.classList.add('hljs');
                 } catch(e) { continue; }
-                // 4.为代码块添加语言标记与复制按钮包装器
-                const pre = el.parentElement;
-                if (pre && pre.tagName === 'PRE' && !pre.parentElement?.classList.contains('code-block-wrapper')) {
-                    const wrapper = document.createElement('div');
-                    wrapper.className = 'code-block-wrapper';
-                    const header = document.createElement('div');
-                    header.className = 'code-block-header';
-                    // 5.语言标记：有语言用语言名，无语言显示"代码"
-                    const langLabel = document.createElement('span');
-                    langLabel.className = 'code-lang';
-                    langLabel.textContent = lang || '代码';
-                    const actions = document.createElement('div');
-                    actions.className = 'code-block-actions';
-                    // 6.复制按钮
-                    const copyBtn = document.createElement('span');
-                    copyBtn.className = 'code-copy-btn';
-                    copyBtn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> 复制';
-                    copyBtn.onclick = () => {
-                        const text = el.textContent;
-                        navigator.clipboard.writeText(text).then(() => {
-                            copyBtn.classList.add('copied');
-                            copyBtn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg> 已复制';
-                            setTimeout(() => {
-                                copyBtn.classList.remove('copied');
-                                copyBtn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> 复制';
-                            }, 2000);
-                        }).catch(() => showToast('复制失败'));
-                    };
-                    header.appendChild(langLabel);
-                    
-                    // 如果是 html 代码块，增加执行按钮
-                    if (lang === 'html') {
-                        const runBtn = document.createElement('span');
-                        runBtn.className = 'code-run-btn';
-                        runBtn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:2px;"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>运行';
-                        runBtn.onclick = () => {
-                            // 调用执行器打开沙箱
-                            const htmlContent = el.textContent;
-                            openHtmlExecutor(htmlContent);
-                        };
-                        actions.appendChild(runBtn);
-                    }
-                    
-                    actions.appendChild(copyBtn);
-                    header.appendChild(actions);
-                    // 7.将 pre 移入 wrapper，替换原位置
-                    pre.parentNode.insertBefore(wrapper, pre);
-                    wrapper.appendChild(header);
-                    wrapper.appendChild(pre);
-                }
+                // 4.代码块闭合后启用外壳按钮
+                ensureCodeBlockShell(el, true);
             }
         }
 
@@ -5930,6 +6026,134 @@
             }
         };
 
+        let mermaidRenderSeq = 0;
+
+        /**
+         * 【流式渲染/系统】【图表包装】创建 Mermaid 渲染成功后的视图容器
+         * @param {string} source - Mermaid 源码
+         * @param {string} svg - Mermaid 渲染后的 SVG 字符串
+         * @returns {HTMLElement} - Mermaid 图表包装容器
+         */
+        function createMermaidWrapper(source, svg) {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'mermaid-wrapper';
+            const toolbar = document.createElement('div');
+            toolbar.className = 'mermaid-toolbar';
+
+            const btnPreview = document.createElement('span');
+            btnPreview.className = 'mermaid-tool-btn active';
+            btnPreview.textContent = '图表';
+            btnPreview.onclick = () => switchMermaidTab(wrapper, 'preview');
+
+            const btnCode = document.createElement('span');
+            btnCode.className = 'mermaid-tool-btn';
+            btnCode.textContent = '源码';
+            btnCode.onclick = () => switchMermaidTab(wrapper, 'code');
+
+            const btnZoom = document.createElement('span');
+            btnZoom.className = 'mermaid-tool-btn';
+            btnZoom.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:2px;vertical-align:middle;"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>放大';
+
+            const btnCopy = document.createElement('span');
+            btnCopy.className = 'mermaid-tool-copy';
+            btnCopy.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> 复制';
+            btnCopy.onclick = () => {
+                navigator.clipboard.writeText(source).then(() => {
+                    btnCopy.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg> 已复制';
+                    setTimeout(() => {
+                        btnCopy.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> 复制';
+                    }, 2000);
+                });
+            };
+
+            const previewDiv = document.createElement('div');
+            previewDiv.className = 'mermaid-preview';
+            previewDiv.innerHTML = svg;
+            btnZoom.onclick = () => {
+                const svgEl = previewDiv.querySelector('svg');
+                if (svgEl) {
+                    openMermaidViewer(svgEl.outerHTML);
+                } else {
+                    showToast('图表尚未渲染完成');
+                }
+            };
+
+            const codeDiv = document.createElement('div');
+            codeDiv.className = 'mermaid-code';
+            codeDiv.style.display = 'none';
+            const preNode = document.createElement('pre');
+            const codeNode = document.createElement('code');
+            codeNode.className = 'mermaid-source-text hljs';
+            if (window.hljs) {
+                try { codeNode.innerHTML = hljs.highlightAuto(source).value; }
+                catch(e) { codeNode.textContent = source; }
+            } else {
+                codeNode.textContent = source;
+            }
+            preNode.appendChild(codeNode);
+            codeDiv.appendChild(preNode);
+
+            toolbar.appendChild(btnPreview);
+            toolbar.appendChild(btnCode);
+            toolbar.appendChild(btnZoom);
+            toolbar.appendChild(btnCopy);
+            wrapper.appendChild(toolbar);
+            wrapper.appendChild(previewDiv);
+            wrapper.appendChild(codeDiv);
+            return wrapper;
+        }
+
+        /**
+         * 【流式渲染/系统】【安全替换】Mermaid 渲染成功后才替换旧代码块状态
+         * @param {HTMLElement} codeEl - Mermaid 源码代码元素
+         * @returns {void}
+         */
+        function renderMermaidCandidate(codeEl) {
+            if (!codeEl || codeEl.__mermaidRendering) return;
+            const pre = codeEl.parentElement;
+            if (!pre || pre.tagName !== 'PRE') return;
+            const source = codeEl.textContent || '';
+            if (!source.trim() || codeEl.__mermaidErrorSource === source) return;
+            codeEl.__mermaidRendering = true;
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            mermaid.initialize({
+                startOnLoad: false,
+                theme: isDark ? 'dark' : 'default',
+                securityLevel: 'loose'
+            });
+            const renderId = `mermaid-render-${Date.now()}-${mermaidRenderSeq++}`;
+            let renderTask;
+            try {
+                renderTask = Promise.resolve(mermaid.render(renderId, source));
+            } catch (err) {
+                codeEl.__mermaidErrorSource = source;
+                codeEl.__mermaidRendering = false;
+                console.info('Mermaid 渲染暂缓: ', err);
+                return;
+            }
+            renderTask.then(result => {
+                if (!pre.isConnected || codeEl.textContent !== source) return;
+                const svg = typeof result === 'string' ? result : result.svg;
+                if (!svg) return;
+                const wrapper = createMermaidWrapper(source, svg);
+                const previewDiv = wrapper.querySelector('.mermaid-preview');
+                if (result && typeof result.bindFunctions === 'function' && previewDiv) {
+                    result.bindFunctions(previewDiv);
+                }
+                let targetToReplace = pre;
+                if (pre.parentNode && pre.parentNode.classList.contains('code-block-wrapper')) {
+                    targetToReplace = pre.parentNode;
+                }
+                if (!targetToReplace.parentNode) return;
+                targetToReplace.parentNode.replaceChild(wrapper, targetToReplace);
+            }).catch(err => {
+                codeEl.__mermaidErrorSource = source;
+                console.info('Mermaid 渲染暂缓: ', err);
+            }).finally(() => {
+                codeEl.__mermaidRendering = false;
+            });
+        }
+
         /**
          * 【流式渲染/系统】【图表渲染】将已闭合的 Mermaid 代码块替换为图表预览
          * @param {HTMLElement} container - 待处理的消息容器
@@ -5953,105 +6177,7 @@
                 if (skipLast && i === end - 1 && !isCodeBlockClosed(el)) {
                     continue;
                 }
-
-                const wrapper = document.createElement('div');
-                wrapper.className = 'mermaid-wrapper';
-                // 1. 创建工具栏
-                const toolbar = document.createElement('div');
-                toolbar.className = 'mermaid-toolbar';
-
-                const btnPreview = document.createElement('span');
-                btnPreview.className = 'mermaid-tool-btn active';
-                btnPreview.textContent = '图表';
-                btnPreview.onclick = () => switchMermaidTab(wrapper, 'preview');
-
-                const btnCode = document.createElement('span');
-                btnCode.className = 'mermaid-tool-btn';
-                btnCode.textContent = '源码';
-                btnCode.onclick = () => switchMermaidTab(wrapper, 'code');
-
-                const btnCopy = document.createElement('span');
-                btnCopy.className = 'mermaid-tool-copy';
-                btnCopy.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> 复制';
-                btnCopy.onclick = () => {
-                    navigator.clipboard.writeText(el.textContent).then(() => {
-                        btnCopy.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg> 已复制';
-                        setTimeout(() => {
-                            btnCopy.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> 复制';
-                        }, 2000);
-                    });
-                };
-
-                const btnZoom = document.createElement('span');
-                btnZoom.className = 'mermaid-tool-btn';
-                btnZoom.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:2px;vertical-align:middle;"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>放大';
-                btnZoom.onclick = () => {
-                    const svgEl = previewDiv.querySelector('svg');
-                    if (svgEl) {
-                        openMermaidViewer(svgEl.outerHTML);
-                    } else {
-                        showToast('图表尚未渲染完成');
-                    }
-                };
-
-                toolbar.appendChild(btnPreview);
-                toolbar.appendChild(btnCode);
-                toolbar.appendChild(btnZoom);
-                toolbar.appendChild(btnCopy);
-
-                // 2. 创建图表预览区域
-                const previewDiv = document.createElement('div');
-                previewDiv.className = 'mermaid-preview';
-                
-                const mermaidDiv = document.createElement('div');
-                mermaidDiv.className = 'mermaid';
-                mermaidDiv.textContent = el.textContent;
-                previewDiv.appendChild(mermaidDiv);
-
-                // 3. 创建源码框
-                const codeDiv = document.createElement('div');
-                codeDiv.className = 'mermaid-code';
-                codeDiv.style.display = 'none';
-
-                const preNode = document.createElement('pre');
-                const codeNode = document.createElement('code');
-                codeNode.className = 'mermaid-source-text hljs';
-                if (window.hljs) {
-                    try { codeNode.innerHTML = hljs.highlightAuto(el.textContent).value; } 
-                    catch(e) { codeNode.textContent = el.textContent; }
-                } else {
-                    codeNode.textContent = el.textContent;
-                }
-                preNode.appendChild(codeNode);
-                codeDiv.appendChild(preNode);
-
-                wrapper.appendChild(toolbar);
-                wrapper.appendChild(previewDiv);
-                wrapper.appendChild(codeDiv);
-
-                // 检查并替换可能已存在的高亮包装容器 code-block-wrapper，避免残留 header 栏
-                let targetToReplace = pre;
-                if (pre.parentNode && pre.parentNode.classList.contains('code-block-wrapper')) {
-                    targetToReplace = pre.parentNode;
-                }
-
-                targetToReplace.parentNode.replaceChild(wrapper, targetToReplace);
-            }
-
-            try {
-                const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-                mermaid.initialize({
-                    startOnLoad: false,
-                    theme: isDark ? 'dark' : 'default',
-                    securityLevel: 'loose'
-                });
-                const nodes = Array.from(container.querySelectorAll('.mermaid:not([data-processed="true"])'));
-                if (nodes.length === 0) return;
-                Promise.resolve(mermaid.run({ nodes })).catch(err => {
-                    console.error("Mermaid 渲染错误: ", err);
-                });
-            } catch (err) {
-                console.error("Mermaid 渲染错误: ", err);
+                renderMermaidCandidate(el);
             }
         }
 
