@@ -154,7 +154,21 @@
         .chat-history-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; border-radius: 8px; font-size: 14px; cursor: pointer; color: var(--text-muted); transition: all 0.2s; white-space: nowrap; }
         .chat-history-item:hover { background-color: var(--bg-hover); color: var(--text-main); }
         .chat-history-item.active { background-color: var(--bg-active-chat); color: var(--text-main); }
+        .chat-history-item.selected { background-color: var(--bg-active-chat); color: var(--text-main); }
         .chat-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
+        /* 多选 checkbox */
+        .chat-checkbox { width: 18px; height: 18px; border: 2px solid var(--border-color); border-radius: 4px; flex-shrink: 0; display: none; align-items: center; justify-content: center; transition: all 0.15s; }
+        .multi-select-mode .chat-checkbox { display: flex; }
+        .multi-select-mode .chat-history-item { padding-left: 8px; }
+        .chat-checkbox.checked { background: var(--black-btn); border-color: var(--black-btn); }
+        .chat-checkbox.checked::after { content: ''; width: 5px; height: 9px; border: solid var(--text-on-dark); border-width: 0 2px 2px 0; transform: rotate(45deg); margin-bottom: 2px; }
+        /* 多选操作栏 */
+        .multi-select-bar { display: none; align-items: center; gap: 8px; padding: 8px 12px; background: var(--bg-surface); border-top: 1px solid var(--border-color); }
+        .multi-select-bar.show { display: flex; }
+        .multi-select-bar .ms-count { font-size: 12px; color: var(--text-muted); margin-right: auto; }
+        .multi-select-bar .ms-btn { font-size: 12px; padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border-color); background: transparent; color: var(--text-muted); cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+        .multi-select-bar .ms-btn:hover { color: var(--text-main); border-color: var(--text-main); }
+        .multi-select-bar .ms-btn.danger:hover { color: #cc4444; border-color: #cc4444; }
         
         .chat-history-icons { display: none; gap: 10px; color: var(--text-muted); }
         .chat-history-item:hover .chat-history-icons, .chat-history-item.active .chat-history-icons { display: flex; }
@@ -1665,12 +1679,21 @@
             <h2>会话</h2>
             <div class="sidebar-actions">
                 <svg onclick="openSearchModal()" width="20" height="20" viewBox="0 0 24 24" title="搜索会话" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <svg onclick="toggleMultiSelect()" width="20" height="20" viewBox="0 0 24 24" title="多选" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
                 <svg onclick="createNewChat()" width="20" height="20" viewBox="0 0 24 24" title="新建会话" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                 <svg onclick="toggleSidebar()" width="20" height="20" viewBox="0 0 24 24" title="隐藏侧边栏" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line></svg>
             </div>
         </div>
 
         <div class="chat-list thin-scrollbar" id="chatList"></div>
+
+        <div class="multi-select-bar" id="multiSelectBar">
+            <span class="ms-count" id="msCount">已选 0 项</span>
+            <button class="ms-btn" onclick="batchPin()">置顶</button>
+            <button class="ms-btn" onclick="batchUnpin()">取消置顶</button>
+            <button class="ms-btn danger" onclick="batchDelete()">删除</button>
+            <button class="ms-btn" onclick="toggleMultiSelect()">取消</button>
+        </div>
     </div>
 
     <div class="main-content">
@@ -3640,6 +3663,63 @@
         // ============================================================
         //  侧边栏渲染
         // ============================================================
+        // ============================================================
+        //  多选模式
+        // ============================================================
+        let multiSelectMode = false;
+        const selectedSessions = new Set();
+
+        function toggleMultiSelect() {
+            multiSelectMode = !multiSelectMode;
+            if (!multiSelectMode) selectedSessions.clear();
+            document.getElementById('sidebar').classList.toggle('multi-select-mode', multiSelectMode);
+            document.getElementById('multiSelectBar').classList.toggle('show', multiSelectMode);
+            renderSidebar();
+            updateMultiSelectCount();
+        }
+
+        function toggleSessionSelection(id) {
+            if (selectedSessions.has(id)) selectedSessions.delete(id);
+            else selectedSessions.add(id);
+            renderSidebar();
+            updateMultiSelectCount();
+        }
+
+        function updateMultiSelectCount() {
+            document.getElementById('msCount').textContent = `已选 ${selectedSessions.size} 项`;
+        }
+
+        function batchDelete() {
+            if (selectedSessions.size === 0) { showToast('未选择会话'); return; }
+            const count = selectedSessions.size;
+            const deletedCurrent = selectedSessions.has(getCurrentId());
+            sessions = sessions.filter(s => !selectedSessions.has(s.id));
+            selectedSessions.clear();
+            const modeSessions = sessions.filter(s => s.type === (imageGenMode ? 'gen' : 'chat'));
+            if (modeSessions.length === 0) createNewChat();
+            else if (deletedCurrent) switchChat(modeSessions[0].id);
+            else renderSidebar();
+            saveSessionsToStorage();
+            updateMultiSelectCount();
+            showToast(`已删除 ${count} 个会话`);
+        }
+
+        function batchPin() {
+            if (selectedSessions.size === 0) { showToast('未选择会话'); return; }
+            sessions.forEach(s => { if (selectedSessions.has(s.id)) s.pinned = true; });
+            saveSessionsToStorage();
+            renderSidebar();
+            showToast(`已置顶 ${selectedSessions.size} 个会话`);
+        }
+
+        function batchUnpin() {
+            if (selectedSessions.size === 0) { showToast('未选择会话'); return; }
+            sessions.forEach(s => { if (selectedSessions.has(s.id)) s.pinned = false; });
+            saveSessionsToStorage();
+            renderSidebar();
+            showToast(`已取消置顶 ${selectedSessions.size} 个会话`);
+        }
+
         function renderSidebar() {
             const list = document.getElementById('chatList');
             list.innerHTML = '';
@@ -3652,8 +3732,16 @@
             });
             sortedSessions.forEach(session => {
                 const item = document.createElement('div');
-                item.className = `chat-history-item ${session.id === getCurrentId() ? 'active' : ''}`;
-                item.onclick = () => switchChat(session.id);
+                const isSelected = selectedSessions.has(session.id);
+                item.className = `chat-history-item ${session.id === getCurrentId() ? 'active' : ''} ${isSelected ? 'selected' : ''}`;
+                // 多选模式下点击切换选中，非多选模式切换会话
+                item.onclick = () => {
+                    if (multiSelectMode) toggleSessionSelection(session.id);
+                    else switchChat(session.id);
+                };
+
+                const checkbox = document.createElement('div');
+                checkbox.className = `chat-checkbox ${isSelected ? 'checked' : ''}`;
 
                 const title = document.createElement('span');
                 title.className = 'chat-title';
@@ -3680,6 +3768,7 @@
                 actionsDiv.appendChild(pinIcon);
                 actionsDiv.appendChild(editIcon);
                 actionsDiv.appendChild(delIcon);
+                item.appendChild(checkbox);
                 item.appendChild(title);
                 item.appendChild(actionsDiv);
                 list.appendChild(item);
