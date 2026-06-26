@@ -1054,16 +1054,8 @@
 
         svg { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
         .sidebar-brand svg, .sidebar-brand svg * { fill: currentColor !important; stroke: none !important; stroke-width: 0 !important; }
-        .message-content svg, .message-content svg * { fill: initial !important; stroke: initial !important; stroke-width: initial !important; stroke-linecap: initial !important; stroke-linejoin: initial !important; }
+        .message-content svg:not(.mermaid *):not(.mermaid), .message-content svg:not(.mermaid *):not(.mermaid) * { fill: initial !important; stroke: initial !important; stroke-width: initial !important; stroke-linecap: initial !important; stroke-linejoin: initial !important; }
         .message-content svg { max-width: 100%; height: auto; }
-        /* 避免全局 SVG 重置污染 Mermaid 图表 */
-        .mermaid svg, .mermaid svg * {
-            fill: revert !important;
-            stroke: revert !important;
-            stroke-width: revert !important;
-            stroke-linecap: revert !important;
-            stroke-linejoin: revert !important;
-        }
 
         .settings-panels { display: flex; gap: 0; border: 1px solid var(--border-color); border-radius: 10px; overflow: hidden; min-height: 320px; margin-bottom: 12px; }
         .settings-left { width: 180px; flex-shrink: 0; background: var(--bg-sidebar); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; }
