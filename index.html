@@ -1202,8 +1202,8 @@
         .add-provider-btn { align-self: flex-start; background: transparent; border: 1px dashed var(--border-color); color: var(--text-muted); padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 13px; transition: all 0.2s; margin-bottom: 4px; }
         .add-provider-btn:hover { border-color: var(--text-main); color: var(--text-main); }
 
-        .model-switcher { position: relative; transform: translateY(2px); }
-        .model-info { cursor: pointer; padding: 4px 8px; border-radius: 6px; transition: background 0.2s; user-select: none; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; }
+        .model-switcher { position: relative; transform: translateY(4.5px); }
+        .model-info { cursor: pointer; padding: 5px 8px; border-radius: 6px; transition: background 0.2s; user-select: none; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; }
         .model-info:hover { background: rgba(128,128,128,0.1); }
         .model-info::after { content: ' ▾'; font-size: 10px; opacity: 0.5; line-height: 1; }
         .model-dropdown { position: fixed; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 10px; box-shadow: 0 4px 16px rgba(0,0,0,0.12); min-width: 260px; z-index: 99999; display: none; max-height: 340px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: transparent transparent; }
@@ -1221,10 +1221,10 @@
         .model-dropdown-item:hover { background: var(--bg-hover); }
         .model-dropdown-item.active { color: var(--text-main); font-weight: 600; background: var(--bg-hover); }
         .model-dropdown-item .provider-name { color: var(--text-muted); font-weight: normal; font-size: 11px; }
-
+ 
         /* --- 思考等级切换器 --- */
-        .thinking-switcher { position: relative; transform: translateY(2px); }
-        .thinking-info { cursor: pointer; padding: 4px 8px; border-radius: 6px; transition: background 0.2s; user-select: none; font-size: 13px; color: var(--text-muted); display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+        .thinking-switcher { position: relative; transform: translateY(4.5px); }
+        .thinking-info { cursor: pointer; padding: 5px 8px; border-radius: 6px; transition: background 0.2s; user-select: none; font-size: 13px; color: var(--text-muted); display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
         .thinking-info:hover { background: rgba(128,128,128,0.1); color: var(--text-main); }
         .thinking-info::after { content: ' ▾'; font-size: 10px; opacity: 0.5; line-height: 1; }
         .thinking-info svg { flex-shrink: 0; }
@@ -1237,16 +1237,16 @@
         .thinking-dropdown-item.active { color: var(--text-main); font-weight: 600; background: var(--bg-hover); }
         .thinking-dropdown-item .thinking-hint { color: var(--text-muted); font-weight: normal; font-size: 11px; }
         [data-mode="gen"] .thinking-switcher { display: none !important; }
-
+ 
         /* --- 网络搜索切换器 --- */
-        .search-switcher { position: relative; transform: translateY(2px); }
-        .search-info { cursor: pointer; padding: 4px 8px; border-radius: 6px; transition: background 0.2s; user-select: none; font-size: 13px; color: var(--text-muted); display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+        .search-switcher { position: relative; transform: translateY(4.5px); }
+        .search-info { cursor: pointer; padding: 5px 8px; border-radius: 6px; transition: background 0.2s; user-select: none; font-size: 13px; color: var(--text-muted); display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
         .search-info:hover { background: rgba(128,128,128,0.1); color: var(--text-main); }
         .search-info.active { color: #2a75e7; font-weight: 500; }
         .search-info svg { flex-shrink: 0; }
         .search-panel-toggle {
             cursor: pointer;
-            padding: 4px 8px;
+            padding: 5px 8px;
             border-radius: 6px;
             transition: all 0.2s ease;
             color: var(--text-muted);
