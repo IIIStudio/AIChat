@@ -4022,7 +4022,7 @@
                         <span>思考过程</span>
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
                     </summary>
-                    <div class="thought-content">${thought}</div>
+                    <div class="thought-content">${escapeHtml(thought)}</div>
                 `;
                 blockDiv.appendChild(thoughtDiv);
             }
@@ -4480,11 +4480,16 @@
         // ============================================================
         //  SSE 流式读取
         // ============================================================
+        // 读取 SSE 流，分别累积正文 content 与思考 reasoning_content
+        // 传参：body 为响应流，el 为正文展示元素
+        // 返回：{ content, thought }，thought 为空字符串表示无思考内容
         async function readSSEStream(body, el) {
             el.style.whiteSpace = 'pre-wrap';
             const reader = body.getReader();
             const decoder = new TextDecoder();
-            let full = '', buf = '';
+            let full = '', thoughtFull = '', buf = '';
+            // 1.定位思考过程展示元素，用于流式回填 reasoning_content
+            const thoughtEl = el.closest('.message-block')?.querySelector('.thought-content');
             while (true) {
                 const { done, value } = await reader.read();
                 if (done) break;
@@ -4496,14 +4501,24 @@
                     const payload = line.slice(6).trim();
                     if (!payload || payload === '[DONE]') continue;
                     try {
-                        const delta = JSON.parse(payload).choices?.[0]?.delta?.content;
-                        if (delta) { full += delta; el.textContent = full; }
+                        const deltaObj = JSON.parse(payload).choices?.[0]?.delta;
+                        if (!deltaObj) continue;
+                        // 2.累积思考内容并实时更新思考区
+                        if (deltaObj.reasoning_content) {
+                            thoughtFull += deltaObj.reasoning_content;
+                            if (thoughtEl) thoughtEl.textContent = thoughtFull;
+                        }
+                        // 3.累积正文内容并实时更新正文区
+                        if (deltaObj.content) {
+                            full += deltaObj.content;
+                            el.textContent = full;
+                        }
                     } catch(e) {}
                 }
                 // 流式输出时持续滚动到底部
                 requestAnimationFrame(() => { chatContainer.scrollTop = chatContainer.scrollHeight; });
             }
-            return full;
+            return { content: full, thought: thoughtFull };
         }
 
         // ============================================================
@@ -4551,14 +4566,20 @@
                     throw new Error(errMsg);
                 }
 
-                let aiReply;
+                let aiReply, realThought = null;
                 if (useStream && response.body) {
-                    aiReply = await readSSEStream(response.body, aiMessageElement);
+                    // 流式：readSSEStream 返回 { content, thought }
+                    const r = await readSSEStream(response.body, aiMessageElement);
+                    aiReply = r.content;
+                    realThought = r.thought || null;
                 } else {
+                    // 非流式：从 message 读取正文与 reasoning_content
                     const data = await response.json();
                     aiReply = data.choices[0].message.content;
+                    realThought = data.choices[0].message.reasoning_content || null;
                 }
-                currentSession.messages.push({ role: "assistant", content: aiReply, thought: fakeThought, model: activeModel, presetId: activePresetId });
+                // 有真实思考内容则用真实内容，否则沿用占位文案保持原行为
+                currentSession.messages.push({ role: "assistant", content: aiReply, thought: realThought || fakeThought, model: activeModel, presetId: activePresetId });
                 if (pendingVersions !== null) {
                     currentSession.messages[currentSession.messages.length - 1].versions = pendingVersions;
                     pendingVersions = null;
