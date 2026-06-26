@@ -259,6 +259,15 @@
             line-height: 1.6;
             margin-top: 8px;
         }
+        /* 思考动效：三点跳动 */
+        .thinking-dots { display: inline-flex; align-items: center; gap: 4px; padding: 4px 0; }
+        .thinking-dots span { width: 6px; height: 6px; border-radius: 50%; background: var(--text-muted); animation: thinking-bounce 1.4s infinite ease-in-out both; }
+        .thinking-dots span:nth-child(1) { animation-delay: -0.32s; }
+        .thinking-dots span:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes thinking-bounce { 0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; } 40% { transform: scale(1); opacity: 1; } }
+        /* 思考过程展开时的脉冲边框 */
+        .thought-process.thinking .thought-content { border-left-color: var(--text-muted); animation: thought-pulse 2s infinite ease-in-out; }
+        @keyframes thought-pulse { 0%, 100% { border-left-color: var(--border-color); } 50% { border-left-color: var(--text-muted); } }
 
         .message { display: flex; flex-direction: column; max-width: 100%; }
         
@@ -294,16 +303,23 @@
         .msg-genparams-tag { display: inline-flex; align-items: center; font-size: 10px; color: var(--text-muted); padding: 2px 8px; border-radius: 10px; border: 1px dashed var(--border-color); user-select: none; white-space: nowrap; flex-shrink: 0; cursor: default; }
 
         /* --- 底部输入区 --- */
+        /* sticky 容器：将图片预览与输入框固定在滚动区底部 */
+        .bottom-sticky {
+            position: sticky;
+            bottom: 0;
+            z-index: 20;
+            background: linear-gradient(180deg, var(--gradient-fade) 0%, var(--bg-main) 30%);
+            padding-top: 8px;
+        }
         .input-area {
-            padding: 20px 20px 40px 20px;
+            padding: 8px 20px 40px 20px;
             display: flex;
             justify-content: center;
-            background: linear-gradient(180deg, var(--gradient-fade) 0%, var(--gradient-fade-to) 40%);
         }
 
         .input-pill {
             display: flex;
-            align-items: center;
+            align-items: flex-end;
             background-color: var(--bg-gray);
             border-radius: 32px;
             width: 100%;
@@ -900,12 +916,12 @@
         .preset-stream-opt.active { background: var(--text-main); color: var(--text-on-dark); border-color: var(--text-main); }
 
         /* 图片预览 */
-        .image-preview-area { display: flex; justify-content: center; padding: 0 20px 8px 20px; }
-        .image-preview-inner { display: flex; align-items: center; gap: 10px; max-width: var(--chat-max-width); width: 100%; }
-        .image-preview-thumb { width: 52px; height: 52px; border-radius: 10px; object-fit: cover; border: 1px solid var(--border-color); flex-shrink: 0; }
-        .image-preview-name { font-size: 12px; color: var(--text-muted); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .image-preview-remove { font-size: 11px; padding: 4px 10px; border-radius: 12px; border: 1px solid var(--border-color); background: var(--bg-surface); cursor: pointer; color: var(--text-muted); white-space: nowrap; transition: all 0.15s; }
-        .image-preview-remove:hover { color: #cc4444; border-color: #cc4444; }
+        .image-preview-area { display: flex; justify-content: center; padding: 0 20px 4px 20px; max-width: var(--chat-max-width); width: 100%; margin: 0 auto; }
+        .image-preview-grid { display: flex; flex-wrap: wrap; gap: 8px; width: 100%; }
+        .image-preview-item { position: relative; width: 64px; height: 64px; border-radius: 10px; overflow: visible; border: 1px solid var(--border-color); flex-shrink: 0; }
+        .image-preview-item img { width: 100%; height: 100%; border-radius: 10px; object-fit: cover; }
+        .image-preview-item .img-remove-btn { position: absolute; top: -6px; right: -6px; width: 18px; height: 18px; border-radius: 50%; background: var(--black-btn); color: var(--text-on-dark); border: 2px solid var(--bg-main); display: none; align-items: center; justify-content: center; cursor: pointer; font-size: 11px; line-height: 1; z-index: 2; }
+        .image-preview-item:hover .img-remove-btn { display: flex; }
         .user-image { max-width: 200px; max-height: 200px; border-radius: 12px; display: block; margin-top: 6px; cursor: pointer; }
 
         /* Markdown 渲染（正文与思考过程共用） */
@@ -921,6 +937,14 @@
         .message-content code, .thought-content code { font-family: "SF Mono", "Fira Code", "Fira Mono", monospace; font-size: 13px; }
         .message-content :not(pre) > code, .thought-content :not(pre) > code { background: var(--bg-gray); padding: 2px 6px; border-radius: 4px; font-size: 0.88em; font-weight: 500; }
         .message-content pre code, .thought-content pre code { background: none; padding: 0; font-weight: 400; }
+        /* 代码块包装器：语言标记 + 复制按钮 */
+        .code-block-wrapper { margin: 10px 0; border-radius: 10px; overflow: hidden; border: 1px solid var(--border-light); }
+        .code-block-header { display: flex; justify-content: space-between; align-items: center; padding: 6px 14px; background: var(--bg-gray); border-bottom: 1px solid var(--border-light); font-size: 12px; }
+        .code-lang { color: var(--text-muted); font-family: "SF Mono", "Fira Code", monospace; text-transform: lowercase; }
+        .code-copy-btn { color: var(--text-muted); cursor: pointer; padding: 2px 8px; border-radius: 4px; transition: all 0.15s; font-size: 12px; display: inline-flex; align-items: center; gap: 4px; }
+        .code-copy-btn:hover { color: var(--text-main); background: var(--bg-hover); }
+        .code-copy-btn.copied { color: #2da44e; }
+        .code-block-wrapper > pre { margin: 0; border: none; border-radius: 0; }
         .message-content blockquote, .thought-content blockquote { border-left: 3px solid var(--border-color); padding: 4px 12px; margin: 8px 0; color: var(--text-muted); background: var(--bg-hover); border-radius: 0 6px 6px 0; }
         .message-content blockquote p, .thought-content blockquote p { margin: 4px 0; }
         .message-content table, .thought-content table { border-collapse: collapse; margin: 10px 0; border-radius: 8px; overflow: hidden; border: 1px solid var(--border-color); }
@@ -1414,9 +1438,6 @@
             .image-preview-area {
                 padding: 0 10px 6px 10px;
             }
-            .image-preview-inner {
-                max-width: 100%;
-            }
             .user-image {
                 max-width: 150px;
                 max-height: 150px;
@@ -1664,6 +1685,41 @@
                     <p>输入一条消息开始新的会话。</p>
                 </div>
                 </div>
+            <!-- 底部 sticky 区域：图片预览 + 输入框，随滚动条一起滚动 -->
+            <div class="bottom-sticky">
+                <div class="image-preview-area" id="imagePreviewArea" style="display:none;">
+                    <div class="image-preview-grid" id="imagePreviewGrid"></div>
+                </div>
+                <div class="input-area">
+                    <div class="input-pill">
+                        <div class="upload-icon" onclick="document.getElementById('fileInput').click()" title="上传文件">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                <line x1="12" y1="15" x2="12" y2="3"></line>
+                                <polyline points="7 8 12 3 17 8"></polyline>
+                                <line x1="4" y1="20" x2="20" y2="20"></line>
+                            </svg>
+                        </div>
+                        <input type="file" id="fileInput" style="display:none;" multiple onchange="handleFileSelected(this)">
+                        <textarea id="userInput" placeholder="输入你的问题, Enter 发送, Shift+Enter 换行" rows="1"></textarea>
+                        <div class="pill-right">
+                            <div class="thinking-switcher">
+                                <span class="thinking-info" id="thinkingInfo" onclick="event.stopPropagation(); toggleThinkingDropdown()" title="思考等级">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"></path><path d="M10 22h4"></path><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"></path></svg>
+                                    <span id="thinkingLabel">自动</span>
+                                </span>
+                                <div class="thinking-dropdown" id="thinkingDropdown"></div>
+                            </div>
+                            <div class="model-switcher">
+                                <span class="model-info" id="displayModelName" onclick="event.stopPropagation(); toggleModelDropdown()"></span>
+                                <div class="model-dropdown" id="modelDropdown"></div>
+                            </div>
+                            <button class="send-btn" id="sendBtn" onclick="sendMessage()">
+                                <svg width="18" height="18" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div id="favPage" class="thin-scrollbar">
@@ -1673,14 +1729,6 @@
 
         <div class="preset-tags-area">
             <div class="preset-tags-row" id="presetTagsRow"></div>
-        </div>
-
-        <div class="image-preview-area" id="imagePreviewArea" style="display:none;">
-            <div class="image-preview-inner">
-                <img class="image-preview-thumb" id="imagePreviewThumb" src="">
-                <span class="image-preview-name" id="imagePreviewName"></span>
-                <button class="image-preview-remove" onclick="clearImagePreview()">✕ 移除</button>
-            </div>
         </div>
 
         <div class="gen-controls-panel" id="genControlsPanel">
@@ -1753,35 +1801,6 @@
             </div>
         </div>
 
-        <div class="input-area">
-            <div class="input-pill">
-                <div class="upload-icon" onclick="document.getElementById('fileInput').click()" title="上传文件">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                        <line x1="12" y1="15" x2="12" y2="3"></line>
-                        <polyline points="7 8 12 3 17 8"></polyline>
-                        <line x1="4" y1="20" x2="20" y2="20"></line>
-                    </svg>
-                </div>
-                <input type="file" id="fileInput" style="display:none;" onchange="handleFileSelected(this)">
-                <textarea id="userInput" placeholder="输入你的问题, Enter 发送, Shift+Enter 换行" rows="1"></textarea>
-                <div class="pill-right">
-                    <div class="thinking-switcher">
-                        <span class="thinking-info" id="thinkingInfo" onclick="event.stopPropagation(); toggleThinkingDropdown()" title="思考等级">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"></path><path d="M10 22h4"></path><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"></path></svg>
-                            <span id="thinkingLabel">自动</span>
-                        </span>
-                        <div class="thinking-dropdown" id="thinkingDropdown"></div>
-                    </div>
-                    <div class="model-switcher">
-                        <span class="model-info" id="displayModelName" onclick="event.stopPropagation(); toggleModelDropdown()"></span>
-                        <div class="model-dropdown" id="modelDropdown"></div>
-                    </div>
-                    <button class="send-btn" id="sendBtn" onclick="sendMessage()">
-                        <svg width="18" height="18" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
-                    </button>
-                </div>
-            </div>
-        </div>
     </div>
 
     <div class="modal-overlay" id="settingsModal">
@@ -3815,8 +3834,9 @@
                     } else if (Array.isArray(msg.content)) {
                         const textPart = msg.content.find(c => c.type === 'text');
                         displayContent = textPart ? textPart.text : '';
-                        const imgPart = msg.content.find(c => c.type === 'image_url');
-                        imageUrl = imgPart ? imgPart.image_url.url : null;
+                        // 提取所有图片 URL，支持多图显示
+                        const imgParts = msg.content.filter(c => c.type === 'image_url');
+                        imageUrl = imgParts.length > 0 ? imgParts.map(p => p.image_url.url) : null;
                     } else {
                         displayContent = msg.content;
                     }
@@ -4046,12 +4066,14 @@
             if (role === 'assistant' && thought) {
                 const thoughtDiv = document.createElement('details');
                 thoughtDiv.className = 'thought-process';
+                // thought 以 < 开头视为 HTML 片段（如思考动效），直接 innerHTML；否则走 marked 解析
+                const thoughtHtml = thought.trimStart().startsWith('<') ? thought : marked.parse(unwrapMathFromCode(thought));
                 thoughtDiv.innerHTML = `
                     <summary class="thought-summary">
                         <span>思考过程</span>
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
                     </summary>
-                    <div class="thought-content">${marked.parse(unwrapMathFromCode(thought))}</div>
+                    <div class="thought-content">${thoughtHtml}</div>
                 `;
                 blockDiv.appendChild(thoughtDiv);
             }
@@ -4100,11 +4122,15 @@
                 msgDiv.appendChild(contentDiv);
             }
             if (imageUrl) {
-                const img = document.createElement('img');
-                img.src = imageUrl;
-                img.className = 'user-image';
-                img.onclick = () => window.open(imageUrl, '_blank');
-                msgDiv.appendChild(img);
+                // imageUrl 可以是单个 base64 字符串或数组（多图）
+                const urls = Array.isArray(imageUrl) ? imageUrl : [imageUrl];
+                for (const url of urls) {
+                    const img = document.createElement('img');
+                    img.src = url;
+                    img.className = 'user-image';
+                    img.onclick = () => window.open(url, '_blank');
+                    msgDiv.appendChild(img);
+                }
             }
             blockDiv.appendChild(msgDiv);
 
@@ -4188,29 +4214,83 @@
         }
 
         // ============================================================
-        //  文件上传 (图片)
+        //  文件上传与粘贴 (多图)
         // ============================================================
-        let pendingFile = null;
+        // pendingFiles 存储待发送的图片数组，每项为 { base64, name }
+        let pendingFiles = [];
+
+        // 处理文件选择：支持多文件，逐个读取为 base64 加入 pendingFiles
         function handleFileSelected(input) {
-            if (input.files && input.files[0]) {
-                const file = input.files[0];
-                if (!file.type.startsWith('image/')) { showToast('仅支持图片文件'); input.value = ''; return; }
+            if (!input.files || input.files.length === 0) return;
+            const files = Array.from(input.files);
+            for (const file of files) {
+                if (!file.type.startsWith('image/')) { showToast('仅支持图片文件'); continue; }
                 const reader = new FileReader();
                 reader.onload = (e) => {
-                    pendingFile = { base64: e.target.result, name: file.name };
-                    document.getElementById('imagePreviewThumb').src = e.target.result;
-                    document.getElementById('imagePreviewName').textContent = file.name;
-                    document.getElementById('imagePreviewArea').style.display = 'flex';
+                    pendingFiles.push({ base64: e.target.result, name: file.name });
+                    renderImagePreview();
                 };
                 reader.readAsDataURL(file);
-                input.value = '';
             }
+            input.value = '';
         }
 
+        // 粘贴事件：从剪贴板提取图片文件加入 pendingFiles
+        function handlePaste(e) {
+            const items = e.clipboardData?.items;
+            if (!items) return;
+            let hasImage = false;
+            for (const item of items) {
+                if (item.type.startsWith('image/')) {
+                    hasImage = true;
+                    const file = item.getAsFile();
+                    if (!file) continue;
+                    const reader = new FileReader();
+                    reader.onload = (ev) => {
+                        pendingFiles.push({ base64: ev.target.result, name: `粘贴图片_${Date.now()}.png` });
+                        renderImagePreview();
+                    };
+                    reader.readAsDataURL(file);
+                }
+            }
+            if (hasImage) e.preventDefault();
+        }
+
+        // 渲染图片预览网格：每张图缩略图 + hover 删除按钮
+        function renderImagePreview() {
+            const area = document.getElementById('imagePreviewArea');
+            const grid = document.getElementById('imagePreviewGrid');
+            if (pendingFiles.length === 0) {
+                area.style.display = 'none';
+                grid.innerHTML = '';
+                return;
+            }
+            area.style.display = 'flex';
+            grid.innerHTML = '';
+            pendingFiles.forEach((file, idx) => {
+                const item = document.createElement('div');
+                item.className = 'image-preview-item';
+                const img = document.createElement('img');
+                img.src = file.base64;
+                img.title = file.name;
+                const removeBtn = document.createElement('span');
+                removeBtn.className = 'img-remove-btn';
+                removeBtn.innerHTML = '&times;';
+                removeBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    pendingFiles.splice(idx, 1);
+                    renderImagePreview();
+                };
+                item.appendChild(img);
+                item.appendChild(removeBtn);
+                grid.appendChild(item);
+            });
+        }
+
+        // 清除所有图片预览
         function clearImagePreview() {
-            pendingFile = null;
-            document.getElementById('imagePreviewArea').style.display = 'none';
-            document.getElementById('imagePreviewThumb').src = '';
+            pendingFiles = [];
+            renderImagePreview();
         }
 
         // ============================================================
@@ -4504,6 +4584,9 @@
             if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
         });
 
+        // 粘贴图片：监听 textarea 的 paste 事件
+        userInput.addEventListener('paste', handlePaste);
+
         // Escape 关闭灯箱
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') closeImgLightbox();
@@ -4512,16 +4595,20 @@
         // ============================================================
         //  代码高亮 — 统一处理 marked 与 smd 两条路径的代码块
         // ============================================================
-        // 对容器内 <pre><code> 元素调用 hljs 着色，已处理的跳过
-        // marked v15 不再支持 highlight 选项，故两条路径都在此统一处理
+        // 对容器内 <pre><code> 元素调用 hljs 着色，并添加语言标记与复制按钮
         // 传参：container 为待处理的 DOM 容器
+        //       skipLast 为 true 时跳过最后一个代码块（流式中可能未完成）
         // 返回：无
-        function highlightCodeBlocks(container) {
+        function highlightCodeBlocks(container, skipLast = false) {
             if (!container || !window.hljs) return;
-            // 查找未着色的代码块，已加 hljs class 的跳过
-            container.querySelectorAll('pre > code:not(.hljs)').forEach(el => {
-                // marked/smd 把语言写在 class 上（如 language-javascript），提取语言名
-                const langMatch = el.className.match(/language-(\w+)/);
+            // 1.收集未着色的代码块
+            const codeEls = Array.from(container.querySelectorAll('pre > code:not(.hljs)'));
+            // 2.skipLast 模式下跳过最后一个（流式输出中可能尚未完成）
+            const end = skipLast ? codeEls.length - 1 : codeEls.length;
+            for (let i = 0; i < end; i++) {
+                const el = codeEls[i];
+                // 3.提取语言名：兼容 marked 的 language-xxx 和 smd 的直接语言名
+                const langMatch = el.className.match(/(?:language-)?(\w+)/);
                 const lang = langMatch ? langMatch[1] : null;
                 try {
                     if (lang && hljs.getLanguage(lang)) {
@@ -4530,8 +4617,41 @@
                         el.innerHTML = hljs.highlightAuto(el.textContent).value;
                     }
                     el.classList.add('hljs');
-                } catch(e) {}
-            });
+                } catch(e) { continue; }
+                // 4.为代码块添加语言标记与复制按钮包装器
+                const pre = el.parentElement;
+                if (pre && pre.tagName === 'PRE' && !pre.parentElement?.classList.contains('code-block-wrapper')) {
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'code-block-wrapper';
+                    const header = document.createElement('div');
+                    header.className = 'code-block-header';
+                    // 5.语言标记：有语言用语言名，无语言显示"代码"
+                    const langLabel = document.createElement('span');
+                    langLabel.className = 'code-lang';
+                    langLabel.textContent = lang || '代码';
+                    // 6.复制按钮
+                    const copyBtn = document.createElement('span');
+                    copyBtn.className = 'code-copy-btn';
+                    copyBtn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> 复制';
+                    copyBtn.onclick = () => {
+                        const text = el.textContent;
+                        navigator.clipboard.writeText(text).then(() => {
+                            copyBtn.classList.add('copied');
+                            copyBtn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg> 已复制';
+                            setTimeout(() => {
+                                copyBtn.classList.remove('copied');
+                                copyBtn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> 复制';
+                            }, 2000);
+                        }).catch(() => showToast('复制失败'));
+                    };
+                    header.appendChild(langLabel);
+                    header.appendChild(copyBtn);
+                    // 7.将 pre 移入 wrapper，替换原位置
+                    pre.parentNode.insertBefore(wrapper, pre);
+                    wrapper.appendChild(header);
+                    wrapper.appendChild(pre);
+                }
+            }
         }
 
         // ============================================================
@@ -4604,8 +4724,10 @@
             const reader = body.getReader();
             const decoder = new TextDecoder();
             let full = '', thoughtFull = '', buf = '';
-            // 1.定位思考过程展示元素
+            // 1.定位思考过程展示元素与容器
             const thoughtEl = el.closest('.message-block')?.querySelector('.thought-content');
+            const thoughtProcessEl = el.closest('.message-block')?.querySelector('.thought-process');
+            let thoughtStarted = false;
             // 2.创建流式 markdown 解析器：正文与思考各一个
             const useSmd = !!window.smd;
             let contentParser = null, thoughtParser = null;
@@ -4617,6 +4739,8 @@
                 el.style.whiteSpace = 'pre-wrap';
                 if (thoughtEl) thoughtEl.style.whiteSpace = 'pre-wrap';
             }
+            // 3.流式着色节流：每 600ms 对已完成代码块着色一次
+            let lastHighlightTime = 0;
             while (true) {
                 const { done, value } = await reader.read();
                 if (done) break;
@@ -4630,13 +4754,19 @@
                     try {
                         const deltaObj = JSON.parse(payload).choices?.[0]?.delta;
                         if (!deltaObj) continue;
-                        // 3.累积并增量渲染思考内容（预处理剥离公式反引号）
+                        // 4.累积并增量渲染思考内容
                         if (deltaObj.reasoning_content) {
+                            // 首次收到思考内容时移除占位动效，添加思考中样式
+                            if (!thoughtStarted) {
+                                thoughtStarted = true;
+                                if (thoughtEl) thoughtEl.innerHTML = '';
+                                if (thoughtProcessEl) thoughtProcessEl.classList.add('thinking');
+                            }
                             thoughtFull += deltaObj.reasoning_content;
                             if (thoughtParser) window.smd.parser_write(thoughtParser, unwrapMathFromCode(deltaObj.reasoning_content));
                             else if (thoughtEl) thoughtEl.textContent = thoughtFull;
                         }
-                        // 4.累积并增量渲染正文内容（预处理剥离公式反引号）
+                        // 5.累积并增量渲染正文内容
                         if (deltaObj.content) {
                             full += deltaObj.content;
                             if (contentParser) window.smd.parser_write(contentParser, unwrapMathFromCode(deltaObj.content));
@@ -4644,13 +4774,21 @@
                         }
                     } catch(e) {}
                 }
+                // 6.节流着色：对已完成代码块（跳过最后一个可能未完成的）着色
+                const now = Date.now();
+                if (useSmd && now - lastHighlightTime > 600) {
+                    lastHighlightTime = now;
+                    highlightCodeBlocks(el, true);
+                }
                 // 流式输出时持续滚动到底部
                 requestAnimationFrame(() => { chatContainer.scrollTop = chatContainer.scrollHeight; });
             }
-            // 5.结束流，刷新剩余未闭合的 markdown 标记
+            // 7.结束流，刷新剩余未闭合的 markdown 标记
             if (contentParser) window.smd.parser_end(contentParser);
             if (thoughtParser) window.smd.parser_end(thoughtParser);
-            // 6.流结束后代码高亮与渲染数学公式（流式中途处理会因内容不完整而失败）
+            // 8.移除思考中样式
+            if (thoughtProcessEl) thoughtProcessEl.classList.remove('thinking');
+            // 9.流结束后最终代码高亮与渲染数学公式（含最后一个代码块）
             highlightCodeBlocks(el);
             renderMath(el);
             if (thoughtEl) { highlightCodeBlocks(thoughtEl); renderMath(thoughtEl); }
@@ -4667,7 +4805,7 @@
             const currentSession = sessions.find(s => s.id === getCurrentId());
 
             const preset = getActivePreset();
-            const fakeThought = "Thinking about your request...";
+            const fakeThought = '<div class="thinking-dots"><span></span><span></span><span></span></div>';
             const msgIdx = currentSession.messages.length;
             const aiMessageElement = appendMessageDOM('assistant', '正在思考...', fakeThought, null, null, msgIdx);
 
@@ -4714,8 +4852,8 @@
                     aiReply = data.choices[0].message.content;
                     realThought = data.choices[0].message.reasoning_content || null;
                 }
-                // 有真实思考内容则用真实内容，否则沿用占位文案保持原行为
-                currentSession.messages.push({ role: "assistant", content: aiReply, thought: realThought || fakeThought, model: activeModel, presetId: activePresetId });
+                // 有真实思考内容则用真实内容，否则存空（避免动效 HTML 持久化）
+                currentSession.messages.push({ role: "assistant", content: aiReply, thought: realThought || '', model: activeModel, presetId: activePresetId });
                 if (pendingVersions !== null) {
                     currentSession.messages[currentSession.messages.length - 1].versions = pendingVersions;
                     pendingVersions = null;
@@ -4780,7 +4918,7 @@
                 return;
             }
 
-            const hasImage = pendingFile != null;
+            const hasImage = pendingFiles.length > 0;
             if (!text && !hasImage) return;
 
             const provider = getActiveProvider();
@@ -4799,10 +4937,12 @@
 
             let content, displayText, imageForDisplay = null;
             if (hasImage) {
-                const imageContent = { type: 'image_url', image_url: { url: pendingFile.base64 } };
-                content = text ? [{ type: 'text', text: text }, imageContent] : [imageContent];
+                // 1.构建 OpenAI 多图格式：文本 + 多个 image_url
+                const imageContents = pendingFiles.map(f => ({ type: 'image_url', image_url: { url: f.base64 } }));
+                content = text ? [{ type: 'text', text: text }, ...imageContents] : imageContents;
                 displayText = text || '图片';
-                imageForDisplay = pendingFile.base64;
+                // 2.展示用第一张图缩略图（多图在 appendMessageDOM 中循环渲染）
+                imageForDisplay = pendingFiles.map(f => f.base64);
             } else {
                 content = text;
                 displayText = text;
