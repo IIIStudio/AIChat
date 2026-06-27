@@ -102,8 +102,8 @@
         .message-content strong, .thought-content strong { font-weight: 700; color: var(--text-main); }
         .mermaid-tool-btn.active { color: var(--text-main); background: var(--bg-active-chat); font-weight: 500; }
         .mermaid-tool-copy { margin-left: auto; }
-        .mermaid-preview { width: 100%; max-width: 100%; min-width: 0; padding: 12px 14px; box-sizing: border-box; overflow-x: auto; display: flex; justify-content: center; background: var(--bg-gray); }
-        div.mermaid { display: flex; justify-content: center; width: 100%; }
+        .mermaid-preview { width: 100%; max-width: 100%; min-width: 0; padding: 12px 14px; box-sizing: border-box; overflow-x: auto; display: block; background: var(--bg-gray); }
+        div.mermaid { display: block; width: 100%; }
         div.mermaid svg { margin: 0 auto; display: block; max-width: 100%; }
         .mermaid-code { width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box; }
         .mermaid-code pre { margin: 0; border: none; border-radius: 0; background: var(--bg-gray); }
