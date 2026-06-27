@@ -147,6 +147,13 @@
         function createMermaidWrapper(source, svg) {
             const wrapper = document.createElement('div');
             wrapper.className = 'mermaid-wrapper';
+
+            // 识别甘特图并增加标记
+            const trimmed = String(source || '').trim();
+            if (trimmed.startsWith('gantt') || trimmed.toLowerCase().startsWith('gantt')) {
+                wrapper.classList.add('is-gantt');
+            }
+
             const toolbar = document.createElement('div');
             toolbar.className = 'mermaid-toolbar';
 

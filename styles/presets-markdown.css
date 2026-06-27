@@ -105,10 +105,9 @@
         .mermaid-preview { width: 100%; max-width: 100%; min-width: 0; padding: 12px 14px; box-sizing: border-box; overflow-x: auto; display: block; background: var(--bg-gray); }
         div.mermaid { display: block; width: 100%; }
         div.mermaid svg { margin: 0 auto; display: block; max-width: 100%; }
-        div.mermaid svg.gantt,
-        div.mermaid svg[class*="gantt"] {
-            min-width: 750px;
-            width: 100%;
+        .mermaid-wrapper.is-gantt svg {
+            min-width: 850px !important;
+            width: 100% !important;
             max-width: none !important;
             height: auto !important;
         }
