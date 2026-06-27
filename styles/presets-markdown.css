@@ -105,6 +105,13 @@
         .mermaid-preview { width: 100%; max-width: 100%; min-width: 0; padding: 12px 14px; box-sizing: border-box; overflow-x: auto; display: block; background: var(--bg-gray); }
         div.mermaid { display: block; width: 100%; }
         div.mermaid svg { margin: 0 auto; display: block; max-width: 100%; }
+        div.mermaid svg.gantt,
+        div.mermaid svg[class*="gantt"] {
+            min-width: 750px;
+            width: 100%;
+            max-width: none !important;
+            height: auto !important;
+        }
         .mermaid-code { width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box; }
         .mermaid-code pre { margin: 0; border: none; border-radius: 0; background: var(--bg-gray); }
         .mermaid-source-text { display: block; padding: 12px 14px; font-size: 13px; line-height: 1.55; overflow-x: auto; }
