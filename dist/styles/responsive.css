@@ -1,0 +1,375 @@
+        /* ========== 移动端响应式 ========== */
+        @media (max-width: 768px) {
+            :root {
+                --chat-max-width: 100%;
+            }
+
+            body {
+                flex-direction: column;
+            }
+
+            /* 右侧搜索侧边栏在移动端 */
+            .search-sidebar {
+                position: fixed;
+                top: 0;
+                right: 0;
+                width: 300px;
+                max-width: 85vw;
+                height: 100vh;
+                z-index: 200;
+                transform: translateX(100%);
+                transition: transform 0.3s ease;
+                box-shadow: -2px 0 20px rgba(0,0,0,0.15);
+                border-left: 1px solid var(--border-color);
+            }
+            .search-sidebar:not(.hidden) {
+                transform: translateX(0);
+                width: 300px;
+                opacity: 1;
+            }
+            .search-sidebar.hidden {
+                transform: translateX(100%);
+                width: 300px;
+                opacity: 0;
+            }
+
+            /* 侧边栏：移动端默认隐藏，滑出覆盖 */
+            .sidebar {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 280px;
+                max-width: 85vw;
+                height: 100vh;
+                z-index: 200;
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+                box-shadow: 2px 0 20px rgba(0,0,0,0.15);
+                border-right: 1px solid var(--border-color);
+            }
+            .sidebar:not(.hidden) {
+                transform: translateX(0);
+            }
+            .sidebar.hidden {
+                transform: translateX(-100%);
+                width: 280px;
+                max-width: 85vw;
+                padding: 24px 16px;
+                opacity: 1;
+            }
+
+            /* 侧边栏遮罩 */
+            .sidebar-mobile-overlay {
+                position: fixed;
+                top: 0; left: 0; right: 0; bottom: 0;
+                background: rgba(0,0,0,0.35);
+                z-index: 199;
+                display: none;
+            }
+            .sidebar-mobile-overlay.show {
+                display: block;
+            }
+
+            /* 主内容区 */
+            .main-content {
+                width: 100%;
+                flex: 1;
+                min-height: 0;
+                overflow: hidden;
+                display: flex;
+                flex-direction: column;
+            }
+
+            .top-nav {
+                padding: 10px 14px;
+                min-height: 50px;
+            }
+            .sidebar-toggle-btn {
+                display: block;
+                opacity: 0.7;
+            }
+
+            /* 欢迎页面 */
+            .welcome-screen {
+                margin-top: 15vh;
+            }
+            .welcome-screen h1 {
+                font-size: 26px;
+            }
+            .welcome-screen p {
+                font-size: 13px;
+            }
+
+            /* 聊天区域 */
+            .chat-container {
+                padding: 12px 12px;
+                min-height: 0;
+            }
+            .chat-inner {
+                max-width: 100%;
+            }
+
+            /* 消息 */
+            .message.user {
+                max-width: 90%;
+            }
+            .message.user .message-content {
+                padding: 10px 16px;
+                font-size: 14px;
+            }
+            .message.assistant .message-content {
+                font-size: 14px;
+            }
+
+            /* 思考过程 */
+            .thought-process {
+                font-size: 12px;
+            }
+
+            /* 消息锚点：移动端隐藏 */
+            .message-anchors {
+                display: none !important;
+            }
+
+            /* 输入区域 */
+            .input-area {
+                padding: 8px 10px 16px 10px;
+            }
+            .input-pill {
+                max-width: 100%;
+                padding: 8px 10px 8px 14px;
+                gap: 8px;
+                border-radius: 24px;
+            }
+            .input-pill textarea {
+                font-size: 15px;
+            }
+            .model-info {
+                font-size: 12px;
+            }
+            .send-btn {
+                width: 30px;
+                height: 30px;
+            }
+
+            /* 预设标签 */
+            .preset-tags-area {
+                padding: 0 10px;
+            }
+            .preset-tags-row {
+                max-width: 100%;
+                gap: 6px;
+            }
+            .preset-tag {
+                padding: 4px 10px;
+                font-size: 12px;
+            }
+
+            /* 图片预览：在输入框内部，无需额外 padding */
+            .user-image {
+                max-width: 150px;
+                max-height: 150px;
+            }
+
+            /* Modal 弹窗 */
+            .modal {
+                width: 94vw;
+                max-width: 94vw;
+                padding: 18px;
+                border-radius: 14px;
+                gap: 12px;
+                margin: 0 3vw;
+            }
+            .modal h2 {
+                font-size: 16px;
+            }
+            .modal input {
+                font-size: 16px;
+                padding: 10px;
+            }
+            .modal-actions {
+                flex-wrap: wrap;
+            }
+            .modal-btn {
+                font-size: 14px;
+                padding: 8px 18px;
+            }
+
+            /* 设置面板：垂直堆叠 */
+            .settings-panels {
+                flex-direction: column;
+                min-height: auto;
+                max-height: 50vh;
+            }
+            .settings-route-tabs {
+                width: 100%;
+            }
+            .settings-route-tab {
+                flex: 1;
+                padding: 8px 10px;
+            }
+            .settings-search-panel {
+                min-height: auto;
+                max-height: 50vh;
+                padding: 12px;
+            }
+            .settings-left {
+                width: 100%;
+                flex-shrink: 0;
+                max-height: 140px;
+                border-right: none;
+                border-bottom: 1px solid var(--border-color);
+            }
+            .settings-right {
+                padding: 12px;
+                max-height: 200px;
+            }
+            .settings-right label {
+                font-size: 12px;
+            }
+            .settings-right input:not(.model-input) {
+                font-size: 14px;
+                padding: 8px 10px;
+            }
+
+            /* 设置 - 模型标签 */
+            .model-tag {
+                font-size: 12px;
+                padding: 4px 9px;
+            }
+
+            /* 设置导出导入按钮 */
+            .export-import-btns {
+                flex-wrap: wrap;
+                gap: 6px;
+            }
+            .modal-header-row {
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+
+            /* 模型下拉 */
+            .model-dropdown {
+                min-width: 200px;
+                right: -10px;
+            }
+
+            /* Toast */
+            .toast {
+                top: 16px;
+                padding: 8px 18px;
+                font-size: 13px;
+                max-width: 90vw;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+            /* 消息操作按钮 */
+            .message-actions svg {
+                width: 16px;
+                height: 16px;
+            }
+            .msg-model-tag, .msg-preset-tag {
+                font-size: 10px;
+                padding: 1px 6px;
+            }
+
+            /* Markdown 代码块 */
+            .message-content pre, .thought-content pre {
+                padding: 10px 12px;
+                font-size: 12px;
+            }
+            .code-block-header, .mermaid-toolbar {
+                padding: 6px 12px;
+                flex-wrap: wrap;
+            }
+            .code-copy-btn, .code-run-btn, .mermaid-tool-btn, .mermaid-tool-copy {
+                font-size: 11px;
+            }
+
+            /* 搜索弹窗 */
+            #searchModal .modal {
+                max-width: 94vw;
+                margin-top: 20px;
+            }
+            #searchResults {
+                max-height: 50vh;
+            }
+
+            /* 参数预设编辑 */
+            .preset-edit-row {
+                flex-wrap: wrap;
+                gap: 6px;
+            }
+            .preset-edit-row label {
+                min-width: 60px;
+                font-size: 11px;
+            }
+            .preset-edit-row input,
+            .preset-edit-row textarea,
+            .preset-edit-row select {
+                font-size: 14px;
+            }
+            .preset-slider-group .slider-label {
+                font-size: 10px;
+                min-width: 52px;
+            }
+
+            /* 折叠按钮 */
+            .collapse-toggle {
+                font-size: 11px;
+                padding: 3px 10px;
+            }
+
+            /* 模式切换 */
+            .mode-toggle-btn {
+                padding: 4px 10px;
+                font-size: 12px;
+            }
+
+            /* 生图控制面板 */
+            .gen-controls-panel {
+                padding: 0 10px 6px 10px;
+            }
+            .gen-controls-inner {
+                padding: 10px 12px;
+                gap: 8px;
+            }
+            .gen-row {
+                gap: 6px;
+            }
+            .gen-row label {
+                font-size: 11px;
+                min-width: 36px;
+            }
+            .gen-row input[type="text"],
+            .gen-row input[type="number"],
+            .gen-row select {
+                font-size: 12px;
+                padding: 5px 8px;
+            }
+            .generated-images img {
+                max-width: 150px;
+                max-height: 150px;
+            }
+        }
+
+        /* 平板中等屏幕 */
+        @media (min-width: 769px) and (max-width: 1024px) {
+            :root {
+                --chat-max-width: 640px;
+            }
+            .sidebar {
+                width: 220px;
+                padding: 18px 12px;
+            }
+            .sidebar.hidden {
+                width: 0;
+                padding-left: 0;
+                padding-right: 0;
+            }
+            .welcome-screen h1 {
+                font-size: 28px;
+            }
+        }
