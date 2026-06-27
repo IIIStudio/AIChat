@@ -28,6 +28,37 @@
         }
 
         /**
+         * 【供应商协议/消息转换】【Responses 内容块】把通用消息内容转换为 Responses content 数组
+         * @param {string} role - Responses 消息角色
+         * @param {string|Array} content - 原始消息内容
+         * @returns {Array<Object>} - Responses content 数组
+         */
+        function convertContentToOpenAIResponseParts(role, content) {
+            const contentType = role === 'assistant' ? 'output_text' : 'input_text';
+            const parts = [];
+            if (!Array.isArray(content)) {
+                const text = extractMessageText(content);
+                if (text) parts.push({ type: contentType, text });
+                return parts;
+            }
+            content.forEach(item => {
+                // 1.文本内容按照消息角色转换为 Responses 支持的文本块
+                if (item && item.type === 'text' && item.text) {
+                    parts.push({ type: contentType, text: item.text });
+                    return;
+                }
+                // 2.图片内容只允许放在用户消息中，保持 Responses API 的合法输入结构
+                if (role === 'user' && item && item.type === 'image_url' && item.image_url?.url) {
+                    parts.push({
+                        type: 'input_image',
+                        image_url: item.image_url.url
+                    });
+                }
+            });
+            return parts;
+        }
+
+        /**
          * 【供应商协议/消息转换】【Gemini 内容】把通用消息转换为 Gemini contents
          * @param {Array} messages - 通用消息列表
          * @returns {Object} - Gemini systemInstruction 与 contents
@@ -189,12 +220,12 @@
                     return;
                 }
                 if (msg.role === 'assistant' && Array.isArray(msg.tool_calls)) {
-                    const text = extractMessageText(msg.content);
-                    if (text) {
+                    const content = convertContentToOpenAIResponseParts('assistant', msg.content);
+                    if (content.length > 0) {
                         input.push({
                             type: 'message',
                             role: 'assistant',
-                            content: [{ type: 'output_text', text }]
+                            content
                         });
                     }
                     msg.tool_calls.forEach(toolCall => {
@@ -208,13 +239,12 @@
                     return;
                 }
                 const role = msg.role === 'assistant' ? 'assistant' : (msg.role === 'system' ? 'system' : 'user');
-                const contentType = role === 'assistant' ? 'output_text' : 'input_text';
-                const text = extractMessageText(msg.content);
-                if (!text) return;
+                const content = convertContentToOpenAIResponseParts(role, msg.content);
+                if (content.length === 0) return;
                 input.push({
                     type: 'message',
                     role,
-                    content: [{ type: contentType, text }]
+                    content
                 });
             });
             return input;

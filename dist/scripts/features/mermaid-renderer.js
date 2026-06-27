@@ -111,6 +111,7 @@
                 startOnLoad: false,
                 theme: 'base',
                 securityLevel: 'loose',
+                suppressErrorRendering: true,
                 themeVariables: isDark ? darkThemeVariables : lightThemeVariables
             };
         }
