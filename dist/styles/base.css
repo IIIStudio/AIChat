@@ -71,16 +71,21 @@
         ::placeholder { color: var(--text-muted); opacity: 0.6; }
 
         /* 全局简洁滚动条：去掉上下箭头，无白色背景，hover 显示 */
-        * { scrollbar-width: thin; scrollbar-color: transparent transparent; }
-        *:hover { scrollbar-color: var(--scrollbar-hover) transparent; }
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: transparent; border-radius: 6px; }
+        * { scrollbar-width: thin !important; scrollbar-color: transparent transparent !important; }
+        *:hover { scrollbar-color: var(--scrollbar-hover) transparent !important; }
+        ::-webkit-scrollbar,
+        *::-webkit-scrollbar { width: 6px !important; height: 6px !important; }
+        ::-webkit-scrollbar-track,
+        *::-webkit-scrollbar-track { background: transparent !important; }
+        ::-webkit-scrollbar-thumb,
+        *::-webkit-scrollbar-thumb { background: transparent !important; border-radius: 6px !important; }
         ::-webkit-scrollbar-button,
         *::-webkit-scrollbar-button { display: none !important; width: 0 !important; height: 0 !important; }
-        ::-webkit-scrollbar-corner { background: transparent; }
-        *:hover::-webkit-scrollbar-thumb { background: var(--scrollbar-hover); }
-        ::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-active); }
+        ::-webkit-scrollbar-corner,
+        *::-webkit-scrollbar-corner { background: transparent !important; }
+        *:hover::-webkit-scrollbar-thumb { background: var(--scrollbar-hover) !important; }
+        *::-webkit-scrollbar-thumb:hover,
+        ::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-active) !important; }
 
         /* --- 全局轻提示 --- */
         .toast {

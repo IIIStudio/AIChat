@@ -102,15 +102,29 @@
         .message-content strong, .thought-content strong { font-weight: 700; color: var(--text-main); }
         .mermaid-tool-btn.active { color: var(--text-main); background: var(--bg-active-chat); font-weight: 500; }
         .mermaid-tool-copy { margin-left: auto; }
-        .mermaid-preview { width: 100%; max-width: 100%; min-width: 0; padding: 12px 14px; box-sizing: border-box; overflow-x: auto; display: block; background: var(--bg-gray); }
+        .mermaid-preview { width: 100%; max-width: 100%; min-width: 0; padding: 12px 14px; box-sizing: border-box; overflow: auto; display: block; background: var(--bg-gray); }
         div.mermaid { display: block; width: 100%; }
         div.mermaid svg { margin: 0 auto; display: block; max-width: 100%; }
+        .mermaid-wrapper.is-gantt .mermaid-preview {
+            padding: 16px;
+            scrollbar-width: thin;
+        }
+        .mermaid-wrapper.is-gantt div.mermaid {
+            width: max-content;
+            min-width: 100%;
+        }
         .mermaid-wrapper.is-gantt div.mermaid svg {
-            min-width: 1000px !important;
-            width: 100% !important;
+            min-width: 900px !important;
             max-width: none !important;
             height: auto !important;
+            margin: 0 !important;
         }
+        .mermaid-wrapper.is-gantt div.mermaid svg .titleText { font-size: 20px !important; }
+        .mermaid-wrapper.is-gantt div.mermaid svg .sectionTitle,
+        .mermaid-wrapper.is-gantt div.mermaid svg .section-title,
+        .mermaid-wrapper.is-gantt div.mermaid svg .taskText,
+        .mermaid-wrapper.is-gantt div.mermaid svg .taskTextOutsideRight,
+        .mermaid-wrapper.is-gantt div.mermaid svg .taskTextOutsideLeft { font-size: 13px !important; }
         .mermaid-wrapper.is-gantt div.mermaid svg g.tick text {
             font-size: 11px !important;
         }

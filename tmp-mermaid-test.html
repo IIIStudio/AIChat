@@ -1,0 +1,69 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <script src="https://cdn.jsdmirror.com/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
+    <link rel="stylesheet" href="styles/presets-markdown.css">
+    <style>
+        :root {
+            --bg-gray: #f4f8f8;
+            --bg-hover: #eef4f4;
+            --bg-active-chat: #e9f0ef;
+            --border-light: #d9e2e2;
+            --border-color: #cbd6d6;
+            --text-main: #10202a;
+            --text-muted: #76838a;
+        }
+        body { margin: 0; padding: 24px; background: #eef5f6; }
+        .message-content { width: 820px; }
+    </style>
+</head>
+<body>
+    <div class="message-content" id="root">
+        <pre><code class="language-mermaid">gantt
+    title 项目开发计划
+    dateFormat  YYYY-MM-DD
+    axisFormat  %m-%d
+    section 需求阶段
+    需求调研       :a1, 2024-01-01, 7d
+    需求评审       :a2, after a1, 3d
+    section 设计阶段
+    原型设计       :b1, after a2, 7d
+    技术方案设计    :b2, after b1, 7d
+    section 开发阶段
+    前端开发       :c1, 2024-01-20, 14d
+    后端开发       :c2, 2024-01-20, 16d
+    联调测试       :c3, after c2, 7d
+    section 发布阶段
+    预发布验证      :d1, after c3, 3d
+    正式发布       :milestone, d2, 2024-02-15, 1d</code></pre>
+    </div>
+    <script>
+        window.openMermaidViewer = function() {};
+        window.showToast = function() {};
+        window.hljs = null;
+    </script>
+    <script src="scripts/features/mermaid-renderer.js"></script>
+    <script>
+        window.addEventListener('load', function() {
+            renderMermaid(document.getElementById('root'));
+            setTimeout(function() {
+                var svg = document.querySelector('.mermaid-preview svg');
+                var result = document.createElement('pre');
+                result.id = 'result';
+                result.textContent = JSON.stringify({
+                    exists: !!svg,
+                    viewBox: svg && svg.getAttribute('viewBox'),
+                    widthStyle: svg && svg.style.width,
+                    maxWidthStyle: svg && svg.style.maxWidth,
+                    titleSize: svg && getComputedStyle(svg.querySelector('.titleText')).fontSize,
+                    tickSize: svg && getComputedStyle(svg.querySelector('g.tick text, .tick text')).fontSize,
+                    scrollWidth: document.querySelector('.mermaid-preview') && document.querySelector('.mermaid-preview').scrollWidth,
+                    clientWidth: document.querySelector('.mermaid-preview') && document.querySelector('.mermaid-preview').clientWidth
+                });
+                document.body.appendChild(result);
+            }, 1200);
+        });
+    </script>
+</body>
+</html>

@@ -112,6 +112,17 @@
                 theme: 'base',
                 securityLevel: 'loose',
                 suppressErrorRendering: true,
+                gantt: {
+                    fontSize: 13,
+                    sectionFontSize: 13,
+                    barHeight: 20,
+                    barGap: 6,
+                    topPadding: 52,
+                    leftPadding: 96,
+                    rightPadding: 96,
+                    bottomPadding: 52,
+                    gridLineStartPadding: 34
+                },
                 themeVariables: isDark ? darkThemeVariables : lightThemeVariables
             };
         }
@@ -140,6 +151,106 @@
         let mermaidRenderSeq = 0;
 
         /**
+         * 【流式渲染/系统】【图表类型】判断 Mermaid 源码是否为甘特图
+         * @param {string} source - Mermaid 源码
+         * @returns {boolean} - 是否为甘特图
+         */
+        function isMermaidGanttSource(source) {
+            return String(source || '').trim().toLowerCase().startsWith('gantt');
+        }
+
+        /**
+         * 【流式渲染/系统】【视口解析】读取 SVG 当前 viewBox 信息
+         * @param {SVGElement} svgEl - Mermaid 渲染出的 SVG 元素
+         * @returns {Object} - SVG 视口坐标和尺寸
+         */
+        function readMermaidSvgViewBox(svgEl) {
+            const fallbackWidth = parseFloat(svgEl.getAttribute('width')) || svgEl.clientWidth || 800;
+            const fallbackHeight = parseFloat(svgEl.getAttribute('height')) || svgEl.clientHeight || 600;
+            const viewBox = svgEl.getAttribute('viewBox');
+            if (!viewBox) {
+                return { x: 0, y: 0, width: fallbackWidth, height: fallbackHeight };
+            }
+            const parts = viewBox.split(/[\s,]+/).map(Number);
+            if (parts.length !== 4 || parts.some(value => !Number.isFinite(value))) {
+                return { x: 0, y: 0, width: fallbackWidth, height: fallbackHeight };
+            }
+            return { x: parts[0], y: parts[1], width: parts[2], height: parts[3] };
+        }
+
+        /**
+         * 【流式渲染/系统】【字体归一】调整甘特图文字尺寸，避免时间轴和任务文本互相挤压
+         * @param {SVGElement} svgEl - Mermaid 渲染出的 SVG 元素
+         * @returns {void}
+         */
+        function normalizeGanttTextSize(svgEl) {
+            const rules = [
+                { selector: '.titleText', size: '20px' },
+                { selector: '.sectionTitle, .section-title', size: '13px' },
+                { selector: '.taskText, .taskTextOutsideRight, .taskTextOutsideLeft', size: '13px' },
+                { selector: 'g.tick text, .tick text', size: '11px' }
+            ];
+            rules.forEach(rule => {
+                svgEl.querySelectorAll(rule.selector).forEach(textEl => {
+                    textEl.style.fontSize = rule.size;
+                });
+            });
+        }
+
+        /**
+         * 【流式渲染/系统】【布局归一】扩展 SVG 视口并稳定甘特图横向尺寸
+         * @param {HTMLElement} wrapper - Mermaid 图表包装容器
+         * @param {string} source - Mermaid 源码
+         * @returns {void}
+         */
+        function normalizeMermaidSvgLayout(wrapper, source) {
+            const svgEl = wrapper?.querySelector('.mermaid-preview svg');
+            if (!svgEl) return;
+
+            const isGantt = wrapper.classList.contains('is-gantt') || isMermaidGanttSource(source);
+            svgEl.setAttribute('preserveAspectRatio', isGantt ? 'xMinYMin meet' : 'xMidYMid meet');
+
+            if (isGantt) {
+                normalizeGanttTextSize(svgEl);
+            }
+
+            const viewBox = readMermaidSvgViewBox(svgEl);
+            let nextViewBox = viewBox;
+            try {
+                // 1. Mermaid 甘特图的分区文字可能伸出原始 viewBox，必须按实际包围盒扩展视口
+                const bbox = svgEl.getBBox();
+                if (bbox && bbox.width > 0 && bbox.height > 0) {
+                    const padding = isGantt ? 36 : 12;
+                    const minX = Math.min(viewBox.x, bbox.x) - padding;
+                    const minY = Math.min(viewBox.y, bbox.y) - padding;
+                    const maxX = Math.max(viewBox.x + viewBox.width, bbox.x + bbox.width) + padding;
+                    const maxY = Math.max(viewBox.y + viewBox.height, bbox.y + bbox.height) + padding;
+                    nextViewBox = {
+                        x: minX,
+                        y: minY,
+                        width: maxX - minX,
+                        height: maxY - minY
+                    };
+                    svgEl.setAttribute('viewBox', `${nextViewBox.x} ${nextViewBox.y} ${nextViewBox.width} ${nextViewBox.height}`);
+                }
+            } catch(e) {
+                console.info('【流式渲染/系统】【Mermaid布局】读取 SVG 包围盒失败: ', e);
+            }
+
+            if (isGantt) {
+                // 2. 甘特图保持内容原始比例并通过容器横向滚动展示，不再压缩到气泡宽度
+                const tickCount = svgEl.querySelectorAll('g.tick text, .tick text').length;
+                const preferredWidth = Math.max(nextViewBox.width, 900, tickCount * 86 + 260);
+                svgEl.style.width = `${Math.ceil(preferredWidth)}px`;
+                svgEl.style.maxWidth = 'none';
+                svgEl.style.height = 'auto';
+                svgEl.style.margin = '0';
+                svgEl.removeAttribute('width');
+                svgEl.removeAttribute('height');
+            }
+        }
+
+        /**
          * 【流式渲染/系统】【图表包装】创建 Mermaid 渲染成功后的视图容器
          * @param {string} source - Mermaid 源码
          * @param {string} svg - Mermaid 渲染后的 SVG 字符串
@@ -150,8 +261,7 @@
             wrapper.className = 'mermaid-wrapper';
 
             // 识别甘特图并增加标记
-            const trimmed = String(source || '').trim();
-            if (trimmed.startsWith('gantt') || trimmed.toLowerCase().startsWith('gantt')) {
+            if (isMermaidGanttSource(source)) {
                 wrapper.classList.add('is-gantt');
             }
 
@@ -262,6 +372,7 @@
                 }
                 if (!targetToReplace.parentNode) return;
                 targetToReplace.parentNode.replaceChild(wrapper, targetToReplace);
+                requestAnimationFrame(() => normalizeMermaidSvgLayout(wrapper, source));
             }).catch(err => {
                 codeEl.__mermaidErrorSource = source;
                 console.info('【流式渲染/系统】【Mermaid暂缓】Mermaid 渲染暂缓: ', err);
