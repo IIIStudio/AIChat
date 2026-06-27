@@ -10,6 +10,61 @@
         let dragStartY = 0;
 
         /**
+         * 【Mermaid查看器/图表缩放】【视口解析】读取 SVG 的 viewBox 尺寸
+         * @param {SVGElement} svg - Mermaid SVG 元素
+         * @returns {Object} - SVG 宽高信息
+         */
+        function readViewerSvgSize(svg) {
+            let width = 0;
+            let height = 0;
+            const viewBox = svg.getAttribute('viewBox');
+            if (viewBox) {
+                const parts = viewBox.split(/[\s,]+/).map(Number);
+                if (parts.length === 4 && parts.every(value => Number.isFinite(value))) {
+                    width = parts[2];
+                    height = parts[3];
+                }
+            }
+            if (!width || !height) {
+                width = parseFloat(svg.getAttribute('width')) || 800;
+                height = parseFloat(svg.getAttribute('height')) || 600;
+            }
+            return { width, height };
+        }
+
+        /**
+         * 【Mermaid查看器/图表缩放】【样式清理】移除内联预览图遗留的响应式尺寸
+         * @param {SVGElement} svg - Mermaid SVG 元素
+         * @returns {void}
+         */
+        function clearViewerSvgInlineSize(svg) {
+            svg.removeAttribute('width');
+            svg.removeAttribute('height');
+            svg.style.removeProperty('width');
+            svg.style.removeProperty('height');
+            svg.style.removeProperty('max-width');
+            svg.style.removeProperty('max-height');
+            svg.style.removeProperty('margin');
+        }
+
+        /**
+         * 【Mermaid查看器/图表缩放】【尺寸应用】按原始尺寸优先显示，空间不足时才缩小适配
+         * @param {SVGElement} svg - Mermaid SVG 元素
+         * @param {HTMLElement} body - 查看器主体区域
+         * @returns {void}
+         */
+        function fitViewerSvgToBody(svg, body) {
+            const svgSize = readViewerSvgSize(svg);
+            clearViewerSvgInlineSize(svg);
+            const availableWidth = Math.max(body.clientWidth - 96, 100);
+            const availableHeight = Math.max(body.clientHeight - 96, 100);
+            const fit = Math.min(1, availableWidth / svgSize.width, availableHeight / svgSize.height);
+            svg.setAttribute('width', Math.max(svgSize.width * fit, 1));
+            svg.setAttribute('height', Math.max(svgSize.height * fit, 1));
+            svg.style.display = 'block';
+        }
+
+        /**
          * 弹出 Mermaid 全屏放大查看器并装载 SVG 结构
          * @param {string} svgHtml - Mermaid 渲染出的 SVG 代码
          * @returns {void}
@@ -30,34 +85,11 @@
 
             const svg = canvas.querySelector('svg');
             if (svg && body) {
-                // 解除 mermaid 内置的最大宽高限制
-                svg.style.maxWidth = 'none';
-                svg.style.maxHeight = 'none';
-                svg.style.display = 'block';
-
-                // 2. 取 viewBox 作为原始比例依据；缺失时回退到 width/height 属性
-                let vbW = 0, vbH = 0;
-                const vb = svg.getAttribute('viewBox');
-                if (vb) {
-                    const p = vb.split(/[\s,]+/).map(Number);
-                    if (p.length === 4) { vbW = p[2]; vbH = p[3]; }
-                }
-                if (!vbW || !vbH) {
-                    vbW = parseFloat(svg.getAttribute('width')) || 800;
-                    vbH = parseFloat(svg.getAttribute('height')) || 600;
-                }
-
-                // 3. 移除硬编码尺寸，改用按视口等比缩放后的明确尺寸，避免在绝对定位画布中塌缩为空白
-                svg.removeAttribute('width');
-                svg.removeAttribute('height');
-                const bw = Math.max(body.clientWidth - 80, 100);
-                const bh = Math.max(body.clientHeight - 80, 100);
-                const fit = Math.min(bw / vbW, bh / vbH);
-                svg.setAttribute('width', Math.max(vbW * fit, 1));
-                svg.setAttribute('height', Math.max(vbH * fit, 1));
+                // 2. 查看器只在空间不足时缩小图表，不主动放大，避免甘特图文字和日期挤压
+                fitViewerSvgToBody(svg, body);
             }
 
-            // 4. 重置画板坐标和比例
+            // 3. 重置画板坐标和比例
             resetMermaidViewer();
         };
 

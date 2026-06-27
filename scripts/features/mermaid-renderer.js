@@ -113,15 +113,17 @@
                 securityLevel: 'loose',
                 suppressErrorRendering: true,
                 gantt: {
-                    fontSize: 13,
-                    sectionFontSize: 13,
+                    fontSize: 12,
+                    sectionFontSize: 12,
                     barHeight: 20,
                     barGap: 6,
                     topPadding: 52,
                     leftPadding: 96,
                     rightPadding: 96,
                     bottomPadding: 52,
-                    gridLineStartPadding: 34
+                    gridLineStartPadding: 34,
+                    axisFormat: '%m-%d',
+                    tickInterval: '1week'
                 },
                 themeVariables: isDark ? darkThemeVariables : lightThemeVariables
             };
@@ -185,10 +187,10 @@
          */
         function normalizeGanttTextSize(svgEl) {
             const rules = [
-                { selector: '.titleText', size: '20px' },
-                { selector: '.sectionTitle, .section-title', size: '13px' },
-                { selector: '.taskText, .taskTextOutsideRight, .taskTextOutsideLeft', size: '13px' },
-                { selector: 'g.tick text, .tick text', size: '11px' }
+                { selector: '.titleText', size: '18px' },
+                { selector: '.sectionTitle, .section-title', size: '12px' },
+                { selector: '.taskText, .taskTextOutsideRight, .taskTextOutsideLeft', size: '12px' },
+                { selector: 'g.tick text, .tick text', size: '10px' }
             ];
             rules.forEach(rule => {
                 svgEl.querySelectorAll(rule.selector).forEach(textEl => {
@@ -198,7 +200,95 @@
         }
 
         /**
-         * 【流式渲染/系统】【布局归一】扩展 SVG 视口并稳定甘特图横向尺寸
+         * 【流式渲染/系统】【越界标记】移除超出项目时间范围的今日标记线
+         * @param {SVGElement} svgEl - Mermaid 渲染出的 SVG 元素
+         * @param {Object} viewBox - SVG 原始视口
+         * @returns {void}
+         */
+        function removeOutOfRangeGanttTodayMarker(svgEl, viewBox) {
+            svgEl.querySelectorAll('g.today line.today, line.today').forEach(lineEl => {
+                const x = parseFloat(lineEl.getAttribute('x1') || lineEl.getAttribute('x2'));
+                if (!Number.isFinite(x)) return;
+                if (x < viewBox.x || x > viewBox.x + viewBox.width) {
+                    const todayGroup = lineEl.closest('g.today');
+                    if (todayGroup) {
+                        todayGroup.remove();
+                    } else {
+                        lineEl.remove();
+                    }
+                }
+            });
+        }
+
+        /**
+         * 【流式渲染/系统】【刻度坐标】读取甘特图 tick 分组的横向坐标
+         * @param {SVGGElement} tickEl - tick 分组元素
+         * @returns {number|null} - 横向坐标，无法解析时返回 null
+         */
+        function readGanttTickX(tickEl) {
+            const transform = tickEl.getAttribute('transform') || '';
+            const match = transform.match(/translate\(([-\d.]+)(?:[\s,]+[-\d.]+)?\)/);
+            if (!match) return null;
+            const x = parseFloat(match[1]);
+            return Number.isFinite(x) ? x : null;
+        }
+
+        /**
+         * 【流式渲染/系统】【刻度归一】移除过密甘特图刻度，避免底部日期和竖线重叠
+         * @param {SVGElement} svgEl - Mermaid 渲染出的 SVG 元素
+         * @returns {void}
+         */
+        function normalizeGanttTicks(svgEl) {
+            const ticks = Array.from(svgEl.querySelectorAll('g.grid g.tick, .grid .tick'))
+                .map(tickEl => ({ tickEl, x: readGanttTickX(tickEl) }))
+                .filter(item => item.x !== null)
+                .sort((a, b) => a.x - b.x);
+            if (ticks.length < 2) return;
+
+            const gaps = [];
+            for (let i = 1; i < ticks.length; i++) {
+                const gap = ticks[i].x - ticks[i - 1].x;
+                if (gap > 0) gaps.push(gap);
+            }
+            if (gaps.length === 0) return;
+
+            const averageGap = gaps.reduce((sum, gap) => sum + gap, 0) / gaps.length;
+            const minimumGap = 64;
+            if (averageGap >= minimumGap) return;
+
+            const keepStep = Math.max(2, Math.ceil(minimumGap / averageGap));
+            let lastKeptX = null;
+            ticks.forEach((item, index) => {
+                const shouldKeepByStep = index % keepStep === 0;
+                const isFarFromLast = lastKeptX === null || item.x - lastKeptX >= minimumGap;
+                if (shouldKeepByStep && isFarFromLast) {
+                    lastKeptX = item.x;
+                    return;
+                }
+                item.tickEl.remove();
+            });
+        }
+
+        /**
+         * 【流式渲染/系统】【视口留白】按原始 viewBox 扩展安全留白
+         * @param {SVGElement} svgEl - Mermaid 渲染出的 SVG 元素
+         * @param {Object} viewBox - SVG 原始视口
+         * @param {number} padding - 额外留白
+         * @returns {Object} - 扩展后的视口
+         */
+        function applyMermaidSvgViewBoxPadding(svgEl, viewBox, padding) {
+            const nextViewBox = {
+                x: viewBox.x - padding,
+                y: viewBox.y - padding,
+                width: viewBox.width + padding * 2,
+                height: viewBox.height + padding * 2
+            };
+            svgEl.setAttribute('viewBox', `${nextViewBox.x} ${nextViewBox.y} ${nextViewBox.width} ${nextViewBox.height}`);
+            return nextViewBox;
+        }
+
+        /**
+         * 【流式渲染/系统】【布局归一】修正 SVG 视口并稳定甘特图缩放方式
          * @param {HTMLElement} wrapper - Mermaid 图表包装容器
          * @param {string} source - Mermaid 源码
          * @returns {void}
@@ -215,38 +305,35 @@
             }
 
             const viewBox = readMermaidSvgViewBox(svgEl);
-            let nextViewBox = viewBox;
+
+            if (isGantt) {
+                // 1. 今日标记可能远超项目日期范围，不能参与布局或造成视口异常放大
+                removeOutOfRangeGanttTodayMarker(svgEl, viewBox);
+                // 2. Mermaid 在部分日期格式下会生成过密刻度，必须合并到可读间距
+                normalizeGanttTicks(svgEl);
+                // 3. 甘特图按原始视口轻微扩展留白，再整体缩放到容器宽度，效果接近 Typora
+                applyMermaidSvgViewBoxPadding(svgEl, viewBox, 12);
+                svgEl.style.width = '100%';
+                svgEl.style.maxWidth = '100%';
+                svgEl.style.height = 'auto';
+                svgEl.style.margin = '0 auto';
+                svgEl.removeAttribute('width');
+                svgEl.removeAttribute('height');
+                return;
+            }
+
             try {
-                // 1. Mermaid 甘特图的分区文字可能伸出原始 viewBox，必须按实际包围盒扩展视口
+                // 3. 非甘特图继续按实际包围盒补安全边距，避免普通图形的边缘文本被裁切
                 const bbox = svgEl.getBBox();
                 if (bbox && bbox.width > 0 && bbox.height > 0) {
-                    const padding = isGantt ? 36 : 12;
-                    const minX = Math.min(viewBox.x, bbox.x) - padding;
-                    const minY = Math.min(viewBox.y, bbox.y) - padding;
-                    const maxX = Math.max(viewBox.x + viewBox.width, bbox.x + bbox.width) + padding;
-                    const maxY = Math.max(viewBox.y + viewBox.height, bbox.y + bbox.height) + padding;
-                    nextViewBox = {
-                        x: minX,
-                        y: minY,
-                        width: maxX - minX,
-                        height: maxY - minY
-                    };
-                    svgEl.setAttribute('viewBox', `${nextViewBox.x} ${nextViewBox.y} ${nextViewBox.width} ${nextViewBox.height}`);
+                    const minX = Math.min(viewBox.x, bbox.x) - 12;
+                    const minY = Math.min(viewBox.y, bbox.y) - 12;
+                    const maxX = Math.max(viewBox.x + viewBox.width, bbox.x + bbox.width) + 12;
+                    const maxY = Math.max(viewBox.y + viewBox.height, bbox.y + bbox.height) + 12;
+                    svgEl.setAttribute('viewBox', `${minX} ${minY} ${maxX - minX} ${maxY - minY}`);
                 }
             } catch(e) {
                 console.info('【流式渲染/系统】【Mermaid布局】读取 SVG 包围盒失败: ', e);
-            }
-
-            if (isGantt) {
-                // 2. 甘特图保持内容原始比例并通过容器横向滚动展示，不再压缩到气泡宽度
-                const tickCount = svgEl.querySelectorAll('g.tick text, .tick text').length;
-                const preferredWidth = Math.max(nextViewBox.width, 900, tickCount * 86 + 260);
-                svgEl.style.width = `${Math.ceil(preferredWidth)}px`;
-                svgEl.style.maxWidth = 'none';
-                svgEl.style.height = 'auto';
-                svgEl.style.margin = '0';
-                svgEl.removeAttribute('width');
-                svgEl.removeAttribute('height');
             }
         }
 

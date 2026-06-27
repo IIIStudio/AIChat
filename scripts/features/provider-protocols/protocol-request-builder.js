@@ -207,6 +207,7 @@
         function convertMessagesToOpenAIResponses(messages) {
             const input = [];
             messages.forEach(msg => {
+                if (msg.role === 'system') return;
                 if (Array.isArray(msg.openai_response_output)) {
                     msg.openai_response_output.forEach(item => input.push(item));
                     return;
@@ -248,6 +249,19 @@
                 });
             });
             return input;
+        }
+
+        /**
+         * 【供应商协议/消息转换】【Responses 指令】提取系统消息作为 Responses 顶层 instructions
+         * @param {Array} messages - 通用消息列表
+         * @returns {string} - 合并后的系统指令
+         */
+        function extractOpenAIResponseInstructions(messages) {
+            return (messages || [])
+                .filter(msg => msg && msg.role === 'system')
+                .map(msg => extractMessageText(msg.content))
+                .filter(Boolean)
+                .join('\n\n');
         }
 
         /**
@@ -298,13 +312,13 @@
          */
         function buildOpenAIResponseRequest(provider, options) {
             const baseUrl = stripApiUrlSuffixes(provider.apiUrl, ['/chat/completions', '/responses']);
+            const instructions = extractOpenAIResponseInstructions(options.messages);
             const body = {
                 model: options.model,
                 input: convertMessagesToOpenAIResponses(options.messages),
-                stream: options.stream,
-                temperature: options.preset ? options.preset.temperature : 0.7,
-                top_p: options.preset ? options.preset.top_p : 1
+                stream: options.stream
             };
+            if (instructions) body.instructions = instructions;
             const tools = buildProtocolTools('openai-response', options.searchTools);
             if (options.webSearchEnabled && tools.length > 0) body.tools = tools;
             applyThinkingOptions(body, provider, 'openai-response', options.model, options.thinkingLevel);
