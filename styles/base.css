@@ -77,12 +77,7 @@
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: transparent; border-radius: 6px; }
         ::-webkit-scrollbar-button,
-        ::-webkit-scrollbar-button:start,
-        ::-webkit-scrollbar-button:end,
-        ::-webkit-scrollbar-button:vertical:start,
-        ::-webkit-scrollbar-button:vertical:end,
-        ::-webkit-scrollbar-button:horizontal:start,
-        ::-webkit-scrollbar-button:horizontal:end { display: none; width: 0; height: 0; }
+        *::-webkit-scrollbar-button { display: none !important; width: 0 !important; height: 0 !important; }
         ::-webkit-scrollbar-corner { background: transparent; }
         *:hover::-webkit-scrollbar-thumb { background: var(--scrollbar-hover); }
         ::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-active); }
