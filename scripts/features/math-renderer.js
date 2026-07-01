@@ -14,6 +14,57 @@
         }
 
         // ============================================================
+        //  公式占位保护 — 防止 marked.parse 破坏公式定界符
+        //  marked 会消费 \(\) 转义序列、拆分 $...$ 中的强调字符
+        //  方案：marked 前用占位符替换公式，marked 后在文本节点中还原
+        // ============================================================
+
+        /**
+         * 提取文本中的数学公式并替换为占位符，防止 marked.parse 破坏定界符
+         * @param {string} text - 原始 markdown 文本
+         * @returns {{text: string, mathMap: string[]}} - 占位后的文本和公式映射表
+         */
+        function protectMath(text) {
+            if (!text) return { text: text, mathMap: [] };
+            const mathMap = [];
+            const pattern = /(\$\$[\s\S]*?\$\$|\\\[[\s\S]*?\\\]|\\\([\s\S]*?\\\)|\$[^\n$]*?\$)/g;
+            const protectedText = text.replace(pattern, (match) => {
+                const idx = mathMap.length;
+                mathMap.push(match);
+                return '@@MATH' + idx + '@@';
+            });
+            return { text: protectedText, mathMap: mathMap };
+        }
+
+        /**
+         * 在 DOM 容器的文本节点中还原被占位的数学公式
+         * @param {HTMLElement} container - 已设置 innerHTML 的 DOM 容器
+         * @param {string[]} mathMap - protectMath 返回的公式映射表
+         * @returns {void}
+         */
+        function restoreMathPlaceholders(container, mathMap) {
+            if (!container || !mathMap || mathMap.length === 0) return;
+            const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, {
+                acceptNode(node) {
+                    return /@@MATH\d+@@/.test(node.nodeValue || '')
+                        ? NodeFilter.FILTER_ACCEPT
+                        : NodeFilter.FILTER_REJECT;
+                }
+            });
+            const textNodes = [];
+            let node = walker.nextNode();
+            while (node) {
+                textNodes.push(node);
+                node = walker.nextNode();
+            }
+            textNodes.forEach(node => {
+                node.nodeValue = node.nodeValue.replace(/@@MATH(\d+)@@/g, (match, idx) => {
+                    return mathMap[parseInt(idx)] || match;
+                });
+            });
+        }
+
+        // ============================================================
         //  数学公式渲染 — 候选成功后替换
         // ============================================================
         const MATH_DELIMITER_CONFIGS = [

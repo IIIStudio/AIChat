@@ -1,4 +1,65 @@
         // ============================================================
+        //  自定义下拉选择器（替代原生 select）
+        // ============================================================
+        /**
+         * 生成自定义下拉选择器的 HTML
+         * @param {string} id - 选择器容器 ID
+         * @param {Array<{value:string,label:string}>} options - 选项列表
+         * @param {string} selectedValue - 当前选中值
+         * @returns {string} - HTML 字符串
+         */
+        function renderCustomSelect(id, options, selectedValue) {
+            const selected = options.find(o => o.value === selectedValue) || options[0] || { value: '', label: '' };
+            const itemsHtml = options.map(opt => `
+                <div class="custom-select-item ${opt.value === selected.value ? 'active' : ''}" data-value="${escapeHtml(opt.value)}" onclick="selectCustomItem(this)">${escapeHtml(opt.label)}</div>
+            `).join('');
+            return `
+                <div class="custom-select" id="${id}" data-value="${escapeHtml(selected.value)}">
+                    <div class="custom-select-trigger" onclick="toggleCustomSelect(this)">
+                        <span>${escapeHtml(selected.label)}</span>
+                        <svg class="custom-select-arrow" width="10" height="10" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    </div>
+                    <div class="custom-select-menu">${itemsHtml}</div>
+                </div>
+            `;
+        }
+
+        function toggleCustomSelect(triggerEl) {
+            const selectEl = triggerEl.closest('.custom-select');
+            const menu = selectEl.querySelector('.custom-select-menu');
+            const isOpen = selectEl.classList.contains('open');
+            document.querySelectorAll('.custom-select.open').forEach(s => { if (s !== selectEl) s.classList.remove('open'); });
+            if (isOpen) {
+                selectEl.classList.remove('open');
+                return;
+            }
+            const rect = triggerEl.getBoundingClientRect();
+            if (menu) {
+                menu.style.left = rect.left + 'px';
+                menu.style.top = (rect.bottom + 4) + 'px';
+                menu.style.width = rect.width + 'px';
+            }
+            selectEl.classList.add('open');
+        }
+
+        function selectCustomItem(itemEl) {
+            const selectEl = itemEl.closest('.custom-select');
+            const value = itemEl.dataset.value;
+            const label = itemEl.textContent;
+            selectEl.dataset.value = value;
+            const triggerSpan = selectEl.querySelector('.custom-select-trigger span');
+            if (triggerSpan) triggerSpan.textContent = label;
+            selectEl.querySelectorAll('.custom-select-item').forEach(i => i.classList.toggle('active', i === itemEl));
+            selectEl.classList.remove('open');
+        }
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.custom-select')) {
+                document.querySelectorAll('.custom-select.open').forEach(s => s.classList.remove('open'));
+            }
+        });
+
+        // ============================================================
         //  设置面板 — 运营商编辑
         // ============================================================
         /**
@@ -16,8 +77,8 @@
             if (nameEl) p.name = nameEl.value.trim() || p.name;
             if (urlEl) p.apiUrl = urlEl.value.trim();
             if (keyEl) p.apiKey = keyEl.value.trim();
-            if (protocolEl && isKnownProviderProtocol(protocolEl.value)) p.protocol = protocolEl.value;
-            if (thinkingFormatEl && isKnownThinkingFormat(thinkingFormatEl.value)) p.thinkingFormat = thinkingFormatEl.value;
+            if (protocolEl && isKnownProviderProtocol(protocolEl.dataset.value)) p.protocol = protocolEl.dataset.value;
+            if (thinkingFormatEl && isKnownThinkingFormat(thinkingFormatEl.dataset.value)) p.thinkingFormat = thinkingFormatEl.dataset.value;
         }
 
         /**
@@ -33,7 +94,7 @@
             const countEl = document.getElementById('editSearchFetchCount');
 
             // 1. 只读取当前网络搜索路由内存在的表单元素
-            if (provEl) webSearchSettings.provider = provEl.value;
+            if (provEl) webSearchSettings.provider = provEl.dataset.value;
             if (urlEl) webSearchSettings.apiUrl = urlEl.value.trim();
             if (keyEl) webSearchSettings.apiKey = keyEl.value.trim();
             if (locEl) webSearchSettings.location = locEl.value.trim() || 'US';
@@ -96,14 +157,8 @@
             }
             normalizeProviderConfig(p);
             const isActive = p.id === activeProviderId;
-            const protocolOptionsHtml = PROVIDER_PROTOCOLS.map(item => {
-                const selected = item.value === p.protocol ? 'selected' : '';
-                return `<option value="${escapeHtml(item.value)}" ${selected}>${escapeHtml(item.label)}</option>`;
-            }).join('');
-            const thinkingOptionsHtml = PROVIDER_THINKING_FORMATS.map(item => {
-                const selected = item.value === p.thinkingFormat ? 'selected' : '';
-                return `<option value="${escapeHtml(item.value)}" ${selected}>${escapeHtml(item.label)}</option>`;
-            }).join('');
+            const protocolSelectHtml = renderCustomSelect('editPprotocol', PROVIDER_PROTOCOLS, p.protocol);
+            const thinkingSelectHtml = renderCustomSelect('editPthinkingFormat', PROVIDER_THINKING_FORMATS, p.thinkingFormat);
             const modelsHtml = (p.models || []).map((m, i) => {
                 const mLogo = getModelDevLogo(p.name, p.apiUrl, m);
                 const mLogoHtml = renderLogoHtml(mLogo, true);
@@ -123,15 +178,11 @@
                 <div class="provider-protocol-grid">
                     <div>
                         <label>协议类型</label>
-                        <select id="editPprotocol">
-                            ${protocolOptionsHtml}
-                        </select>
+                        ${protocolSelectHtml}
                     </div>
                     <div>
                         <label>思考字段类型</label>
-                        <select id="editPthinkingFormat">
-                            ${thinkingOptionsHtml}
-                        </select>
+                        ${thinkingSelectHtml}
                     </div>
                 </div>
                 <div class="provider-protocol-tip">自动兼容会按协议转换思考参数；DeepSeek 会发送 thinking.type 与 reasoning_effort。</div>
@@ -193,27 +244,30 @@
             if (!panel) return;
             const s = webSearchSettings;
             panel.innerHTML = `
-                <div style="font-weight:600;font-size:14px;margin-bottom:2px;">网络搜索配置</div>
-                <label>搜索服务供应商</label>
-                <select id="editSearchProvider">
-                    <option value="tinyfish" ${s.provider === 'tinyfish' ? 'selected' : ''}>TinyFish</option>
-                </select>
-                <label>API URL</label>
-                <input type="text" id="editSearchUrl" value="${escapeHtml(s.apiUrl || '')}" placeholder="https://agent.tinyfish.ai">
-                <label>API Key</label>
-                <input type="password" id="editSearchKey" value="${escapeHtml(s.apiKey || '')}" placeholder="sk-tinyfish-...">
-                <div style="display:flex;gap:10px;">
-                    <div style="flex:1;">
-                        <label>地区 (Location)</label>
-                        <input type="text" id="editSearchLocation" value="${escapeHtml(s.location || 'US')}" placeholder="US">
-                    </div>
-                    <div style="flex:1;">
-                        <label>语言 (Language)</label>
-                        <input type="text" id="editSearchLanguage" value="${escapeHtml(s.language || 'en')}" placeholder="en">
-                    </div>
+                <div class="settings-section-title">网络搜索配置</div>
+                <div class="settings-field-group">
+                    <label>搜索服务供应商</label>
+                    ${renderCustomSelect('editSearchProvider', [{value:'tinyfish',label:'TinyFish'}], s.provider)}
+                    <label>API URL</label>
+                    <input type="text" id="editSearchUrl" value="${escapeHtml(s.apiUrl || '')}" placeholder="https://agent.tinyfish.ai">
+                    <label>API Key</label>
+                    <input type="password" id="editSearchKey" value="${escapeHtml(s.apiKey || '')}" placeholder="sk-tinyfish-...">
                 </div>
-                <label>提取网页内容数量 (Fetch Count, 1-5)</label>
-                <input type="number" id="editSearchFetchCount" value="${s.fetchCount || 2}" min="1" max="5" placeholder="2">
+                <div class="settings-field-group">
+                    <label>搜索参数</label>
+                    <div style="display:flex;gap:10px;">
+                        <div style="flex:1;">
+                            <label>地区 (Location)</label>
+                            <input type="text" id="editSearchLocation" value="${escapeHtml(s.location || 'US')}" placeholder="US">
+                        </div>
+                        <div style="flex:1;">
+                            <label>语言 (Language)</label>
+                            <input type="text" id="editSearchLanguage" value="${escapeHtml(s.language || 'en')}" placeholder="en">
+                        </div>
+                    </div>
+                    <label>提取网页内容数量 (Fetch Count, 1-5)</label>
+                    <input type="number" id="editSearchFetchCount" value="${s.fetchCount || 2}" min="1" max="5" placeholder="2">
+                </div>
             `;
         }
 

@@ -53,20 +53,25 @@
             if (!panel) return;
             const s = webDavSettings;
             panel.innerHTML = `
-                <div class="webdav-settings-header">
-                    <div>
-                        <div class="webdav-settings-title">WebDAV 备份恢复</div>
-                        <div class="webdav-settings-desc">配置 WebDAV 后可把当前配置、会话和收藏备份到远程 JSON 文件，或从远程文件恢复。</div>
+                <div class="settings-section-title">WebDAV 备份恢复</div>
+                <div class="webdav-settings-desc">配置 WebDAV 后可把当前配置、会话和收藏备份到远程 JSON 文件，或从远程文件恢复。</div>
+                <div class="settings-field-group">
+                    <label>连接配置</label>
+                    <label>WebDAV 地址</label>
+                    <input type="text" id="editWebDavBaseUrl" value="${escapeHtml(s.baseUrl || '')}" placeholder="https://dav.example.com/remote.php/dav/files/user">
+                    <div style="display:flex;gap:10px;">
+                        <div style="flex:1;">
+                            <label>用户名</label>
+                            <input type="text" id="editWebDavUsername" value="${escapeHtml(s.username || '')}" placeholder="WebDAV 用户名">
+                        </div>
+                        <div style="flex:1;">
+                            <label>密码或应用密码</label>
+                            <input type="password" id="editWebDavPassword" value="${escapeHtml(s.password || '')}" placeholder="WebDAV 密码">
+                        </div>
                     </div>
+                    <label>远程备份文件路径</label>
+                    <input type="text" id="editWebDavRemotePath" value="${escapeHtml(s.remotePath || 'AIChat/backup.json')}" placeholder="AIChat/backup.json">
                 </div>
-                <label>WebDAV 地址</label>
-                <input type="text" id="editWebDavBaseUrl" value="${escapeHtml(s.baseUrl || '')}" placeholder="https://dav.example.com/remote.php/dav/files/user">
-                <label>用户名</label>
-                <input type="text" id="editWebDavUsername" value="${escapeHtml(s.username || '')}" placeholder="WebDAV 用户名">
-                <label>密码或应用密码</label>
-                <input type="password" id="editWebDavPassword" value="${escapeHtml(s.password || '')}" placeholder="WebDAV 密码">
-                <label>远程备份文件路径</label>
-                <input type="text" id="editWebDavRemotePath" value="${escapeHtml(s.remotePath || 'AIChat/backup.json')}" placeholder="AIChat/backup.json">
                 <div class="webdav-help">浏览器直连 WebDAV 需要服务端允许跨域请求，尤其是 OPTIONS 预检和 PROPFIND、MKCOL、PUT、GET 方法。WebDAV 凭据只保存在本地浏览器，不会写入备份 JSON。</div>
                 <div class="webdav-actions">
                     <button type="button" onclick="testWebDavConnection()">测试连接</button>

@@ -193,7 +193,11 @@
                 ? msg.content.filter(c => c.type === 'text').map(c => c.text).join('\n')
                 : (msg.content || '');
             
-            // 3. 创建用于编辑的 textarea 并配置与底部输入框一致的样式
+            // 3. 标记消息为编辑状态，扩大气泡宽度
+            const msgDiv = block.querySelector('.message.user');
+            if (msgDiv) msgDiv.classList.add('editing');
+
+            // 4. 创建用于编辑的 textarea 并配置与底部输入框一致的样式
             const textarea = document.createElement('textarea');
             textarea.id = 'editingTextarea';
             textarea.value = originalContent;
@@ -405,7 +409,16 @@
                 thoughtDiv.className = 'thought-process';
                 // __thinking__ 标记：显示思考中动效（跳动点 + 思考中文案），不显示折叠箭头
                 const isThinking = thought === '__thinking__';
-                const thoughtHtml = isThinking ? '' : (thought.trimStart().startsWith('<') ? thought : marked.parse(unwrapMathFromCode(thought)));
+                let thoughtHtml, thoughtMathMap;
+                if (isThinking) {
+                    thoughtHtml = '';
+                } else if (thought.trimStart().startsWith('<')) {
+                    thoughtHtml = thought;
+                } else {
+                    const pr = protectMath(unwrapMathFromCode(thought));
+                    thoughtHtml = marked.parse(pr.text);
+                    thoughtMathMap = pr.mathMap;
+                }
                 const barInner = isThinking
                     ? '<span class="thinking-dots"><span></span><span></span><span></span></span><span class="thought-label">思考中</span>'
                     : '<span class="thought-label">思考过程</span><svg class="thought-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>';
@@ -415,6 +428,10 @@
                     </div>
                     <div class="thought-content">${thoughtHtml}</div>
                 `;
+                if (thoughtMathMap && thoughtMathMap.length > 0) {
+                    const tcEl = thoughtDiv.querySelector('.thought-content');
+                    if (tcEl) restoreMathPlaceholders(tcEl, thoughtMathMap);
+                }
                 if (isThinking) thoughtDiv.classList.add('thinking');
                 blockDiv.appendChild(thoughtDiv);
             }
@@ -435,15 +452,23 @@
             contentDiv.setAttribute('data-raw', safeContent);
             if (msgIndex != null) contentDiv.setAttribute('data-index', msgIndex);
             if (safeContent) {
-                let displayHtml = isHtml ? safeContent : marked.parse(unwrapMathFromCode(safeContent)).trim();
-                // 生图占位符替换：src="" data-gen-idx="N" data-gen-src="" → src="data:..."
-                if (role === 'assistant' && isHtml && genImages && genImages.length > 0) {
-                    genImages.forEach((img, i) => {
-                        const dataUrl = 'data:' + (img.type || 'image/png') + ';base64,' + img.b64;
-                        displayHtml = displayHtml.split('src="" data-gen-idx="' + i + '" data-gen-src=""').join('src="' + dataUrl + '"');
-                    });
+                if (isHtml) {
+                    let displayHtml = safeContent;
+                    // 生图占位符替换：src="" data-gen-idx="N" data-gen-src="" → src="data:..."
+                    if (role === 'assistant' && genImages && genImages.length > 0) {
+                        genImages.forEach((img, i) => {
+                            const dataUrl = 'data:' + (img.type || 'image/png') + ';base64,' + img.b64;
+                            displayHtml = displayHtml.split('src="" data-gen-idx="' + i + '" data-gen-src=""').join('src="' + dataUrl + '"');
+                        });
+                    }
+                    contentDiv.innerHTML = displayHtml;
+                } else if (role === 'user') {
+                    contentDiv.innerHTML = escapeHtml(safeContent);
+                } else {
+                    const pr = protectMath(unwrapMathFromCode(safeContent));
+                    contentDiv.innerHTML = marked.parse(pr.text).trim();
+                    restoreMathPlaceholders(contentDiv, pr.mathMap);
                 }
-                contentDiv.innerHTML = displayHtml;
             } else {
                 contentDiv.textContent = '';
             }
