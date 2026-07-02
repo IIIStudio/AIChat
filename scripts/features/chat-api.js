@@ -433,6 +433,7 @@
             let finalReplyText = '';
             let finalThoughtText = '';
             let finalMetrics = null;
+            let finalThoughtDurationMs = null;
 
             try {
                 currentAbortController = new AbortController();
@@ -517,7 +518,7 @@
                         throw new Error(errMsg);
                     }
 
-                    let aiReply = '', realThought = null, toolCalls = [], responseMetrics = null, responseProtocolState = null;
+                    let aiReply = '', realThought = null, toolCalls = [], responseMetrics = null, responseProtocolState = null, responseThoughtDurationMs = null;
                     if (useStream && response.body) {
                         // 【AI响应/系统】【读取响应】流式读取 SSE 响应数据并提取 tool_calls 列表
                         const r = await readSSEStream(response.body, aiMessageElement, chatRequest.protocol, metricsTracker);
@@ -525,6 +526,7 @@
                         realThought = r.thought || null;
                         toolCalls = r.toolCalls || [];
                         responseMetrics = r.metrics || completeChatMetrics(metricsTracker, aiReply || realThought || '');
+                        responseThoughtDurationMs = r.thoughtDurationMs || null;
                     } else {
                         // 【AI响应/系统】【读取响应】非流式直接读取响应体并提取 tool_calls 列表
                         const data = await response.json();
@@ -601,6 +603,7 @@
                     finalReplyText = aiReply;
                     finalThoughtText = realThought || '';
                     finalMetrics = responseMetrics;
+                    finalThoughtDurationMs = responseThoughtDurationMs;
                     break;
                 }
 
@@ -611,7 +614,8 @@
                     thought: finalThoughtText,
                     model: activeModel,
                     presetId: activePresetId,
-                    metrics: finalMetrics
+                    metrics: finalMetrics,
+                    thoughtDurationMs: finalThoughtDurationMs
                 });
 
                 if (pendingVersions !== null) {

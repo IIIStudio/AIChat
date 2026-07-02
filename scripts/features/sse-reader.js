@@ -18,6 +18,11 @@
             const thoughtEl = el.closest('.message-block')?.querySelector('.thought-content');
             const thoughtProcessEl = el.closest('.message-block')?.querySelector('.thought-process');
             let thoughtStarted = false;
+            let shouldThoughtAutoScroll = true;
+            let thoughtStartAt = null;
+            let thoughtEndAt = null;
+            let thoughtSettled = false;
+            let contentStarted = false;
             // 2.创建流式 markdown 解析器：正文与思考各一个
             const useSmd = !!window.smd;
             let contentParser = null, thoughtParser = null;
@@ -29,6 +34,50 @@
                 el.style.whiteSpace = 'pre-wrap';
                 if (thoughtEl) thoughtEl.style.whiteSpace = 'pre-wrap';
             }
+
+            // 思考内容自动滚动：用户滚动离开底部时关闭，回到底部时开启
+            if (thoughtEl) {
+                thoughtEl.addEventListener('scroll', () => {
+                    const atBottom = thoughtEl.scrollHeight - thoughtEl.scrollTop - thoughtEl.clientHeight <= 30;
+                    shouldThoughtAutoScroll = atBottom;
+                });
+            }
+
+            // 思考结束：把"思考中"动效替换为"思考过程(用时xx)"
+            function settleThoughtBar() {
+                if (thoughtSettled || !thoughtStarted || !thoughtProcessEl) return;
+                thoughtSettled = true;
+                thoughtEndAt = performance.now();
+                const durationText = formatThoughtDuration(thoughtEndAt - thoughtStartAt);
+                const bar = thoughtProcessEl.querySelector('.thought-bar');
+                if (bar) bar.innerHTML = `<span class="thought-label">思考过程(${durationText})</span><svg class="thought-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>`;
+            }
+
+            // 动态指标标签：创建（如不存在）并启动定时更新
+            const actionsEl = el.closest('.message-block')?.querySelector('.message-actions');
+            let metricsTag = actionsEl?.querySelector('.msg-metrics-tag');
+            if (!metricsTag && actionsEl) {
+                metricsTag = document.createElement('span');
+                metricsTag.className = 'msg-metrics-tag';
+                const modelTag = actionsEl.querySelector('.msg-model-tag');
+                if (modelTag) modelTag.after(metricsTag);
+                else actionsEl.appendChild(metricsTag);
+            }
+            const metricsTimer = setInterval(() => {
+                if (!metricsTag || !metricsTracker) return;
+                const elapsed = performance.now() - metricsTracker.startedAt;
+                if (!metricsTracker.firstTokenAt) {
+                    metricsTag.textContent = `首字 ${formatMetricDuration(Math.round(elapsed))}`;
+                } else {
+                    const firstMs = Math.round(metricsTracker.firstTokenAt - metricsTracker.startedAt);
+                    const genMs = performance.now() - metricsTracker.firstTokenAt;
+                    const charCount = (metricsTracker.outputText || '').length;
+                    const tokens = estimateTokenCount(metricsTracker.outputText);
+                    const tps = genMs > 0 ? Number((tokens / (genMs / 1000)).toFixed(1)) : 0;
+                    metricsTag.textContent = `首字 ${formatMetricDuration(firstMs)} · ${charCount}字 · 约 ${tps} token/s`;
+                }
+            }, 200);
+
             // 3.流式增强节流：每 600ms 对已完成代码块补充渲染一次
             let lastHighlightTime = 0;
             let contentRenderedFenceCount = 0;
@@ -50,15 +99,16 @@
                             // 4.累积并增量渲染思考内容
                             if (deltaObj.thought) {
                                 markChatMetricFirstToken(metricsTracker, deltaObj.thought);
-                                // 首次收到思考内容时：把"思考中"动效替换为"思考过程"标题
+                                // 首次收到思考内容时：标签从"请求中"改为"思考中"，保留跳动点动效
                                 if (!thoughtStarted) {
                                     thoughtStarted = true;
+                                    thoughtStartAt = performance.now();
                                     if (thoughtEl) thoughtEl.innerHTML = '';
                                     if (thoughtProcessEl) {
                                         thoughtProcessEl.classList.add('thinking');
-                                        // 更新 bar：跳动点→折叠箭头，标签改为"思考过程"
+                                        // 更新 bar：标签从"请求中"改为"思考中"，保留跳动点动效
                                         const bar = thoughtProcessEl.querySelector('.thought-bar');
-                                        if (bar) bar.innerHTML = '<span class="thought-label">思考过程</span><svg class="thought-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>';
+                                        if (bar) bar.innerHTML = '<span class="thinking-dots"><span></span><span></span><span></span></span><span class="thought-label">思考中</span>';
                                     }
                                 }
                                 thoughtFull += deltaObj.thought;
@@ -75,15 +125,26 @@
                                         thoughtRenderedFenceCount = getCodeFenceCount(thoughtFull);
                                         renderCompletedMarkdownBlocks(thoughtEl, true);
                                     }
+                                    // 思考内容自动滚动到底部
+                                    if (shouldThoughtAutoScroll) {
+                                        thoughtEl.scrollTop = thoughtEl.scrollHeight;
+                                    }
                                 }
                             }
                             // 5.累积并增量渲染正文内容
                             if (deltaObj.content) {
                                 markChatMetricFirstToken(metricsTracker, deltaObj.content);
                                 appendChatMetricOutput(metricsTracker, deltaObj.content);
-                                // 【流式渲染/系统】【正文渲染】一旦开始收到正文，说明思考阶段已结束，立即移除“思考中”动效
-                                if (thoughtProcessEl && thoughtProcessEl.classList.contains('thinking') && !thoughtStarted) {
-                                    thoughtProcessEl.remove();
+                                // 思考→正文切换：首次收到正文时，结算思考状态
+                                if (!contentStarted) {
+                                    contentStarted = true;
+                                    if (thoughtProcessEl) {
+                                        if (!thoughtStarted) {
+                                            thoughtProcessEl.remove();
+                                        } else {
+                                            settleThoughtBar();
+                                        }
+                                    }
                                 }
                                 full += deltaObj.content;
                                 el.setAttribute('data-raw', full);
@@ -146,13 +207,15 @@
                 if (streamErr.name !== 'AbortError') throw streamErr;
             }
             // 7.结束流，刷新剩余未闭合的 markdown 标记
+            clearInterval(metricsTimer);
             if (contentParser) window.smd.parser_end(contentParser);
             if (thoughtParser) window.smd.parser_end(thoughtParser);
-            // 【流式渲染/系统】【思考清除】8. 结束流后，若从未输出过真实思考内容，则直接移去思考动效元素
+            // 【流式渲染/系统】【思考清除】8. 结束流后，结算思考状态
             if (thoughtProcessEl) {
                 if (!thoughtStarted) {
                     thoughtProcessEl.remove();
                 } else {
+                    settleThoughtBar();
                     thoughtProcessEl.classList.remove('thinking');
                 }
             }
@@ -161,5 +224,5 @@
             if (thoughtEl) {
                 renderCompletedMarkdownBlocks(thoughtEl);
             }
-            return { content: full, thought: thoughtFull, toolCalls: toolCalls.filter(Boolean), metrics: completeChatMetrics(metricsTracker, full || thoughtFull) };
+            return { content: full, thought: thoughtFull, toolCalls: toolCalls.filter(Boolean), metrics: completeChatMetrics(metricsTracker, full || thoughtFull), thoughtDurationMs: (thoughtStartAt && thoughtEndAt) ? Math.round(thoughtEndAt - thoughtStartAt) : null };
         }

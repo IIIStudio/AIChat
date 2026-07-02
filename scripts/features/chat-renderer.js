@@ -71,6 +71,7 @@
                         let displayGenImages = msg.images || null;
                         let displayGenParams = msg.genParams || null;
                         let displayMetrics = msg.metrics || null;
+                        let displayThoughtDuration = msg.thoughtDurationMs;
                         // 2. 如果有版本历史且正在查看旧版本，使用旧版本内容
                         let displayIsHtml = msg.isHtml || false;
                         if (msg.role === 'assistant' && msg.versions && msg.versions.length > 0) {
@@ -85,6 +86,7 @@
                                 displayGenImages = ver.images || displayGenImages;
                                 displayGenParams = ver.genParams || displayGenParams;
                                 displayMetrics = ver.metrics || null;
+                                displayThoughtDuration = ver.thoughtDurationMs != null ? ver.thoughtDurationMs : displayThoughtDuration;
                             } else if (Array.isArray(msg.content)) {
                                 const textPart = msg.content.find(c => c.type === 'text');
                                 displayContent = textPart ? textPart.text : '';
@@ -100,7 +102,7 @@
                         } else {
                             displayContent = msg.content;
                         }
-                        appendMessageDOM(msg.role, displayContent, displayThought, imageUrl, displayModel, idx, displayPresetId, displayIsHtml, displayGenImages, displayGenParams, displayMetrics);
+                        appendMessageDOM(msg.role, displayContent, displayThought, imageUrl, displayModel, idx, displayPresetId, displayIsHtml, displayGenImages, displayGenParams, displayMetrics, displayThoughtDuration);
                     });
                 }
                 updateMessageAnchors();
@@ -140,7 +142,7 @@
             // 保存当前回复到版本历史
             if (msg && msg.role === 'assistant') {
                 pendingVersions = (msg.versions || []).slice();
-                pendingVersions.push({ content: msg.content, thought: msg.thought, model: msg.model, presetId: msg.presetId, isHtml: msg.isHtml, images: msg.images, genParams: msg.genParams, metrics: msg.metrics });
+                pendingVersions.push({ content: msg.content, thought: msg.thought, model: msg.model, presetId: msg.presetId, isHtml: msg.isHtml, images: msg.images, genParams: msg.genParams, metrics: msg.metrics, thoughtDurationMs: msg.thoughtDurationMs });
             }
             // 生图模式：保留当前用户消息作为提示词，不额外添加用户消息
             if (imageGenMode) {
@@ -288,7 +290,7 @@
             const oldAs = session.messages[oldAsIdx];
             if (oldAs && oldAs.role === 'assistant') {
                 pendingVersions = (oldAs.versions || []).slice();
-                pendingVersions.push({ content: oldAs.content, thought: oldAs.thought, model: oldAs.model, presetId: oldAs.presetId, isHtml: oldAs.isHtml, images: oldAs.images, metrics: oldAs.metrics });
+                pendingVersions.push({ content: oldAs.content, thought: oldAs.thought, model: oldAs.model, presetId: oldAs.presetId, isHtml: oldAs.isHtml, images: oldAs.images, metrics: oldAs.metrics, thoughtDurationMs: oldAs.thoughtDurationMs });
             }
             // 截断消息列表，仅保留到当前编辑的用户消息及之前的消息
             session.messages = session.messages.slice(0, editingMessageIndex + 1);
@@ -398,7 +400,7 @@
         // ============================================================
         const COLLAPSE_THRESHOLD = 300; // 内容超过此字符数时自动折叠
 
-        function appendMessageDOM(role, content, thought = null, imageUrl = null, msgModel = null, msgIndex = null, msgPresetId = null, isHtml = false, genImages = null, genParams = null, msgMetrics = null) {
+        function appendMessageDOM(role, content, thought = null, imageUrl = null, msgModel = null, msgIndex = null, msgPresetId = null, isHtml = false, genImages = null, genParams = null, msgMetrics = null, thoughtDurationMs = null) {
             welcomeScreen.style.display = 'none';
             
             const blockDiv = document.createElement('div');
@@ -419,9 +421,10 @@
                     thoughtHtml = marked.parse(pr.text);
                     thoughtMathMap = pr.mathMap;
                 }
+                const durationText = thoughtDurationMs != null ? `(${formatThoughtDuration(thoughtDurationMs)})` : '';
                 const barInner = isThinking
-                    ? '<span class="thinking-dots"><span></span><span></span><span></span></span><span class="thought-label">思考中</span>'
-                    : '<span class="thought-label">思考过程</span><svg class="thought-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>';
+                    ? '<span class="thinking-dots"><span></span><span></span><span></span></span><span class="thought-label">请求中</span>'
+                    : `<span class="thought-label">思考过程${durationText}</span><svg class="thought-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>`;
                 thoughtDiv.innerHTML = `
                     <div class="thought-bar">
                         ${barInner}
@@ -535,9 +538,9 @@
                 if (totalVersions > 1) {
                     const currentVer = totalVersions - dv;
                     versionNavHtml = `<span class="version-nav" data-msg-idx="${msgIndex}" style="display:inline-flex;align-items:center;gap:3px;user-select:none;flex-shrink:0;">
-                        <span onclick="event.stopPropagation();switchVersion(this,1)" style="cursor:pointer;opacity:0.4;font-size:16px;transition:opacity 0.15s;line-height:1;font-weight:600;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='0.4'">◂</span>
+                        <svg onclick="event.stopPropagation();switchVersion(this,1)" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="cursor:pointer;opacity:0.4;transition:opacity 0.15s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='0.4'"><polyline points="15 18 9 12 15 6"></polyline></svg>
                         <span style="font-size:12px;color:var(--text-muted);">${currentVer}/${totalVersions}</span>
-                        <span onclick="event.stopPropagation();switchVersion(this,-1)" style="cursor:pointer;opacity:0.4;font-size:16px;transition:opacity 0.15s;line-height:1;font-weight:600;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='0.4'">▸</span>
+                        <svg onclick="event.stopPropagation();switchVersion(this,-1)" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="cursor:pointer;opacity:0.4;transition:opacity 0.15s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='0.4'"><polyline points="9 18 15 12 9 6"></polyline></svg>
                     </span>`;
                 }
                 const delTitle = totalVersions > 1 ? '删除此版本' : '删除此回复';
@@ -571,7 +574,7 @@
                     <svg onclick="deleteMessage(this)" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" title="${delTitle}"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                     ${genExtraBtns}
                     ${versionNavHtml}
-                    <span class="msg-model-tag" onclick="event.stopPropagation(); retryWithDropdown(this.closest('.message-block'))">${msgLogoHtml}${escapeHtml(displayModel)}</span>
+                    <span class="msg-model-tag" onclick="event.stopPropagation(); retryWithDropdown(this.closest('.message-block'))">${msgLogoHtml}${escapeHtml(displayModel)}<svg class="msg-model-arrow" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg></span>
                     ${metricsHtml}
                     ${genParamsHtml}
                     ${presetTagHtml}

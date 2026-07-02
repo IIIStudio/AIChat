@@ -67,7 +67,8 @@
         .message { display: flex; flex-direction: column; max-width: 100%; }
         
         .message.user { align-self: flex-end; align-items: flex-end; max-width: 85%; }
-        .message.user.editing { max-width: 100%; align-self: stretch; align-items: stretch; }
+        .message.user.editing { max-width: 100%; align-self: stretch; }
+        .message.user.editing .collapse-wrapper { width: 100%; }
         .message.assistant { align-self: stretch; align-items: flex-start; }
 
         .message-content {
@@ -96,5 +97,6 @@
         .message-actions svg:hover { color: var(--text-main); }
         .msg-model-tag { display: inline-flex; align-items: center; font-size: 11px; color: var(--text-muted); cursor: pointer; padding: 2px 8px; border-radius: 10px; border: 1px solid transparent; margin-left: auto; transition: all 0.15s; user-select: none; white-space: nowrap; flex-shrink: 0; }
         .msg-model-tag:hover { border-color: var(--border-color); color: var(--text-main); }
+        .msg-model-tag .msg-model-arrow { opacity: 0.4; flex-shrink: 0; margin-left: 2px; }
         .msg-preset-tag { display: inline-flex; align-items: center; font-size: 11px; color: var(--text-muted); padding: 2px 8px; border-radius: 10px; border: 1px solid var(--border-color); user-select: none; white-space: nowrap; flex-shrink: 0; }
         .msg-genparams-tag { display: inline-flex; align-items: center; font-size: 10px; color: var(--text-muted); padding: 2px 8px; border-radius: 10px; border: 1px dashed var(--border-color); user-select: none; white-space: nowrap; flex-shrink: 0; cursor: default; }

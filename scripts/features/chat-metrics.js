@@ -87,6 +87,20 @@
         }
 
         /**
+         * 【聊天指标/展示格式】【思考时长】格式化思考过程耗时
+         * @param {number|null} ms - 毫秒时长
+         * @returns {string} - 展示文本，如"用时3秒"或"用时2分15秒"
+         */
+        function formatThoughtDuration(ms) {
+            if (ms == null || ms < 0) return '';
+            const totalSec = Math.floor(ms / 1000);
+            if (totalSec < 60) return `用时${totalSec}秒`;
+            const min = Math.floor(totalSec / 60);
+            const sec = totalSec % 60;
+            return `用时${min}分${sec}秒`;
+        }
+
+        /**
          * 【聊天指标/展示格式】【指标文案】格式化响应指标展示文本
          * @param {Object} metrics - 响应指标
          * @returns {string} - 展示文本
