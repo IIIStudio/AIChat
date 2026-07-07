@@ -735,6 +735,21 @@
             white-space: nowrap;
         }
         .gen-control-toggle:hover { border-color: var(--text-main); color: var(--text-main); }
+        .gen-size-btns { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+        .gen-size-btn {
+            font-size: 12px;
+            color: var(--text-muted);
+            cursor: pointer;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 5px 10px;
+            background: var(--bg-surface);
+            transition: all 0.15s;
+            user-select: none;
+            white-space: nowrap;
+        }
+        .gen-size-btn:hover { border-color: var(--text-muted); color: var(--text-main); }
+        .gen-size-btn.active { background: var(--text-main); color: var(--text-on-dark); border-color: var(--text-main); }
         .gen-control-upload {
             display: inline-flex;
             align-items: center;
@@ -1670,19 +1685,20 @@
                 </div>
                 <div class="gen-row">
                     <label>尺寸</label>
-                    <select id="genSizePreset" onchange="onGenSizeChange()" style="width:110px;flex:none;">
-                        <option value="1024x1024">1:1 (1024)</option>
-                        <option value="1024x768">4:3</option>
-                        <option value="768x1024">3:4</option>
-                        <option value="1024x576">16:9</option>
-                        <option value="576x1024">9:16</option>
-                        <option value="custom">自定义</option>
-                    </select>
+                    <div class="gen-size-btns" id="genSizeBtns">
+                        <span class="gen-size-btn" data-size="1024x1024">1:1</span>
+                        <span class="gen-size-btn" data-size="1024x768">4:3</span>
+                        <span class="gen-size-btn" data-size="768x1024">3:4</span>
+                        <span class="gen-size-btn" data-size="1024x576">16:9</span>
+                        <span class="gen-size-btn" data-size="576x1024">9:16</span>
+                        <span class="gen-size-btn" data-size="custom">自定义</span>
+                    </div>
                     <span id="genCustomSize" style="display:none;gap:4px;align-items:center;">
                         <input type="number" id="genWidth" value="1024" min="64" max="2048" style="width:62px;flex:none;">
                         <span style="font-size:12px;color:var(--text-muted);">×</span>
                         <input type="number" id="genHeight" value="1024" min="64" max="2048" style="width:62px;flex:none;">
                     </span>
+                    <input type="hidden" id="genSizePreset" value="1024x1024">
                 </div>
                 <div class="gen-row">
                     <label>控制</label>
@@ -4283,6 +4299,11 @@
             } else {
                 custom.style.display = 'none';
             }
+            // 更新按钮高亮
+            const btns = document.querySelectorAll('#genSizeBtns .gen-size-btn');
+            btns.forEach(b => {
+                b.classList.toggle('active', b.getAttribute('data-size') === preset);
+            });
         }
 
         function getGenSize() {
@@ -4294,6 +4315,16 @@
             }
             return preset;
         }
+
+        // 尺寸按钮点击事件委托
+        document.getElementById('genSizeBtns').addEventListener('click', function(e) {
+            const btn = e.target.closest('.gen-size-btn');
+            if (!btn) return;
+            const size = btn.getAttribute('data-size');
+            document.getElementById('genSizePreset').value = size;
+            onGenSizeChange();
+            saveGenSettings();
+        });
 
         // 生图面板所有控件改变时自动持久化
         (function() {
