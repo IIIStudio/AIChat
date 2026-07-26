@@ -13,7 +13,7 @@
             const newTitle = document.getElementById('renameInput').value.trim();
             if (newTitle && renamingSessionId !== null) {
                 const session = sessions.find(s => s.id === renamingSessionId);
-                if (session) { session.title = newTitle; renderSidebar(); saveSessionsToStorage(); showToast('已重命名'); }
+                if (session) { session.title = newTitle; renderSidebar(); saveSessionsToStorage(renamingSessionId); showToast('已重命名'); }
             }
             closeRenameModal();
         }

@@ -98,7 +98,8 @@
                 currentChatSessionId = data.currentChatSessionId || sessions[0]?.id || null;
                 currentGenSessionId = data.currentGenSessionId || null;
                 normalizeCurrentSessionIds();
-                await saveSessionsToStorage();
+                // 导入时保存所有会话
+                await saveSessionsToStorage(sessions.map(s => s.id));
                 lastRenderedSessionId = null;
                 switchChat(getCurrentId());
             }

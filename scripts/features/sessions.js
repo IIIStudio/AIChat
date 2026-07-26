@@ -10,19 +10,68 @@
             return imageGenMode ? currentGenSessionId : currentChatSessionId;
         }
 
-        async function saveSessionsToStorage() {
+        // 保存会话到 IndexedDB（按会话单独存储，只写变更的会话）
+        // idsToSave: 可选，指定要保存的会话 ID 数组；默认只保存当前会话
+        async function saveSessionsToStorage(idsToSave) {
             try {
-                await dbSet('sessions', { sessions, currentChatSessionId, currentGenSessionId });
+                let ids;
+                if (Array.isArray(idsToSave)) {
+                    ids = idsToSave;
+                } else if (idsToSave != null) {
+                    ids = [idsToSave];
+                } else {
+                    const currentId = getCurrentId();
+                    ids = currentId ? [currentId] : [];
+                }
+                // 逐个保存变更的会话
+                for (const id of ids) {
+                    const session = sessions.find(s => s.id === id);
+                    if (session) await dbSet('session_' + id, session);
+                }
+                // 保存轻量索引（不含消息内容，体积很小）
+                await dbSet('sessions_index', {
+                    sessionIds: sessions.map(s => s.id),
+                    currentChatSessionId,
+                    currentGenSessionId
+                });
             } catch(e) {}
+        }
+
+        // 从 IndexedDB 删除指定会话
+        async function deleteSessionFromStorage(id) {
+            try { await dbDelete('session_' + id); } catch(e) {}
         }
 
         async function loadSessionsFromStorage() {
             try {
-                const saved = await dbGet('sessions');
-                if (saved) {
-                    sessions = saved.sessions || [];
-                    currentChatSessionId = saved.currentChatSessionId || null;
-                    currentGenSessionId = saved.currentGenSessionId || null;
+                // 尝试新格式（按会话单独存储）
+                const index = await dbGet('sessions_index');
+                if (index && index.sessionIds) {
+                    sessions = [];
+                    for (const id of index.sessionIds) {
+                        const session = await dbGet('session_' + id);
+                        if (session) sessions.push(session);
+                    }
+                    currentChatSessionId = index.currentChatSessionId || null;
+                    currentGenSessionId = index.currentGenSessionId || null;
+                } else {
+                    // 兼容旧格式：一次性全量存储
+                    const saved = await dbGet('sessions');
+                    if (saved) {
+                        sessions = saved.sessions || [];
+                        currentChatSessionId = saved.currentChatSessionId || null;
+                        currentGenSessionId = saved.currentGenSessionId || null;
+                        // 迁移到新格式
+                        for (const session of sessions) {
+                            await dbSet('session_' + session.id, session);
+                        }
+                        await dbSet('sessions_index', {
+                            sessionIds: sessions.map(s => s.id),
+                            currentChatSessionId,
+                            currentGenSessionId
+                        });
+                        await dbDelete('sessions');
+                    }
                 }
             } catch(e) {}
             // 确保每种模式至少有一个会话
@@ -57,9 +106,10 @@
         }
 
         function deleteChat(id, event) {
-            event.stopPropagation(); 
+            event.stopPropagation();
             const deletedType = sessions.find(s => s.id === id)?.type;
             sessions = sessions.filter(s => s.id !== id);
+            deleteSessionFromStorage(id);
             const modeSessions = sessions.filter(s => s.type === (imageGenMode ? 'gen' : 'chat'));
             if (modeSessions.length === 0) createNewChat();
             else if (getCurrentId() === id) switchChat(modeSessions[0].id);
@@ -73,7 +123,7 @@
             const session = sessions.find(s => s.id === id);
             if (!session) return;
             session.pinned = !session.pinned;
-            saveSessionsToStorage();
+            saveSessionsToStorage(id);
             renderSidebar();
             showToast(session.pinned ? '已置顶' : '已取消置顶');
         }
@@ -164,8 +214,10 @@
         function batchDelete() {
             if (selectedSessions.size === 0) { showToast('未选择会话'); return; }
             const count = selectedSessions.size;
+            const deletedIds = [...selectedSessions];
             const deletedCurrent = selectedSessions.has(getCurrentId());
             sessions = sessions.filter(s => !selectedSessions.has(s.id));
+            deletedIds.forEach(id => deleteSessionFromStorage(id));
             selectedSessions.clear();
             const modeSessions = sessions.filter(s => s.type === (imageGenMode ? 'gen' : 'chat'));
             if (modeSessions.length === 0) createNewChat();
@@ -178,16 +230,18 @@
 
         function batchPin() {
             if (selectedSessions.size === 0) { showToast('未选择会话'); return; }
+            const ids = [...selectedSessions];
             sessions.forEach(s => { if (selectedSessions.has(s.id)) s.pinned = true; });
-            saveSessionsToStorage();
+            saveSessionsToStorage(ids);
             renderSidebar();
             showToast(`已置顶 ${selectedSessions.size} 个会话`);
         }
 
         function batchUnpin() {
             if (selectedSessions.size === 0) { showToast('未选择会话'); return; }
+            const ids = [...selectedSessions];
             sessions.forEach(s => { if (selectedSessions.has(s.id)) s.pinned = false; });
-            saveSessionsToStorage();
+            saveSessionsToStorage(ids);
             renderSidebar();
             showToast(`已取消置顶 ${selectedSessions.size} 个会话`);
         }
