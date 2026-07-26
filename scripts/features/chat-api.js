@@ -535,9 +535,8 @@
                         realThought = parsed.thought || null;
                         toolCalls = parsed.toolCalls || [];
                         responseProtocolState = parsed.protocolState || null;
-                        markChatMetricFirstToken(metricsTracker, aiReply || realThought || (toolCalls.length > 0 ? 'tool_calls' : ''));
-                        appendChatMetricOutput(metricsTracker, aiReply || realThought || '');
-                        responseMetrics = completeChatMetrics(metricsTracker, aiReply || realThought || '');
+                        // 非流式不统计指标（首字/token/s 不准确）
+                        responseMetrics = null;
                     }
 
                     // 【AI响应/系统】【工具决策】判断 AI 是否决策并生成了工具调用请求
