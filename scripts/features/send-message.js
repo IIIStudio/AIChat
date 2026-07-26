@@ -94,6 +94,7 @@
             try {
                 currentAbortController = new AbortController();
                 setResponding(true);
+                const genStartTime = performance.now();
                 let baseUrl = (provider.apiUrl || '').trim().replace(/\/+$/, '');
                 if (baseUrl.endsWith('/chat/completions')) {
                     baseUrl = baseUrl.slice(0, -'/chat/completions'.length);
@@ -159,9 +160,11 @@
                 }
 
                 // 持久化（使用占位符版本，images 数组单独存储）
+                const genDurationMs = Math.round(performance.now() - genStartTime);
                 const genParams = {
                     size: getGenSize(),
-                    negative: document.getElementById('genNegativePrompt').value.trim() || ''
+                    negative: document.getElementById('genNegativePrompt').value.trim() || '',
+                    durationMs: genDurationMs
                 };
                 const msgData = {
                     role: "assistant",
