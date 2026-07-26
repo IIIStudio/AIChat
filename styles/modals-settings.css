@@ -20,6 +20,18 @@
             gap: 16px;
             max-height: 90vh;
         }
+        /* 设置弹窗固定高度，切换标签时避免抖动 */
+        #settingsModal .modal {
+            height: 80vh;
+            max-height: 80vh;
+        }
+        /* 设置面板填满剩余空间 */
+        #settingsModal .settings-panels,
+        #settingsModal .settings-search-panel,
+        #settingsModal .settings-webdav-panel {
+            flex: 1;
+            min-height: 0;
+        }
         .modal h2 { font-size: 18px; margin-bottom: 8px; }
         .modal label { font-size: 13px; color: var(--text-muted); font-weight: 500; }
         .modal input { width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; outline: none; background: var(--bg-surface); color: var(--text-main); }

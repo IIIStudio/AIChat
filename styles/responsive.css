@@ -195,34 +195,55 @@
                 padding: 8px 18px;
             }
 
+            /* 设置弹窗：小屏适配 */
+            #settingsModal .modal {
+                height: 92vh;
+                max-height: 92vh;
+                padding: 14px;
+                gap: 10px;
+            }
+            .modal-header-row {
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+            .modal-header-row h2 {
+                font-size: 15px;
+            }
             /* 设置面板：垂直堆叠 */
             .settings-panels {
                 flex-direction: column;
-                min-height: auto;
-                max-height: 50vh;
+                min-height: 0;
+                max-height: none;
             }
             .settings-route-tabs {
                 width: 100%;
+                flex-shrink: 0;
             }
             .settings-route-tab {
                 flex: 1;
-                padding: 8px 10px;
+                padding: 8px 6px;
+                font-size: 12px;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
             }
-            .settings-search-panel {
-                min-height: auto;
-                max-height: 50vh;
+            .settings-search-panel,
+            .settings-webdav-panel {
+                min-height: 0;
+                max-height: none;
                 padding: 12px;
             }
             .settings-left {
                 width: 100%;
                 flex-shrink: 0;
-                max-height: 140px;
+                max-height: 120px;
                 border-right: none;
                 border-bottom: 1px solid var(--border-color);
             }
             .settings-right {
                 padding: 12px;
-                max-height: 200px;
+                max-height: none;
+                flex: 1;
             }
             .settings-right label {
                 font-size: 12px;
@@ -243,9 +264,9 @@
                 flex-wrap: wrap;
                 gap: 6px;
             }
-            .modal-header-row {
-                flex-wrap: wrap;
-                gap: 8px;
+            .export-import-btns button {
+                font-size: 11px;
+                padding: 4px 8px;
             }
 
             /* 模型下拉 */
