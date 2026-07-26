@@ -130,6 +130,31 @@
             transition: all 0.15s;
         }
         .gen-control-preview .gen-ctrl-remove:hover { color: #cc4444; border-color: #cc4444; }
+        /* 尺寸预设按钮组 */
+        .gen-size-btns {
+            display: inline-flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            flex: 1;
+        }
+        .gen-size-btn {
+            font-size: 12px;
+            padding: 5px 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            background: var(--bg-surface);
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.15s;
+            user-select: none;
+            white-space: nowrap;
+        }
+        .gen-size-btn:hover { border-color: var(--text-main); color: var(--text-main); }
+        .gen-size-btn.active {
+            background: var(--black-btn);
+            color: #fff;
+            border-color: var(--black-btn);
+        }
 
         /* --- 生成图片展示 --- */
         .generated-images {

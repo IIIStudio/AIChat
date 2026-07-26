@@ -204,6 +204,10 @@
             } else {
                 custom.style.display = 'none';
             }
+            // 同步按钮高亮
+            document.querySelectorAll('.gen-size-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.value === preset);
+            });
         }
 
         function getGenSize() {
@@ -232,6 +236,18 @@
                     });
                 }
             });
+        })();
+
+        // 尺寸预设按钮点击
+        (function() {
+            document.querySelectorAll('.gen-size-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const hidden = document.getElementById('genSizePreset');
+                    hidden.value = btn.dataset.value;
+                    hidden.dispatchEvent(new Event('change'));
+                });
+            });
+            onGenSizeChange(); // 初始化默认高亮
         })();
 
         // 持久化生图设置

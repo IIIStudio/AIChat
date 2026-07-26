@@ -153,14 +153,15 @@
                 </div>
                 <div class="gen-row">
                     <label>尺寸</label>
-                    <select id="genSizePreset" onchange="onGenSizeChange()" style="width:110px;flex:none;">
-                        <option value="1024x1024">1:1 (1024)</option>
-                        <option value="1024x768">4:3</option>
-                        <option value="768x1024">3:4</option>
-                        <option value="1024x576">16:9</option>
-                        <option value="576x1024">9:16</option>
-                        <option value="custom">自定义</option>
-                    </select>
+                    <input type="hidden" id="genSizePreset" value="1024x1024">
+                    <div class="gen-size-btns" role="group" aria-label="尺寸预设">
+                        <button type="button" class="gen-size-btn" data-value="1024x1024">1:1</button>
+                        <button type="button" class="gen-size-btn" data-value="1024x768">4:3</button>
+                        <button type="button" class="gen-size-btn" data-value="768x1024">3:4</button>
+                        <button type="button" class="gen-size-btn" data-value="1024x576">16:9</button>
+                        <button type="button" class="gen-size-btn" data-value="576x1024">9:16</button>
+                        <button type="button" class="gen-size-btn" data-value="custom">自定义</button>
+                    </div>
                     <span id="genCustomSize" style="display:none;gap:4px;align-items:center;">
                         <input type="number" id="genWidth" value="1024" min="64" max="2048" style="width:62px;flex:none;">
                         <span style="font-size:12px;color:var(--text-muted);">×</span>
