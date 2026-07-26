@@ -10,6 +10,20 @@
             return imageGenMode ? currentGenSessionId : currentChatSessionId;
         }
 
+        // 构建轻量索引（含元数据，不含消息内容）
+        function buildSessionIndex() {
+            const sessionMeta = {};
+            sessions.forEach(s => {
+                sessionMeta[s.id] = { title: s.title, type: s.type, pinned: s.pinned, presetId: s.presetId };
+            });
+            return {
+                sessionIds: sessions.map(s => s.id),
+                sessionMeta,
+                currentChatSessionId,
+                currentGenSessionId
+            };
+        }
+
         // 保存会话到 IndexedDB（按会话单独存储，只写变更的会话）
         // idsToSave: 可选，指定要保存的会话 ID 数组；默认只保存当前会话
         async function saveSessionsToStorage(idsToSave) {
@@ -23,17 +37,16 @@
                     const currentId = getCurrentId();
                     ids = currentId ? [currentId] : [];
                 }
-                // 逐个保存变更的会话
+                // 逐个保存变更的会话（去除内部标记）
                 for (const id of ids) {
                     const session = sessions.find(s => s.id === id);
-                    if (session) await dbSet('session_' + id, session);
+                    if (session) {
+                        const { _loaded, ...data } = session;
+                        await dbSet('session_' + id, data);
+                    }
                 }
-                // 保存轻量索引（不含消息内容，体积很小）
-                await dbSet('sessions_index', {
-                    sessionIds: sessions.map(s => s.id),
-                    currentChatSessionId,
-                    currentGenSessionId
-                });
+                // 保存轻量索引（含元数据，不含消息内容，体积很小）
+                await dbSet('sessions_index', buildSessionIndex());
             } catch(e) {}
         }
 
@@ -42,34 +55,64 @@
             try { await dbDelete('session_' + id); } catch(e) {}
         }
 
+        // 按需加载会话消息（如果尚未加载）
+        async function ensureSessionLoaded(id) {
+            const s = sessions.find(s => s.id === id);
+            if (!s || s._loaded) return;
+            try {
+                const full = await dbGet('session_' + id);
+                if (full) {
+                    s.messages = full.messages || [];
+                    s._loaded = true;
+                }
+            } catch(e) {}
+        }
+
         async function loadSessionsFromStorage() {
             try {
-                // 尝试新格式（按会话单独存储）
                 const index = await dbGet('sessions_index');
                 if (index && index.sessionIds) {
-                    sessions = [];
-                    for (const id of index.sessionIds) {
-                        const session = await dbGet('session_' + id);
-                        if (session) sessions.push(session);
+                    if (index.sessionMeta) {
+                        // 新格式：只加载元数据，消息按需加载
+                        sessions = index.sessionIds.map(id => {
+                            const meta = index.sessionMeta[id] || {};
+                            return {
+                                id,
+                                title: meta.title || '会话',
+                                type: meta.type || 'chat',
+                                pinned: meta.pinned || false,
+                                presetId: meta.presetId || null,
+                                messages: [],
+                                _loaded: false
+                            };
+                        });
+                    } else {
+                        // 旧格式（无元数据索引）：全量加载
+                        sessions = [];
+                        for (const id of index.sessionIds) {
+                            const session = await dbGet('session_' + id);
+                            if (session) { session._loaded = true; sessions.push(session); }
+                        }
                     }
                     currentChatSessionId = index.currentChatSessionId || null;
                     currentGenSessionId = index.currentGenSessionId || null;
+                    // 加载当前会话的消息内容
+                    if (currentChatSessionId) await ensureSessionLoaded(currentChatSessionId);
+                    if (currentGenSessionId) await ensureSessionLoaded(currentGenSessionId);
                 } else {
-                    // 兼容旧格式：一次性全量存储
+                    // 兼容最旧格式：一次性全量存储
                     const saved = await dbGet('sessions');
                     if (saved) {
                         sessions = saved.sessions || [];
                         currentChatSessionId = saved.currentChatSessionId || null;
                         currentGenSessionId = saved.currentGenSessionId || null;
+                        sessions.forEach(s => s._loaded = true);
                         // 迁移到新格式
                         for (const session of sessions) {
-                            await dbSet('session_' + session.id, session);
+                            const { _loaded, ...data } = session;
+                            await dbSet('session_' + session.id, data);
                         }
-                        await dbSet('sessions_index', {
-                            sessionIds: sessions.map(s => s.id),
-                            currentChatSessionId,
-                            currentGenSessionId
-                        });
+                        await dbSet('sessions_index', buildSessionIndex());
                         await dbDelete('sessions');
                     }
                 }
@@ -79,12 +122,12 @@
             const hasGen = sessions.some(s => s.type === 'gen');
             if (!hasChat) {
                 const id = Date.now();
-                sessions.unshift({ id, title: "新会话", messages: [], presetId: activePresetId, pinned: false, type: 'chat' });
+                sessions.unshift({ id, title: "新会话", messages: [], presetId: activePresetId, pinned: false, type: 'chat', _loaded: true });
                 currentChatSessionId = id;
             }
             if (!hasGen) {
                 const id = Date.now() + 1;
-                sessions.unshift({ id, title: "新会话", messages: [], presetId: null, pinned: false, type: 'gen' });
+                sessions.unshift({ id, title: "新会话", messages: [], presetId: null, pinned: false, type: 'gen', _loaded: true });
                 currentGenSessionId = id;
             }
             // 校验当前 ID 存在
@@ -99,7 +142,7 @@
         function createNewChat() {
             const newId = Date.now();
             const sType = imageGenMode ? 'gen' : 'chat';
-            sessions.unshift({ id: newId, title: "新会话", messages: [], presetId: sType === 'chat' ? activePresetId : null, pinned: false, type: sType });
+            sessions.unshift({ id: newId, title: "新会话", messages: [], presetId: sType === 'chat' ? activePresetId : null, pinned: false, type: sType, _loaded: true });
             switchChat(newId);
             saveSessionsToStorage();
             closeSidebarOnMobile();
@@ -155,7 +198,12 @@
             // 只有会话 ID 变化才重建聊天区（避免 base64 图片重新解码）
             if (id !== lastRenderedSessionId) {
                 lastRenderedSessionId = id;
-                renderChatArea();
+                // 按需加载会话消息
+                if (s && !s._loaded) {
+                    ensureSessionLoaded(id).then(() => renderChatArea());
+                } else {
+                    renderChatArea();
+                }
             }
             // 移动端选择会话后自动收起侧边栏
             closeSidebarOnMobile();

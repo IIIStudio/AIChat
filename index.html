@@ -3,6 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script>
+        // 在渲染前恢复模式，避免闪烁
+        (function(){try{const m=localStorage.getItem('chatGenMode');if(m==='gen'||m==='fav')document.documentElement.setAttribute('data-mode',m);}catch(e){}})();
+    </script>
     <meta name="description" content="一个支持多模型切换、图片识别、流式输出、Markdown 渲染的 AI 对话客户端，兼容 OpenAI 格式 API，支持多运营商管理与参数预设, 文生图, z-image-turbo。">
     <meta name="keywords" content="AI Chat, 多模型切换, 图片识别, Markdown, 流式输出, OpenAI API, 参数预设, 大模型对话, LLM, 文生图, z-image-turbo">
     <link rel="icon" type="image/png" href="image/1.png">

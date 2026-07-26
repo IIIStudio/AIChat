@@ -95,6 +95,7 @@
             // 4. 恢复会话历史
             if (data.sessions && Array.isArray(data.sessions)) {
                 sessions = data.sessions;
+                sessions.forEach(s => s._loaded = true);
                 currentChatSessionId = data.currentChatSessionId || sessions[0]?.id || null;
                 currentGenSessionId = data.currentGenSessionId || null;
                 normalizeCurrentSessionIds();

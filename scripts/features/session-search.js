@@ -48,7 +48,7 @@
             performSearch();
         }
 
-        function performSearch() {
+        async function performSearch() {
             const query = document.getElementById('searchInput').value.trim().toLowerCase();
             const resultsDiv = document.getElementById('searchResults');
             const clearBtn = document.getElementById('searchClearBtn');
@@ -60,6 +60,11 @@
                 resultsDiv.innerHTML = '<div style="color:var(--text-muted);padding:20px 0;font-size:13px;text-align:center;">输入关键词搜索会话</div>';
                 statsDiv.style.display = 'none';
                 return;
+            }
+
+            // 搜索前确保所有会话消息已加载
+            for (const s of sessions) {
+                if (!s._loaded) await ensureSessionLoaded(s.id);
             }
 
             const results = [];
