@@ -6,7 +6,7 @@
 
 ![](image/4.jpg)
 
-![](image/5.png)
+![](image/6.jpg)
 
 ## 快速开始
 
