@@ -32,6 +32,14 @@
             flex: 1;
             min-height: 0;
         }
+        /* 标签切换淡入动画 */
+        .settings-panel-fade {
+            animation: settingsPanelFadeIn 0.2s ease;
+        }
+        @keyframes settingsPanelFadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
         .modal h2 { font-size: 18px; margin-bottom: 8px; }
         .modal label { font-size: 13px; color: var(--text-muted); font-weight: 500; }
         .modal input { width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; outline: none; background: var(--bg-surface); color: var(--text-main); }

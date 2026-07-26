@@ -225,10 +225,16 @@
             if (searchTab) searchTab.classList.toggle('active', isSearchRoute);
             if (webDavTab) webDavTab.classList.toggle('active', isWebDavRoute);
 
-            // 2. 切换路由对应的编辑面板
-            if (modelPanels) modelPanels.style.display = isModelsRoute ? 'flex' : 'none';
-            if (searchPanel) searchPanel.style.display = isSearchRoute ? 'flex' : 'none';
-            if (webDavPanel) webDavPanel.style.display = isWebDavRoute ? 'flex' : 'none';
+            // 2. 切换路由对应的编辑面板（带淡入动画）
+            const panels = [modelPanels, searchPanel, webDavPanel];
+            const activePanel = isModelsRoute ? modelPanels : (isSearchRoute ? searchPanel : webDavPanel);
+            panels.forEach(p => { if (p) { p.style.display = 'none'; p.classList.remove('settings-panel-fade'); } });
+            if (activePanel) {
+                activePanel.style.display = 'flex';
+                // 触发 reflow 后添加动画类
+                void activePanel.offsetWidth;
+                activePanel.classList.add('settings-panel-fade');
+            }
             if (title) {
                 title.textContent = isWebDavRoute ? 'WebDAV 备份恢复' : (isSearchRoute ? '网络搜索配置' : '模型 API 配置');
             }
