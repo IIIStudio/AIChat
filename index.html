@@ -362,7 +362,14 @@
 
             <div class="preset-section">
                 <div class="preset-edit-row"><label>名称</label><input type="text" id="presetEditName" placeholder="预设名称"></div>
-                <div class="preset-edit-row"><label>提示词</label><textarea id="presetEditSysPrompt" placeholder="System Prompt，为空则不注入"></textarea></div>
+                <div class="preset-edit-row"><label>提示词</label>
+                    <div class="prompt-expand-wrap">
+                        <textarea id="presetEditSysPrompt" placeholder="System Prompt，为空则不注入"></textarea>
+                        <button class="prompt-expand-btn" onclick="openPromptExpand()" title="放大编辑">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6"></path><path d="M9 21H3v-6"></path><path d="M21 3l-7 7"></path><path d="M3 21l7-7"></path></svg>
+                        </button>
+                    </div>
+                </div>
             </div>
 
             <div class="preset-section">
@@ -451,6 +458,17 @@
     <div class="img-lightbox" id="imgLightbox" onclick="closeImgLightbox()">
         <span class="img-lightbox-close" onclick="event.stopPropagation();closeImgLightbox()">✕</span>
         <img id="imgLightboxImg" src="">
+    </div>
+
+    <!-- 提示词放大编辑 -->
+    <div class="prompt-expand-overlay" id="promptExpandOverlay" onclick="closePromptExpand()">
+        <div class="prompt-expand-modal" onclick="event.stopPropagation()">
+            <div class="prompt-expand-header">
+                <span>编辑提示词</span>
+                <button class="prompt-expand-done" onclick="closePromptExpand()">完成</button>
+            </div>
+            <textarea id="promptExpandTextarea" placeholder="System Prompt，为空则不注入"></textarea>
+        </div>
     </div>
 </body>
 </html>

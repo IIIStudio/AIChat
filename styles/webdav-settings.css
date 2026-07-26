@@ -54,7 +54,7 @@
             background: var(--bg-surface);
             color: var(--text-muted);
             cursor: pointer;
-            transition: all 0.2s;
+            /* transition removed for low-end devices */
         }
         .webdav-actions button:hover {
             border-color: var(--text-main);

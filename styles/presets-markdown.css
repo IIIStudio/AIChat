@@ -33,11 +33,9 @@
         .preset-edit-row input, .preset-edit-row textarea, .preset-edit-row select {
             flex: 1; padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 8px;
             font-size: 13px; outline: none; background: var(--bg-surface); color: var(--text-main);
-            transition: border-color 0.15s, box-shadow 0.15s;
         }
         .preset-edit-row input:focus, .preset-edit-row textarea:focus {
             border-color: var(--text-main);
-            box-shadow: 0 0 0 3px rgba(128,128,128,0.1);
         }
         .preset-edit-row textarea {
             min-height: 72px; resize: vertical; line-height: 1.5;
@@ -47,6 +45,55 @@
         .preset-edit-row textarea::-webkit-scrollbar-track { background: transparent; }
         .preset-edit-row textarea::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 3px; }
         .preset-edit-row textarea:hover::-webkit-scrollbar-thumb { background: var(--text-muted); }
+
+        /* 提示词放大编辑 */
+        .prompt-expand-wrap { position: relative; flex: 1; display: flex; }
+        .prompt-expand-wrap textarea { width: 100%; }
+        .prompt-expand-btn {
+            position: absolute; top: 6px; right: 6px;
+            width: 26px; height: 26px; border-radius: 6px;
+            border: 1px solid var(--border-color); background: var(--bg-surface);
+            color: var(--text-muted); cursor: pointer;
+            display: inline-flex; align-items: center; justify-content: center;
+            opacity: 0;
+            z-index: 2;
+        }
+        .prompt-expand-wrap:hover .prompt-expand-btn { opacity: 1; }
+        .prompt-expand-btn:hover { color: var(--text-main); border-color: var(--text-main); }
+
+        .prompt-expand-overlay {
+            display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: var(--modal-overlay);
+            z-index: 200; justify-content: center; align-items: center;
+        }
+        .prompt-expand-overlay.show { display: flex; }
+        .prompt-expand-modal {
+            width: 90vw; max-width: 800px; height: 80vh;
+            background: var(--bg-surface); border-radius: 14px;
+            display: flex; flex-direction: column;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+        }
+        .prompt-expand-header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 16px 20px; border-bottom: 1px solid var(--border-light);
+            font-size: 15px; font-weight: 600; color: var(--text-main);
+        }
+        .prompt-expand-done {
+            padding: 6px 18px; border-radius: 8px; border: none;
+            background: var(--black-btn); color: var(--text-on-dark);
+            font-size: 13px; cursor: pointer;
+        }
+        .prompt-expand-done:hover { opacity: 0.85; }
+        .prompt-expand-modal textarea {
+            flex: 1; border: none; outline: none; resize: none;
+            padding: 16px 20px; font-size: 14px; line-height: 1.7;
+            background: var(--bg-surface); color: var(--text-main);
+            font-family: inherit;
+            scrollbar-width: thin; scrollbar-color: var(--border-color) transparent;
+        }
+        .prompt-expand-modal textarea::-webkit-scrollbar { width: 5px; }
+        .prompt-expand-modal textarea::-webkit-scrollbar-track { background: transparent; }
+        .prompt-expand-modal textarea::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 3px; }
 
         /* 滑动条参数区 */
         .preset-slider-group {
@@ -66,19 +113,13 @@
         .preset-slider {
             flex: 1; -webkit-appearance: none; appearance: none;
             height: 4px; border-radius: 2px; background: var(--border-color);
-            outline: none; transition: background 0.15s; cursor: pointer;
+            outline: none; cursor: pointer;
         }
         .preset-slider:hover { background: var(--text-muted); }
         .preset-slider::-webkit-slider-thumb {
             -webkit-appearance: none; appearance: none;
             width: 16px; height: 16px; border-radius: 50%;
             background: var(--text-main); cursor: pointer; border: none;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.15);
-            transition: transform 0.15s, box-shadow 0.15s;
-        }
-        .preset-slider::-webkit-slider-thumb:hover {
-            transform: scale(1.2);
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
         }
         .preset-slider::-moz-range-thumb {
             width: 16px; height: 16px; border-radius: 50%;
@@ -94,7 +135,7 @@
             font-size: 13px; padding: 7px 18px; border-radius: 8px;
             border: 1px solid var(--border-color); cursor: pointer;
             background: var(--bg-surface); color: var(--text-muted);
-            transition: all 0.15s; user-select: none;
+            user-select: none;
         }
         .preset-stream-opt:hover { border-color: var(--text-muted); color: var(--text-main); }
         .preset-stream-opt.active {

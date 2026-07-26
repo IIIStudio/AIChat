@@ -111,6 +111,23 @@
             editingPresetId = null;
         }
 
+        // 提示词放大编辑
+        function openPromptExpand() {
+            const src = document.getElementById('presetEditSysPrompt');
+            const overlay = document.getElementById('promptExpandOverlay');
+            const textarea = document.getElementById('promptExpandTextarea');
+            textarea.value = src.value;
+            overlay.classList.add('show');
+            setTimeout(() => textarea.focus(), 100);
+        }
+
+        function closePromptExpand() {
+            const overlay = document.getElementById('promptExpandOverlay');
+            const textarea = document.getElementById('promptExpandTextarea');
+            document.getElementById('presetEditSysPrompt').value = textarea.value;
+            overlay.classList.remove('show');
+        }
+
         function savePreset() {
             const name = document.getElementById('presetEditName').value.trim() || '未命名';
             const systemPrompt = document.getElementById('presetEditSysPrompt').value.trim();
