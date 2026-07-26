@@ -100,7 +100,7 @@
             const pp = p ? p.presence_penalty : 0;
             document.getElementById('presetEditPp').value = pp;
             document.getElementById('ppVal').textContent = pp;
-            const stream = p ? p.stream : false;
+            const stream = p ? p.stream : true;
             selectStream(stream);
             document.getElementById('presetDeleteBtn').style.display = id ? '' : 'none';
             document.getElementById('presetEditModal').style.display = 'flex';
