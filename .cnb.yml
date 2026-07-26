@@ -1,3 +1,10 @@
+$:
+  vscode:
+    - docker:
+        image: docker.cnb.cool/iiistudio/os/docker/python:3.12.11
+      services:
+        - vscode
+        - docker
 main:
   push:
     - services:
