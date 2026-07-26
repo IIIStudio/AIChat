@@ -100,28 +100,16 @@
                 }
                 const genUrl = baseUrl + '/images/generations';
 
-                const seedVal = parseInt(document.getElementById('genSeed').value) || 0;
                 const body = {
                     model: activeModel,
                     prompt: prompt,
                     num_images_per_prompt: 1,
                     negative_prompt: document.getElementById('genNegativePrompt').value.trim() || undefined,
-                    num_inference_steps: parseInt(document.getElementById('genSteps').value) || 9,
-                    guidance_scale: parseFloat(document.getElementById('genGuidanceScale').value) || 1,
-                    image_scale: parseFloat(document.getElementById('genImageScale').value) || 1,
+                    num_inference_steps: 9,
+                    guidance_scale: 1,
+                    image_scale: 1,
                     size: getGenSize(),
                 };
-                if (seedVal !== 0) body.seed = seedVal; // 0=随机，不传
-
-                // 控制模式
-                const controlMode = document.getElementById('genControlMode').value;
-                if (controlMode) {
-                    body.control_mode = controlMode;
-                    body.control_context_scale = parseFloat(document.getElementById('genControlScale').value) || 0.75;
-                    if (genControlImage) {
-                        body.control_image = genControlImage.base64;
-                    }
-                }
 
                 const response = await fetch(genUrl, {
                     method: 'POST',
@@ -173,13 +161,7 @@
                 // 持久化（使用占位符版本，images 数组单独存储）
                 const genParams = {
                     size: getGenSize(),
-                    steps: parseInt(document.getElementById('genSteps').value) || 9,
-                    guidance: parseFloat(document.getElementById('genGuidanceScale').value) || 1,
-                    imgScale: parseFloat(document.getElementById('genImageScale').value) || 1,
-                    seed: seedVal,
-                    negative: document.getElementById('genNegativePrompt').value.trim() || '',
-                    control: document.getElementById('genControlMode').value || '',
-                    controlScale: document.getElementById('genControlScale').value || ''
+                    negative: document.getElementById('genNegativePrompt').value.trim() || ''
                 };
                 const msgData = {
                     role: "assistant",

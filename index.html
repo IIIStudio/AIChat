@@ -141,21 +141,6 @@
                     <input type="text" id="genNegativePrompt" placeholder="blurry ugly bad" maxlength="500">
                 </div>
                 <div class="gen-row">
-                    <label>步数</label>
-                    <input type="range" id="genSteps" min="1" max="50" value="9" oninput="document.getElementById('genStepsVal').textContent=this.value">
-                    <span class="val-tag" id="genStepsVal">9</span>
-                    <label>种子</label>
-                    <input type="number" id="genSeed" value="" min="0" max="4294967295" placeholder="随机" style="width:80px;flex:none;">
-                </div>
-                <div class="gen-row">
-                    <label>引导</label>
-                    <input type="range" id="genGuidanceScale" min="0" max="20" step="0.1" value="1" oninput="document.getElementById('genGuidanceScaleVal').textContent=this.value">
-                    <span class="val-tag" id="genGuidanceScaleVal">1</span>
-                    <label>图尺度</label>
-                    <input type="range" id="genImageScale" min="0" max="1" step="0.05" value="1" oninput="document.getElementById('genImageScaleVal').textContent=this.value">
-                    <span class="val-tag" id="genImageScaleVal">1</span>
-                </div>
-                <div class="gen-row">
                     <label>尺寸</label>
                     <input type="hidden" id="genSizePreset" value="1024x1024">
                     <div class="gen-size-btns" role="group" aria-label="尺寸预设">
@@ -171,32 +156,6 @@
                         <span style="font-size:12px;color:var(--text-muted);">×</span>
                         <input type="number" id="genHeight" value="1024" min="64" max="2048" style="width:62px;flex:none;">
                     </span>
-                </div>
-                <div class="gen-row">
-                    <label>控制</label>
-                    <select id="genControlMode" style="width:100px;flex:none;">
-                        <option value="">无</option>
-                        <option value="HED">HED</option>
-                        <option value="Canny">Canny</option>
-                        <option value="Depth">Depth</option>
-                        <option value="Pose">Pose</option>
-                    </select>
-                    <label style="margin-left:8px;">强度</label>
-                    <input type="range" id="genControlScale" min="0" max="1" step="0.05" value="0.75" oninput="document.getElementById('genControlScaleVal').textContent=this.value" style="flex:1;">
-                    <span class="val-tag" id="genControlScaleVal">0.75</span>
-                </div>
-                <div class="gen-row" id="genControlUploadRow" style="display:none;">
-                    <label>参考图</label>
-                    <span class="gen-control-upload" onclick="document.getElementById('genControlFileInput').click()">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-                        上传
-                    </span>
-                    <input type="file" id="genControlFileInput" style="display:none;" accept="image/*" onchange="handleGenControlFile(this)">
-                    <div class="gen-control-preview" id="genControlPreview" style="display:none;">
-                        <img id="genControlPreviewImg" src="">
-                        <span class="gen-ctrl-name" id="genControlPreviewName"></span>
-                        <span class="gen-ctrl-remove" onclick="clearGenControlImage()">✕ 移除</span>
-                    </div>
                 </div>
                 </div><!-- gen-collapse-body -->
             </div>

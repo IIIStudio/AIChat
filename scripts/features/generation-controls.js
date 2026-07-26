@@ -1,29 +1,14 @@
         // ============================================================
         //  生图模式
         // ============================================================
-        let genControlImage = null; // { base64, name }
+        let genControlImage = null; // { base64, name }（保留变量以兼容引用）
 
         function handleGenControlFile(input) {
-            if (input.files && input.files[0]) {
-                const file = input.files[0];
-                if (!file.type.startsWith('image/')) { showToast('仅支持图片文件'); input.value = ''; return; }
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    genControlImage = { base64: e.target.result, name: file.name };
-                    document.getElementById('genControlPreviewImg').src = e.target.result;
-                    document.getElementById('genControlPreviewName').textContent = file.name;
-                    document.getElementById('genControlPreview').style.display = 'flex';
-                };
-                reader.readAsDataURL(file);
-                input.value = '';
-            }
+            // 控制模式已移除
         }
 
         function clearGenControlImage() {
             genControlImage = null;
-            document.getElementById('genControlPreview').style.display = 'none';
-            document.getElementById('genControlPreviewImg').src = '';
-            document.getElementById('genControlFileInput').value = '';
         }
 
         function setMode(mode) {
@@ -169,12 +154,6 @@
         function buildGenSummary() {
             const parts = [];
             parts.push(getGenSize());
-            const steps = document.getElementById('genSteps').value;
-            if (steps != 9) parts.push('步' + steps);
-            const gs = document.getElementById('genGuidanceScale').value;
-            if (gs != 1) parts.push('引导' + gs);
-            const ctrl = document.getElementById('genControlMode').value;
-            if (ctrl) parts.push(ctrl);
             return parts.join(', ');
         }
 
@@ -190,14 +169,7 @@
         }
 
         function updateGenControlUploadVisibility() {
-            const mode = document.getElementById('genControlMode').value;
-            const row = document.getElementById('genControlUploadRow');
-            if (mode) {
-                row.style.display = 'flex';
-            } else {
-                row.style.display = 'none';
-                if (genControlImage) clearGenControlImage();
-            }
+            // 控制模式已移除，此函数保留为空操作以兼容调用
         }
 
         function onGenSizeChange() {
@@ -226,9 +198,7 @@
 
         // 生图面板所有控件改变时自动持久化
         (function() {
-            const ids = ['genNegativePrompt','genSteps','genSeed',
-                'genGuidanceScale','genImageScale','genSizePreset','genWidth','genHeight',
-                'genControlMode','genControlScale'];
+            const ids = ['genNegativePrompt','genSizePreset','genWidth','genHeight'];
             ids.forEach(id => {
                 const el = document.getElementById(id);
                 if (el) {
@@ -236,7 +206,6 @@
                     el.addEventListener('change', () => {
                         saveGenSettings();
                         if (id === 'genSizePreset') onGenSizeChange();
-                        if (id === 'genControlMode') updateGenControlUploadVisibility();
                     });
                 }
             });
@@ -254,20 +223,26 @@
             onGenSizeChange(); // 初始化默认高亮
         })();
 
+        // 输入框聚焦时展开生图参数，离开时折叠（仅生图模式）
+        (function() {
+            const input = document.getElementById('userInput');
+            if (!input) return;
+            input.addEventListener('focus', function() {
+                if (imageGenMode) setGenCollapsed(false);
+            });
+            input.addEventListener('blur', function() {
+                if (imageGenMode) setGenCollapsed(true);
+            });
+        })();
+
         // 持久化生图设置
         function saveGenSettings() {
             try {
                 const s = {
                     np: document.getElementById('genNegativePrompt').value,
-                    steps: document.getElementById('genSteps').value,
-                    seed: document.getElementById('genSeed').value,
-                    guidance: document.getElementById('genGuidanceScale').value,
-                    imgScale: document.getElementById('genImageScale').value,
                     size: document.getElementById('genSizePreset').value,
                     w: document.getElementById('genWidth').value,
                     h: document.getElementById('genHeight').value,
-                    ctrl: document.getElementById('genControlMode').value,
-                    ctrlScale: document.getElementById('genControlScale').value,
                 };
                 localStorage.setItem('chatGenSettings', JSON.stringify(s));
             } catch(e) {}
@@ -279,14 +254,8 @@
                 if (!raw) return;
                 const s = JSON.parse(raw);
                 if (s.np !== undefined) document.getElementById('genNegativePrompt').value = s.np;
-                if (s.steps) { document.getElementById('genSteps').value = s.steps; document.getElementById('genStepsVal').textContent = s.steps; }
-                if (s.seed) document.getElementById('genSeed').value = s.seed;
-                if (s.guidance) { document.getElementById('genGuidanceScale').value = s.guidance; document.getElementById('genGuidanceScaleVal').textContent = s.guidance; }
-                if (s.imgScale) { document.getElementById('genImageScale').value = s.imgScale; document.getElementById('genImageScaleVal').textContent = s.imgScale; }
                 if (s.size) { document.getElementById('genSizePreset').value = s.size; onGenSizeChange(); }
                 if (s.w) document.getElementById('genWidth').value = s.w;
                 if (s.h) document.getElementById('genHeight').value = s.h;
-                if (s.ctrl) { document.getElementById('genControlMode').value = s.ctrl; updateGenControlUploadVisibility(); }
-                if (s.ctrlScale) { document.getElementById('genControlScale').value = s.ctrlScale; document.getElementById('genControlScaleVal').textContent = s.ctrlScale; }
             } catch(e) {}
         }
