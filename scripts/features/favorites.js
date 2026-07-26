@@ -4,11 +4,22 @@
         let favorites = [];
         let favRenderedOnce = false; // 仅在首次初始化时渲染一次
         let favLazyState = null; // 懒加载状态
+        let _favMap = new Map(); // id → favorite 快速索引
+
+        function rebuildFavMap() {
+            _favMap.clear();
+            favorites.forEach(f => _favMap.set(f.id, f));
+        }
+
+        function getFavById(id) {
+            return _favMap.get(Number(id)) || null;
+        }
 
         async function loadFavorites() {
             try {
                 const saved = await dbGet('favorites');
                 if (saved && Array.isArray(saved)) favorites = saved;
+                rebuildFavMap();
             } catch(e) {}
         }
 
@@ -22,7 +33,7 @@
                 showToast('已收藏过此图片');
                 return;
             }
-            favorites.push({
+            const fav = {
                 id: Date.now(),
                 prompt: prompt,
                 imageSrc: src,
@@ -30,16 +41,19 @@
                 tags: [],
                 model: model || '',
                 addedAt: Date.now()
-            });
+            };
+            favorites.push(fav);
+            _favMap.set(fav.id, fav);
             saveFavorites();
-            // 原地追加卡片到瀑布流（避免全量重建）
-            appendFavCard(favorites[favorites.length - 1]);
+            // 原地追加卡片到瀑布流
+            appendFavCard(fav);
             showToast('已收藏');
         }
 
         function removeFavorite(id) {
             const numId = Number(id);
             favorites = favorites.filter(f => f.id !== numId);
+            _favMap.delete(numId);
             saveFavorites();
             // 原地移除卡片，不重建
             const card = document.querySelector('.fav-card[data-fav-id="' + numId + '"]');
@@ -70,7 +84,7 @@
         function addTagToFavorite(favId, tag) {
             tag = tag.trim().replace(/\s+/g, '');
             if (!tag) return;
-            const fav = favorites.find(f => f.id === favId);
+            const fav = getFavById(favId);
             if (!fav) return;
             if (!fav.tags) fav.tags = [];
             if (fav.tags.includes(tag)) { showToast('标签已存在'); return; }
@@ -82,7 +96,7 @@
         }
 
         function removeTagFromFavorite(favId, tag) {
-            const fav = favorites.find(f => f.id === favId);
+            const fav = getFavById(favId);
             if (!fav) return;
             if (!fav.tags) return;
             fav.tags = fav.tags.filter(t => t !== tag);
@@ -96,7 +110,7 @@
             closeFavTagInput();
             const favId = Number(cardEl.getAttribute('data-fav-id'));
             favTagInputCardId = favId;
-            const fav = favorites.find(f => f.id === favId);
+            const fav = getFavById(favId);
             const currentTags = (fav && fav.tags) ? fav.tags : [];
 
             // 收集所有已有标签（去重）
@@ -244,7 +258,7 @@
             const cards = document.querySelectorAll('.fav-card');
             cards.forEach(card => {
                 const favId = Number(card.getAttribute('data-fav-id'));
-                const fav = favorites.find(f => f.id === favId);
+                const fav = getFavById(favId);
                 if (!favFilterTag || (fav && fav.tags && fav.tags.includes(favFilterTag))) {
                     card.style.display = '';
                 } else {
@@ -382,14 +396,30 @@
             return card;
         }
 
-        // 追加新收藏卡片（全量重建以保证横向阅读顺序）
+        // 追加新收藏卡片（增量追加到对应列，不重建已有卡片）
         function appendFavCard(fav) {
             const waterfall = document.getElementById('favWaterfall');
             if (!waterfall) return;
             // 如果有筛选且新卡片不匹配，不追加
             if (favFilterTag && (!fav.tags || !fav.tags.includes(favFilterTag))) return;
-            // 全量重建以保证 CSS 列布局中的横向阅读顺序
-            renderFavorites();
+            // 如果是空状态提示，先清除
+            if (waterfall.querySelector('.fav-empty')) waterfall.innerHTML = '';
+
+            let columns = waterfall.querySelectorAll('.fav-column');
+            // 如果列容器不存在（首次），走全量渲染
+            if (columns.length === 0) { renderFavorites(); return; }
+
+            // 追加到最短的列（保持视觉平衡）
+            let shortest = columns[0];
+            columns.forEach(col => {
+                if (col.offsetHeight < shortest.offsetHeight) shortest = col;
+            });
+            const totalCards = waterfall.querySelectorAll('.fav-card').length;
+            const card = createFavCard(fav, totalCards);
+            shortest.appendChild(card);
+            // 更新懒加载状态
+            if (favLazyState) favLazyState.renderedCount++;
+            renderFavTagBar();
         }
 
         // 获取当前瀑布流的列数
