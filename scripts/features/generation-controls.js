@@ -72,9 +72,10 @@
             renderModelDropdown();
             updateModelDisplay();
             try { localStorage.setItem('chatGenMode', mode); } catch(e) {}
-            // 切换模式时强制重置渲染标记，确保侧边栏按新模式重新渲染
+            // 切换模式时强制刷新侧边栏（模式变了会话列表不同），但不重置聊天区渲染标记
+            // 避免同一会话的图片被重复渲染
             if (mode !== 'fav') {
-                lastRenderedSessionId = null;
+                renderSidebar();
                 switchChat(getCurrentId());
             }
             else renderSidebar();
