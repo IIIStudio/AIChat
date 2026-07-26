@@ -3,6 +3,7 @@
         // ============================================================
         let favorites = [];
         let favRenderedOnce = false; // 仅在首次初始化时渲染一次
+        let favLazyState = null; // 懒加载状态
 
         async function loadFavorites() {
             try {
@@ -389,6 +390,7 @@
             if (!waterfall) return;
             closeFavTagInput();
             renderFavTagBar();
+            favLazyState = null;
 
             if (favorites.length === 0) {
                 waterfall.innerHTML = '<div class="fav-empty"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg><h3>暂无收藏</h3><p>在生图模式下点击图片旁的收藏按钮即可收藏</p></div>';
@@ -411,18 +413,46 @@
                 columns.push(col);
             }
 
-            const batchSize = 10;
-            let i = 0;
-            function renderBatch() {
-                const batch = allFavs.slice(i, i + batchSize);
-                i += batchSize;
-                batch.forEach((fav, idx) => {
-                    const globalIdx = i - batchSize + idx;
-                    const card = createFavCard(fav, globalIdx);
-                    // 按顺序轮流分配到各列：第 0 项 → 第 0 列，第 1 项 → 第 1 列…
-                    columns[globalIdx % N].appendChild(card);
-                });
-                if (i < allFavs.length) requestAnimationFrame(renderBatch);
-            }
-            renderBatch();
+            // 懒加载状态
+            favLazyState = {
+                allFavs,
+                columns,
+                renderedCount: 0,
+                pageSize: 20,
+                N
+            };
+
+            // 渲染首批
+            renderNextFavBatch();
         }
+
+        // 渲染下一批收藏卡片
+        function renderNextFavBatch() {
+            if (!favLazyState) return;
+            const { allFavs, columns, renderedCount, pageSize, N } = favLazyState;
+            if (renderedCount >= allFavs.length) return;
+            const batch = allFavs.slice(renderedCount, renderedCount + pageSize);
+            batch.forEach((fav, idx) => {
+                const globalIdx = renderedCount + idx;
+                const card = createFavCard(fav, globalIdx);
+                columns[globalIdx % N].appendChild(card);
+            });
+            favLazyState.renderedCount += batch.length;
+        }
+
+        // 收藏页滚动懒加载（下滑时加载更多）
+        (function() {
+            const favPage = document.getElementById('favPage');
+            if (!favPage) return;
+            let scrollTimer;
+            favPage.addEventListener('scroll', function() {
+                clearTimeout(scrollTimer);
+                scrollTimer = setTimeout(function() {
+                    if (!favLazyState) return;
+                    if (favLazyState.renderedCount >= favLazyState.allFavs.length) return;
+                    if (favPage.scrollTop + favPage.clientHeight >= favPage.scrollHeight - 300) {
+                        renderNextFavBatch();
+                    }
+                }, 80);
+            });
+        })();
