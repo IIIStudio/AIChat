@@ -104,12 +104,15 @@
         }
         
         .chat-history-icons {
-            display: none;
+            display: flex;
             align-items: center;
             gap: 8px;
             color: var(--text-muted);
             flex-shrink: 0;
             margin-left: 6px;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.15s ease, visibility 0.15s;
         }
         .chat-history-icons div {
             display: flex;
@@ -123,7 +126,10 @@
             background-color: var(--bg-hover);
             color: var(--text-main);
         }
-        .chat-history-item:hover .chat-history-icons, .chat-history-item.active .chat-history-icons { display: flex; }
+        .chat-history-item:hover .chat-history-icons, .chat-history-item.active .chat-history-icons {
+            opacity: 1;
+            visibility: visible;
+        }
 
         /* --- 右侧主体 --- */
         .main-content {

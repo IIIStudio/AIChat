@@ -8,30 +8,99 @@
         .preset-tag { display: inline-flex; align-items: center; gap: 4px; padding: 5px 14px; border-radius: 20px; font-size: 13px; cursor: pointer; border: 1px solid var(--border-color); background: var(--bg-surface); color: var(--text-muted); white-space: nowrap; transition: all 0.15s; user-select: none; flex-shrink: 0; }
         .preset-tag:hover { border-color: var(--text-muted); color: var(--text-main); }
         .preset-tag.active { background: var(--text-main); color: var(--text-on-dark); border-color: var(--text-main); }
-        .preset-edit-row { display: flex; align-items: center; gap: 10px; }
-        .preset-edit-row label { min-width: 80px; font-size: 12px; color: var(--text-muted); font-weight: 500; }
-        .preset-edit-row input, .preset-edit-row textarea, .preset-edit-row select { flex: 1; padding: 7px 10px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 13px; outline: none; background: var(--bg-surface); color: var(--text-main); }
-        .preset-edit-row input:focus, .preset-edit-row textarea:focus { border-color: var(--black-btn); }
-        .preset-edit-row textarea { min-height: 60px; resize: vertical; scrollbar-color: var(--text-main) var(--border-color); scrollbar-width: thin; }
-        .preset-edit-row textarea::-webkit-scrollbar { width: 6px; }
-        .preset-edit-row textarea::-webkit-scrollbar-track { background: var(--border-color); border-radius: 3px; }
-        .preset-edit-row textarea::-webkit-scrollbar-thumb { background: var(--text-main); border-radius: 3px; }
+        /* --- 参数预设编辑弹窗 --- */
+        .preset-edit-modal { gap: 14px; }
+        .preset-edit-modal h2 { font-size: 17px; margin-bottom: 0; font-weight: 600; }
+
+        .preset-section {
+            border: 1px solid var(--border-light);
+            border-radius: 10px;
+            padding: 14px;
+            background: var(--bg-gray);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .preset-section-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-main);
+            margin-bottom: 2px;
+        }
+
+        .preset-edit-row { display: flex; align-items: flex-start; gap: 10px; }
+        .preset-edit-row label { min-width: 52px; font-size: 12px; color: var(--text-muted); font-weight: 500; padding-top: 8px; }
+        .preset-edit-row input, .preset-edit-row textarea, .preset-edit-row select {
+            flex: 1; padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 8px;
+            font-size: 13px; outline: none; background: var(--bg-surface); color: var(--text-main);
+            transition: border-color 0.15s, box-shadow 0.15s;
+        }
+        .preset-edit-row input:focus, .preset-edit-row textarea:focus {
+            border-color: var(--text-main);
+            box-shadow: 0 0 0 3px rgba(128,128,128,0.1);
+        }
+        .preset-edit-row textarea {
+            min-height: 72px; resize: vertical; line-height: 1.5;
+            scrollbar-color: var(--text-main) var(--border-color); scrollbar-width: thin;
+        }
+        .preset-edit-row textarea::-webkit-scrollbar { width: 5px; }
+        .preset-edit-row textarea::-webkit-scrollbar-track { background: transparent; }
+        .preset-edit-row textarea::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 3px; }
+        .preset-edit-row textarea:hover::-webkit-scrollbar-thumb { background: var(--text-muted); }
 
         /* 滑动条参数区 */
-        .preset-slider-group { margin: 1px 0; display: flex; align-items: center; gap: 6px; }
-        .preset-slider-group .slider-label { font-size: 11px; color: var(--text-muted); white-space: nowrap; min-width: 64px; }
-        .preset-slider-group .slider-val { font-size: 10px; font-weight: 500; color: var(--text-muted); background: transparent; padding: 0; border-radius: 0; min-width: 28px; text-align: right; }
-        .preset-slider { flex: 1; -webkit-appearance: none; appearance: none; height: 2px; border-radius: 1px; background: var(--border-color); outline: none; transition: background 0.15s; accent-color: var(--text-main); }
+        .preset-slider-group {
+            display: flex; align-items: center; gap: 10px;
+            padding: 4px 0;
+        }
+        .preset-slider-group .slider-label {
+            font-size: 12px; color: var(--text-main); white-space: nowrap;
+            min-width: 56px; font-weight: 500;
+        }
+        .preset-slider-group .slider-val {
+            font-size: 12px; font-weight: 600; color: var(--text-main);
+            background: var(--bg-surface); padding: 2px 8px; border-radius: 6px;
+            min-width: 36px; text-align: center; border: 1px solid var(--border-color);
+            font-variant-numeric: tabular-nums;
+        }
+        .preset-slider {
+            flex: 1; -webkit-appearance: none; appearance: none;
+            height: 4px; border-radius: 2px; background: var(--border-color);
+            outline: none; transition: background 0.15s; cursor: pointer;
+        }
         .preset-slider:hover { background: var(--text-muted); }
-        .preset-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 12px; height: 12px; border-radius: 50%; background: var(--text-main); cursor: pointer; border: none; box-shadow: 0 0 0 2px rgba(128,128,128,0.15); transition: transform 0.15s, box-shadow 0.15s; }
-        .preset-slider::-webkit-slider-thumb:hover { transform: scale(1.25); box-shadow: 0 0 0 4px rgba(128,128,128,0.15); }
-        .preset-slider::-moz-range-thumb { width: 12px; height: 12px; border-radius: 50%; background: var(--text-main); cursor: pointer; border: none; box-shadow: 0 0 0 2px rgba(128,128,128,0.15); }
-        .preset-slider::-moz-range-track { height: 2px; border-radius: 1px; background: var(--border-color); }
-        .preset-slider::-moz-range-progress { height: 2px; border-radius: 1px; background: var(--text-main); }
-        .preset-stream-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; }
-        .preset-stream-row .stream-label { font-size: 13px; font-weight: 500; color: var(--text-main); }
-        .preset-stream-opt { font-size: 12px; padding: 5px 16px; border-radius: 16px; border: 1px solid var(--border-color); cursor: pointer; background: var(--bg-surface); color: var(--text-muted); transition: all 0.15s; }
-        .preset-stream-opt.active { background: var(--text-main); color: var(--text-on-dark); border-color: var(--text-main); }
+        .preset-slider::-webkit-slider-thumb {
+            -webkit-appearance: none; appearance: none;
+            width: 16px; height: 16px; border-radius: 50%;
+            background: var(--text-main); cursor: pointer; border: none;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+            transition: transform 0.15s, box-shadow 0.15s;
+        }
+        .preset-slider::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        .preset-slider::-moz-range-thumb {
+            width: 16px; height: 16px; border-radius: 50%;
+            background: var(--text-main); cursor: pointer; border: none;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+        }
+        .preset-slider::-moz-range-track { height: 4px; border-radius: 2px; background: var(--border-color); }
+        .preset-slider::-moz-range-progress { height: 4px; border-radius: 2px; background: var(--text-main); }
+
+        /* 流式输出切换 */
+        .preset-stream-row { display: flex; align-items: center; gap: 8px; }
+        .preset-stream-opt {
+            font-size: 13px; padding: 7px 18px; border-radius: 8px;
+            border: 1px solid var(--border-color); cursor: pointer;
+            background: var(--bg-surface); color: var(--text-muted);
+            transition: all 0.15s; user-select: none;
+        }
+        .preset-stream-opt:hover { border-color: var(--text-muted); color: var(--text-main); }
+        .preset-stream-opt.active {
+            background: var(--text-main); color: var(--text-on-dark);
+            border-color: var(--text-main); font-weight: 500;
+        }
 
         /* 图片预览：在输入框内部显示 */
         .image-preview-area { padding: 0 0 6px 0; width: 100%; }

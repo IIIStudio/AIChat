@@ -319,12 +319,16 @@
             }
 
             /* 参数预设编辑 */
+            .preset-section {
+                padding: 12px;
+                gap: 8px;
+            }
             .preset-edit-row {
                 flex-wrap: wrap;
                 gap: 6px;
             }
             .preset-edit-row label {
-                min-width: 60px;
+                min-width: 48px;
                 font-size: 11px;
             }
             .preset-edit-row input,
@@ -332,9 +336,17 @@
             .preset-edit-row select {
                 font-size: 14px;
             }
+            .preset-slider-group {
+                gap: 8px;
+            }
             .preset-slider-group .slider-label {
-                font-size: 10px;
-                min-width: 52px;
+                font-size: 11px;
+                min-width: 48px;
+            }
+            .preset-slider-group .slider-val {
+                font-size: 11px;
+                padding: 1px 6px;
+                min-width: 32px;
             }
 
             /* 折叠按钮 */

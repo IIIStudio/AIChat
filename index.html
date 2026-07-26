@@ -357,40 +357,45 @@
     </div>
 
     <div class="modal-overlay" id="presetEditModal">
-        <div class="modal" style="max-width:540px;">
-            <h2 id="presetEditTitle" style="margin-bottom:12px;">编辑参数预设</h2>
-            <div class="preset-edit-row"><label>名称</label><input type="text" id="presetEditName" placeholder="预设名称"></div>
-            <div class="preset-edit-row"><label>提示词</label><textarea id="presetEditSysPrompt" placeholder="System Prompt，为空则不注入"></textarea></div>
+        <div class="modal preset-edit-modal" style="max-width:540px;">
+            <h2 id="presetEditTitle">编辑参数预设</h2>
 
-            <div class="preset-slider-group">
-                <span class="slider-label">思维发散程度</span>
-                <span class="slider-val" id="tempVal">0.7</span>
-                <input type="range" class="preset-slider" id="presetEditTemp" min="0" max="2" step="0.1" value="0.7" oninput="document.getElementById('tempVal').textContent=this.value">
+            <div class="preset-section">
+                <div class="preset-edit-row"><label>名称</label><input type="text" id="presetEditName" placeholder="预设名称"></div>
+                <div class="preset-edit-row"><label>提示词</label><textarea id="presetEditSysPrompt" placeholder="System Prompt，为空则不注入"></textarea></div>
             </div>
 
-            <div class="preset-slider-group">
-                <span class="slider-label">词汇范围</span>
-                <span class="slider-val" id="topPVal">1</span>
-                <input type="range" class="preset-slider" id="presetEditTopP" min="0" max="1" step="0.05" value="1" oninput="document.getElementById('topPVal').textContent=this.value">
+            <div class="preset-section">
+                <div class="preset-section-title">模型参数</div>
+                <div class="preset-slider-group">
+                    <span class="slider-label">思维发散</span>
+                    <input type="range" class="preset-slider" id="presetEditTemp" min="0" max="2" step="0.1" value="0.7" oninput="document.getElementById('tempVal').textContent=this.value">
+                    <span class="slider-val" id="tempVal">0.7</span>
+                </div>
+                <div class="preset-slider-group">
+                    <span class="slider-label">词汇范围</span>
+                    <input type="range" class="preset-slider" id="presetEditTopP" min="0" max="1" step="0.05" value="1" oninput="document.getElementById('topPVal').textContent=this.value">
+                    <span class="slider-val" id="topPVal">1</span>
+                </div>
+                <div class="preset-slider-group">
+                    <span class="slider-label">重复惩罚</span>
+                    <input type="range" class="preset-slider" id="presetEditFp" min="-2" max="2" step="0.1" value="0" oninput="document.getElementById('fpVal').textContent=this.value">
+                    <span class="slider-val" id="fpVal">0</span>
+                </div>
+                <div class="preset-slider-group">
+                    <span class="slider-label">话题多样性</span>
+                    <input type="range" class="preset-slider" id="presetEditPp" min="-2" max="2" step="0.1" value="0" oninput="document.getElementById('ppVal').textContent=this.value">
+                    <span class="slider-val" id="ppVal">0</span>
+                </div>
             </div>
 
-            <div class="preset-slider-group">
-                <span class="slider-label">重复惩罚</span>
-                <span class="slider-val" id="fpVal">0</span>
-                <input type="range" class="preset-slider" id="presetEditFp" min="-2" max="2" step="0.1" value="0" oninput="document.getElementById('fpVal').textContent=this.value">
-            </div>
-
-            <div class="preset-slider-group">
-                <span class="slider-label">话题多样性</span>
-                <span class="slider-val" id="ppVal">0</span>
-                <input type="range" class="preset-slider" id="presetEditPp" min="-2" max="2" step="0.1" value="0" oninput="document.getElementById('ppVal').textContent=this.value">
-            </div>
-
-            <div class="preset-stream-row">
-                <span class="stream-label">流式输出</span>
-                <span class="preset-stream-opt active" id="streamYes" onclick="selectStream(true)">开</span>
-                <span class="preset-stream-opt" id="streamNo" onclick="selectStream(false)">关</span>
-                <input type="hidden" id="presetEditStream" value="false">
+            <div class="preset-section">
+                <div class="preset-section-title">输出方式</div>
+                <div class="preset-stream-row">
+                    <span class="preset-stream-opt active" id="streamYes" onclick="selectStream(true)">流式输出</span>
+                    <span class="preset-stream-opt" id="streamNo" onclick="selectStream(false)">非流式</span>
+                    <input type="hidden" id="presetEditStream" value="false">
+                </div>
             </div>
 
             <div class="modal-actions" style="justify-content:space-between;margin-top:4px;">
