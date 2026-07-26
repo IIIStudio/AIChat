@@ -152,7 +152,7 @@
         .gen-size-btn:hover { border-color: var(--text-main); color: var(--text-main); }
         .gen-size-btn.active {
             background: var(--black-btn);
-            color: #fff;
+            color: var(--text-on-dark);
             border-color: var(--black-btn);
         }
 

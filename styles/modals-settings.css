@@ -339,7 +339,7 @@
         /* --- 消息锚点导航 --- */
         .message-anchors {
             position: absolute;
-            right: 4px;
+            right: 16px;
             top: 50%;
             transform: translateY(-50%);
             display: flex;
