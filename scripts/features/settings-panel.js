@@ -479,6 +479,7 @@
         // ============================================================
         //  导入导出
         // ============================================================
+        // 导出全部（含会话、收藏）
         function exportProviders() {
             flushCurrentSettingsRoute();
             const data = buildBackupPayload();
@@ -490,6 +491,28 @@
             a.click();
             URL.revokeObjectURL(url);
             showToast(`已导出 (${providers.length}个运营商, ${sessions.length}个会话, ${favorites.length}个收藏)`);
+        }
+
+        // 只导出配置（模型配置 + 参数预设），不含会话和收藏
+        function exportConfigOnly() {
+            flushCurrentSettingsRoute();
+            const data = {
+                providers,
+                activeProviderId,
+                activeModel,
+                webSearchSettings,
+                paramPresets,
+                activePresetId,
+                exportedAt: new Date().toISOString()
+            };
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'chat-config-' + new Date().toISOString().slice(0, 10) + '.json';
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast(`已导出配置 (${providers.length}个运营商, ${paramPresets.length}个预设)`);
         }
 
         function importProviders(input) {

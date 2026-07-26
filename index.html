@@ -296,7 +296,8 @@
             <div class="modal-header-row">
                 <h2 id="settingsModalTitle">模型 API 配置</h2>
                 <div class="export-import-btns" id="settingsExportImportBtns">
-                    <button onclick="exportProviders()">导出 JSON</button>
+                    <button onclick="exportConfigOnly()">导出配置</button>
+                    <button onclick="exportProviders()">导出全部</button>
                     <button onclick="document.getElementById('importFileInput').click()">导入 JSON</button>
                     <input type="file" id="importFileInput" style="display:none;" accept=".json" onchange="importProviders(this)">
                 </div>
