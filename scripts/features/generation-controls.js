@@ -72,8 +72,11 @@
             renderModelDropdown();
             updateModelDisplay();
             try { localStorage.setItem('chatGenMode', mode); } catch(e) {}
-            // 切换到当前模式的会话（switchChat 内部会 renderSidebar + renderChatArea）
-            if (mode !== 'fav') switchChat(getCurrentId());
+            // 切换模式时强制重置渲染标记，确保侧边栏按新模式重新渲染
+            if (mode !== 'fav') {
+                lastRenderedSessionId = null;
+                switchChat(getCurrentId());
+            }
             else renderSidebar();
         }
 
