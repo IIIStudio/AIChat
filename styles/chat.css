@@ -1,0 +1,102 @@
+        /* --- 聊天区域  --- */
+        .chat-container {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px 20px;
+        }
+
+        .chat-inner {
+            width: 100%;
+            max-width: var(--chat-max-width);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .welcome-screen { margin-top: 25vh; text-align: center; width: 100%; }
+        .welcome-screen h1 { font-size: 32px; font-weight: 700; margin-bottom: 12px; }
+        .welcome-screen p { color: var(--text-muted); font-size: 14px; }
+
+        /* 消息区块 */
+        .message-block {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 32px;
+            width: 100%;
+        }
+
+        /* 思考过程：简洁横条 + 可折叠内容 */
+        .thought-process {
+            color: var(--text-muted);
+            font-size: 13px;
+            margin-bottom: 10px;
+        }
+        .thought-bar {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            user-select: none;
+            width: fit-content;
+            padding: 2px 0;
+        }
+        .thought-bar .thought-label { white-space: nowrap; }
+        .thought-bar .thought-arrow { font-size: 10px; transition: transform 0.2s; opacity: 0.6; }
+        .thought-process.collapsed .thought-arrow { transform: rotate(-90deg); }
+        /* 思考中动效：跳动点 */
+        .thinking-dots { display: inline-flex; align-items: center; gap: 3px; }
+        .thinking-dots span { width: 4px; height: 4px; border-radius: 50%; background: var(--text-muted); animation: thinking-bounce 1.4s infinite ease-in-out both; }
+        .thinking-dots span:nth-child(1) { animation-delay: -0.32s; }
+        .thinking-dots span:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes thinking-bounce { 0%, 80%, 100% { transform: scale(0.5); opacity: 0.3; } 40% { transform: scale(1); opacity: 1; } }
+        /* 思考内容区 */
+        .thought-content {
+            padding-left: 10px;
+            border-left: 2px solid var(--border-color);
+            line-height: 1.6;
+            margin-top: 6px;
+            max-height: 500px;
+            overflow-y: auto;
+            transition: max-height 0.2s;
+        }
+        .thought-process.collapsed .thought-content { display: none; }
+        .thought-process.thinking .thought-content { border-left-color: var(--text-muted); }
+
+        .message { display: flex; flex-direction: column; max-width: 100%; }
+        
+        .message.user { align-self: flex-end; align-items: flex-end; max-width: 85%; }
+        .message.user.editing { max-width: 100%; align-self: stretch; }
+        .message.user.editing .collapse-wrapper { width: 100%; }
+        .message.assistant { align-self: stretch; align-items: flex-start; }
+
+        .message-content {
+            font-size: 15px;
+            line-height: 1.6;
+            word-wrap: break-word;
+        }
+
+        .message.user .message-content { 
+            background-color: var(--bg-gray); 
+            padding: 12px 20px;
+            border-radius: 20px; 
+            white-space: pre-wrap;
+        }
+        .message.assistant .message-content { 
+            background-color: transparent; 
+            padding: 4px 0; 
+            width: 100%;
+        }
+
+        /* 操作按钮 */
+        .message-actions { display: flex; align-items: center; gap: 12px; color: var(--text-muted); margin-top: 8px; }
+        .message-block.user-block .message-actions { align-self: flex-end; padding-right: 4px; }
+        .message-block.assistant-block .message-actions { align-self: flex-start; }
+        .message-actions svg { cursor: pointer; transition: color 0.2s; flex-shrink: 0; }
+        .message-actions svg:hover { color: var(--text-main); }
+        .msg-model-tag { display: inline-flex; align-items: center; font-size: 11px; color: var(--text-muted); cursor: pointer; padding: 2px 8px; border-radius: 10px; border: 1px solid transparent; margin-left: auto; transition: all 0.15s; user-select: none; white-space: nowrap; flex-shrink: 0; }
+        .msg-model-tag:hover { border-color: var(--border-color); color: var(--text-main); }
+        .msg-model-tag .msg-model-arrow { opacity: 0.4; flex-shrink: 0; margin-left: 2px; }
+        .msg-preset-tag { display: inline-flex; align-items: center; font-size: 11px; color: var(--text-muted); padding: 2px 8px; border-radius: 10px; border: 1px solid var(--border-color); user-select: none; white-space: nowrap; flex-shrink: 0; }
+        .msg-genparams-tag { display: inline-flex; align-items: center; font-size: 10px; color: var(--text-muted); padding: 2px 8px; border-radius: 10px; border: 1px dashed var(--border-color); user-select: none; white-space: nowrap; flex-shrink: 0; cursor: default; }

@@ -1,0 +1,236 @@
+        /* --- HTML 沙箱执行器样式 --- */
+        .html-executor-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: var(--bg-main);
+            z-index: 100000;
+            display: flex;
+            flex-direction: column;
+            animation: fadeIn 0.2s ease-out;
+        }
+        .executor-header {
+            height: 56px;
+            border-bottom: 1px solid var(--border-light);
+            background-color: var(--bg-surface);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            box-sizing: border-box;
+        }
+        .executor-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .executor-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .cdn-injector {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            border-right: 1px solid var(--border-light);
+            padding-right: 12px;
+            margin-right: 4px;
+        }
+        .cdn-injector input {
+            width: 260px;
+            height: 32px;
+            padding: 0 10px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            font-size: 12px;
+            outline: none;
+            transition: border-color 0.15s;
+        }
+        .cdn-injector input:focus {
+            border-color: var(--black-btn);
+        }
+        .executor-btn {
+            height: 32px;
+            padding: 0 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            transition: all 0.15s;
+            border: 1px solid transparent;
+        }
+        .btn-primary {
+            background-color: var(--black-btn);
+            color: var(--text-on-dark);
+        }
+        .btn-primary:hover {
+            opacity: 0.85;
+        }
+        .btn-secondary {
+            background-color: var(--bg-surface);
+            border-color: var(--border-color);
+            color: var(--text-muted);
+        }
+        .btn-secondary:hover {
+            color: var(--text-main);
+            border-color: var(--text-muted);
+        }
+        .btn-close {
+            background: transparent;
+            border: none;
+            font-size: 16px;
+            color: var(--text-muted);
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .btn-close:hover {
+            background-color: var(--bg-hover);
+            color: var(--text-main);
+        }
+        .executor-content {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+            background-color: var(--bg-main);
+        }
+        .executor-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .executor-left {
+            border-right: 1px solid var(--border-light);
+            transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+        .executor-left.collapsed {
+            width: 0;
+            flex: 0;
+            border-right: none;
+        }
+        .panel-header {
+            height: 36px;
+            background-color: var(--bg-hover);
+            border-bottom: 1px solid var(--border-light);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+        }
+        .sandbox-badge {
+            background-color: #e6f7ff;
+            color: #1890ff;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: normal;
+        }
+        .dark-mode .sandbox-badge {
+            background-color: #111b26;
+            color: #177ddc;
+        }
+        .source-editor {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+        }
+        .source-highlight {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 16px;
+            box-sizing: border-box;
+            background-color: var(--bg-surface);
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            overflow: auto;
+            pointer-events: none;
+            white-space: pre-wrap;
+            overflow-wrap: break-word;
+            word-break: break-word;
+            border: none;
+            z-index: 1;
+        }
+        .source-highlight code {
+            background: none;
+            padding: 0;
+            font-family: inherit;
+            font-size: inherit;
+            line-height: inherit;
+            white-space: pre-wrap;
+            overflow-wrap: break-word;
+            word-break: break-word;
+        }
+        #executorSource {
+            position: relative;
+            z-index: 2;
+            flex: 1;
+            width: 100%;
+            border: none;
+            resize: none;
+            outline: none;
+            padding: 16px;
+            box-sizing: border-box;
+            background-color: transparent;
+            color: transparent;
+            caret-color: var(--text-main);
+            -webkit-text-fill-color: transparent;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            overflow-wrap: break-word;
+            word-break: break-word;
+        }
+        #executorSource::placeholder {
+            color: var(--text-muted);
+            opacity: 0.5;
+            -webkit-text-fill-color: var(--text-muted);
+        }
+        [data-theme="dark"] #executorSource {
+            caret-color: var(--text-main);
+        }
+        .executor-right {
+            position: relative;
+        }
+        .iframe-container {
+            flex: 1;
+            background-color: #ffffff;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+        }
+        #executorIframe {
+            border: none;
+            width: 100%;
+            height: 100%;
+            background-color: #ffffff;
+        }

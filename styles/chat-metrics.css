@@ -1,0 +1,12 @@
+        .msg-metrics-tag {
+            display: inline-flex;
+            align-items: center;
+            font-size: 11px;
+            color: var(--text-muted);
+            padding: 2px 8px;
+            border-radius: 10px;
+            background: var(--bg-gray);
+            border: 1px solid var(--border-light);
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
