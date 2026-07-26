@@ -110,7 +110,9 @@
                     return f;
                 });
                 await saveFavorites();
-                if (favMode) renderFavorites();
+                // 重置渲染标记并立即刷新，确保切换到收藏页时能显示最新数据
+                favRenderedOnce = false;
+                renderFavorites();
             }
 
             updateModelDisplay();

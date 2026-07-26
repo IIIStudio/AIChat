@@ -209,6 +209,24 @@
             }
         });
 
+        // 窗口大小变化时重新渲染（列数变化影响横向阅读顺序）
+        (function() {
+            let lastColumnCount = getFavColumnCount();
+            let resizeTimer;
+            window.addEventListener('resize', function() {
+                const newCount = getFavColumnCount();
+                if (newCount !== lastColumnCount) {
+                    lastColumnCount = newCount;
+                    clearTimeout(resizeTimer);
+                    resizeTimer = setTimeout(function() {
+                        if (document.documentElement.getAttribute('data-mode') === 'fav') {
+                            renderFavorites();
+                        }
+                    }, 250);
+                }
+            });
+        })();
+
         function filterByTag(tag) {
             if (favFilterTag === tag) {
                 favFilterTag = null;
@@ -270,7 +288,7 @@
             });
         }
 
-        // 创建单张收藏卡片（公共函数，用于渲染和追加）
+        // 创建单张收藏卡片
         function createFavCard(fav, index) {
             const card = document.createElement('div');
             card.className = 'fav-card';
@@ -347,17 +365,23 @@
             return card;
         }
 
-        // 原地追加一张新卡片（addFavorite 时调用，避免全量重建）
+        // 追加新收藏卡片（全量重建以保证横向阅读顺序）
         function appendFavCard(fav) {
             const waterfall = document.getElementById('favWaterfall');
             if (!waterfall) return;
             // 如果有筛选且新卡片不匹配，不追加
             if (favFilterTag && (!fav.tags || !fav.tags.includes(favFilterTag))) return;
-            // 如果瀑布流是空状态提示，先清除
-            if (waterfall.querySelector('.fav-empty')) waterfall.innerHTML = '';
-            const card = createFavCard(fav, waterfall.children.length);
-            waterfall.insertBefore(card, waterfall.firstChild);
-            renderFavTagBar();
+            // 全量重建以保证 CSS 列布局中的横向阅读顺序
+            renderFavorites();
+        }
+
+        // 获取当前瀑布流的列数
+        function getFavColumnCount() {
+            const w = window.innerWidth;
+            if (w > 1100) return 5;
+            if (w > 860) return 4;
+            if (w > 600) return 3;
+            return 2;
         }
 
         function renderFavorites() {
@@ -376,14 +400,27 @@
                 waterfall.innerHTML = '<div class="fav-empty"><h3>该标签下无收藏</h3></div>';
                 return;
             }
+
+            // 使用 flexbox 分列布局，创建列容器并按顺序分配卡片
+            const N = getFavColumnCount();
+            const columns = [];
+            for (let c = 0; c < N; c++) {
+                const col = document.createElement('div');
+                col.className = 'fav-column';
+                waterfall.appendChild(col);
+                columns.push(col);
+            }
+
             const batchSize = 10;
             let i = 0;
             function renderBatch() {
                 const batch = allFavs.slice(i, i + batchSize);
                 i += batchSize;
                 batch.forEach((fav, idx) => {
-                    const card = createFavCard(fav, i - batchSize + idx);
-                    waterfall.appendChild(card);
+                    const globalIdx = i - batchSize + idx;
+                    const card = createFavCard(fav, globalIdx);
+                    // 按顺序轮流分配到各列：第 0 项 → 第 0 列，第 1 项 → 第 1 列…
+                    columns[globalIdx % N].appendChild(card);
                 });
                 if (i < allFavs.length) requestAnimationFrame(renderBatch);
             }
