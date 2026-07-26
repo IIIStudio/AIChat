@@ -234,7 +234,23 @@
             } else {
                 favFilterTag = tag;
             }
-            renderFavorites();
+            // 不重建 DOM，只切换卡片可见性，避免图片重新加载
+            applyFavFilter();
+            renderFavTagBar();
+        }
+
+        // 根据当前筛选标签切换卡片可见性
+        function applyFavFilter() {
+            const cards = document.querySelectorAll('.fav-card');
+            cards.forEach(card => {
+                const favId = Number(card.getAttribute('data-fav-id'));
+                const fav = favorites.find(f => f.id === favId);
+                if (!favFilterTag || (fav && fav.tags && fav.tags.includes(favFilterTag))) {
+                    card.style.display = '';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
         }
 
         function getFilteredFavorites() {
