@@ -253,18 +253,52 @@
             renderFavTagBar();
         }
 
-        // 根据当前筛选标签切换卡片可见性
+        // 根据当前筛选标签切换卡片可见性，并把可见卡片重新分配到各列（保持瀑布流均衡）
         function applyFavFilter() {
-            const cards = document.querySelectorAll('.fav-card');
-            cards.forEach(card => {
-                const favId = Number(card.getAttribute('data-fav-id'));
-                const fav = getFavById(favId);
-                if (!favFilterTag || (fav && fav.tags && fav.tags.includes(favFilterTag))) {
-                    card.style.display = '';
-                } else {
-                    card.style.display = 'none';
-                }
+            const waterfall = document.getElementById('favWaterfall');
+            if (!waterfall) return;
+            const columns = Array.from(waterfall.querySelectorAll('.fav-column'));
+            if (columns.length === 0) { renderFavorites(); return; }
+
+            // 已渲染卡片索引（id → 卡片节点）
+            const cardMap = new Map();
+            waterfall.querySelectorAll('.fav-card').forEach(c => {
+                cardMap.set(Number(c.getAttribute('data-fav-id')), c);
             });
+
+            // 匹配当前筛选的收藏（保持收藏顺序），区分已渲染/未渲染
+            const filtered = getFilteredFavorites();
+            const renderedFavs = [];
+            const pendingFavs = [];
+            filtered.forEach(fav => {
+                if (cardMap.has(fav.id)) renderedFavs.push(fav);
+                else pendingFavs.push(fav);
+            });
+
+            // 可见卡片按顺序轮流移入各列，重新计算位置（移动节点不会重新加载图片）
+            renderedFavs.forEach((fav, i) => {
+                const card = cardMap.get(fav.id);
+                card.style.display = '';
+                columns[i % columns.length].appendChild(card);
+                cardMap.delete(fav.id);
+            });
+            // 不匹配的卡片隐藏
+            cardMap.forEach(card => { card.style.display = 'none'; });
+
+            // 同步懒加载状态：未渲染的匹配卡片随滚动继续加载
+            if (favLazyState) {
+                favLazyState.allFavs = renderedFavs.concat(pendingFavs);
+                favLazyState.renderedCount = renderedFavs.length;
+                favLazyState.columns = columns;
+                favLazyState.N = columns.length;
+                // 筛选后若内容不足一屏，继续渲染后续批次
+                const favPage = document.getElementById('favPage');
+                let guard = 0;
+                while (favLazyState.renderedCount < favLazyState.allFavs.length &&
+                       favPage && favPage.scrollHeight <= favPage.clientHeight + 300 && guard++ < 50) {
+                    renderNextFavBatch();
+                }
+            }
         }
 
         function getFilteredFavorites() {
