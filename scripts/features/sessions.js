@@ -55,6 +55,11 @@
             try { await dbDelete('session_' + id); } catch(e) {}
         }
 
+        // 只保存轻量索引（切换会话时用，不写消息内容，体积极小）
+        async function saveSessionIndex() {
+            try { await dbSet('sessions_index', buildSessionIndex()); } catch(e) {}
+        }
+
         // 按需加载会话消息（如果尚未加载）
         async function ensureSessionLoaded(id) {
             const s = sessions.find(s => s.id === id);
@@ -187,7 +192,8 @@
                 if (s.type === 'gen') currentGenSessionId = id;
                 else currentChatSessionId = id;
             }
-            // 不在切模式时写 IndexedDB（session 内容未变，只改当前 ID）
+            // 保存轻量索引（记录当前会话 ID，刷新后恢复到正确会话）
+            saveSessionIndex();
             // 同步该会话的预设
             if (s && s.presetId != null && paramPresets.find(p => p.id === s.presetId)) {
                 activePresetId = s.presetId;
