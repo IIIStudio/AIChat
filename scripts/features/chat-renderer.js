@@ -528,7 +528,6 @@
                 const displayModel = msgModel || activeModel;
                 const msgLogo = msgModel ? getLogoForModel(msgModel) : getActiveLogo();
                 const msgLogoHtml = renderLogoHtml(msgLogo, true);
-                const metricsHtml = renderChatMetricsTag(msgMetrics);
                 // 版本切换导航
                 const msg = (session && msgIndex != null) ? session.messages[msgIndex] : null;
                 const versions = (msg && msg.versions) ? msg.versions : [];
@@ -576,7 +575,6 @@
                     ${genExtraBtns}
                     ${versionNavHtml}
                     <span class="msg-model-tag" onclick="event.stopPropagation(); retryWithDropdown(this.closest('.message-block'))">${msgLogoHtml}${escapeHtml(displayModel)}<svg class="msg-model-arrow" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg></span>
-                    ${metricsHtml}
                     ${genParamsHtml}
                     ${presetTagHtml}
                 `;

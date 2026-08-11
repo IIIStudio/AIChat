@@ -53,31 +53,6 @@
                 if (bar) bar.innerHTML = `<span class="thought-label">思考过程(${durationText})</span><svg class="thought-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>`;
             }
 
-            // 动态指标标签：创建（如不存在）并启动定时更新
-            const actionsEl = el.closest('.message-block')?.querySelector('.message-actions');
-            let metricsTag = actionsEl?.querySelector('.msg-metrics-tag');
-            if (!metricsTag && actionsEl) {
-                metricsTag = document.createElement('span');
-                metricsTag.className = 'msg-metrics-tag';
-                const modelTag = actionsEl.querySelector('.msg-model-tag');
-                if (modelTag) modelTag.after(metricsTag);
-                else actionsEl.appendChild(metricsTag);
-            }
-            const metricsTimer = setInterval(() => {
-                if (!metricsTag || !metricsTracker) return;
-                const elapsed = performance.now() - metricsTracker.startedAt;
-                if (!metricsTracker.firstTokenAt) {
-                    metricsTag.textContent = `首字 ${formatMetricDuration(Math.round(elapsed))}`;
-                } else {
-                    const firstMs = Math.round(metricsTracker.firstTokenAt - metricsTracker.startedAt);
-                    const genMs = performance.now() - metricsTracker.firstTokenAt;
-                    const charCount = (metricsTracker.outputText || '').length;
-                    const tokens = estimateTokenCount(metricsTracker.outputText);
-                    const tps = genMs > 0 ? Number((tokens / (genMs / 1000)).toFixed(1)) : 0;
-                    metricsTag.textContent = `首字 ${formatMetricDuration(firstMs)} · ${charCount}字 · 约 ${tps} token/s`;
-                }
-            }, 200);
-
             // 3.流式增强节流：每 600ms 对已完成代码块补充渲染一次
             let lastHighlightTime = 0;
             let contentRenderedFenceCount = 0;
@@ -207,7 +182,6 @@
                 if (streamErr.name !== 'AbortError') throw streamErr;
             }
             // 7.结束流，刷新剩余未闭合的 markdown 标记
-            clearInterval(metricsTimer);
             if (contentParser) window.smd.parser_end(contentParser);
             if (thoughtParser) window.smd.parser_end(thoughtParser);
             // 【流式渲染/系统】【思考清除】8. 结束流后，结算思考状态

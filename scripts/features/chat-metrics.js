@@ -38,16 +38,26 @@
 
         /**
          * 【聊天指标/响应统计】【token 估算】根据中英文混合文本估算 token 数
+         * 估算口径（贴近主流 BPE tokenizer 的平均换算）：
+         * - 中文（CJK）1 个汉字 ≈ 1 token
+         * - 英文单词与数字串按约 4 字符 = 1 token（模拟子词切分）
+         * - 标点等符号约 2 个 = 1 token
          * @param {string} text - 响应文本
          * @returns {number} - 估算 token 数
          */
         function estimateTokenCount(text) {
             const raw = String(text || '');
-            const cjkMatches = raw.match(/[\u4e00-\u9fff]/g) || [];
+            if (!raw.trim()) return 0;
+            // 中文（CJK）字符
+            const cjkCount = (raw.match(/[\u4e00-\u9fff]/g) || []).length;
             const nonCjkText = raw.replace(/[\u4e00-\u9fff]/g, ' ');
-            const wordMatches = nonCjkText.match(/[A-Za-z0-9_]+/g) || [];
+            // 英文单词与数字串：按字符数折算（每约 4 字符 1 token）
+            const letterDigitCount = (nonCjkText.match(/[A-Za-z0-9_]/g) || []).length;
+            const wordTokens = Math.ceil(letterDigitCount / 4);
+            // 标点等符号：每约 2 个 1 token
             const symbolCount = (nonCjkText.match(/[^\sA-Za-z0-9_]/g) || []).length;
-            return Math.max(1, cjkMatches.length + wordMatches.length + Math.ceil(symbolCount / 4));
+            const symbolTokens = Math.ceil(symbolCount / 2);
+            return Math.max(1, cjkCount + wordTokens + symbolTokens);
         }
 
         /**
@@ -100,25 +110,4 @@
             return `用时${min}分${sec}秒`;
         }
 
-        /**
-         * 【聊天指标/展示格式】【指标文案】格式化响应指标展示文本
-         * @param {Object} metrics - 响应指标
-         * @returns {string} - 展示文本
-         */
-        function formatChatMetrics(metrics) {
-            if (!metrics) return '';
-            const first = formatMetricDuration(metrics.firstTokenMs);
-            const speed = metrics.tokensPerSecond != null ? metrics.tokensPerSecond : 0;
-            return `首字 ${first} · 约 ${speed} token/s`;
-        }
 
-        /**
-         * 【聊天指标/展示格式】【标签渲染】渲染聊天响应指标标签
-         * @param {Object} metrics - 响应指标
-         * @returns {string} - 指标标签 HTML
-         */
-        function renderChatMetricsTag(metrics) {
-            const text = formatChatMetrics(metrics);
-            if (!text) return '';
-            return `<span class="msg-metrics-tag">${escapeHtml(text)}</span>`;
-        }
