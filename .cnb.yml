@@ -23,7 +23,7 @@ main:
             password: ${GIT_ACCESS_TOKEN}
             branch: main
             # sync_mode: mirror
-            # force: true
+            force: true
   web_trigger:
     - runner:
         cpus: 1
