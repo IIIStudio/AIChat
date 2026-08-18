@@ -171,7 +171,7 @@
                 // 持久化（使用占位符版本，images 数组单独存储）
                 const genDurationMs = Math.round(performance.now() - genStartTime);
                 const genParams = {
-                    size: getGenSize(),
+                    size: getGenSizeLabel(),
                     negative: document.getElementById('genNegativePrompt').value.trim() || '',
                     durationMs: genDurationMs
                 };

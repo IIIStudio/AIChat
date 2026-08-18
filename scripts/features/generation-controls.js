@@ -155,7 +155,7 @@
 
         function buildGenSummary() {
             const parts = [];
-            parts.push(getGenSize());
+            parts.push(getGenSizeLabel());
             return parts.join(', ');
         }
 
@@ -196,6 +196,14 @@
                 return `${w}x${h}`;
             }
             return preset;
+        }
+
+        // 返回当前尺寸对应的比例标签（如 1:1 / 16:9），用于界面展示
+        function getGenSizeLabel() {
+            const size = getGenSize();
+            const opts = getGenSizeOptions();
+            const found = opts.find(o => o.value === size);
+            return found ? found.label : size;
         }
 
         // 生图面板所有控件改变时自动持久化
@@ -246,14 +254,22 @@
             if (!opts.some(o => o.value === hidden.value)) {
                 hidden.value = opts[0].value;
             }
-            container.querySelectorAll('.gen-size-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    hidden.value = btn.dataset.value;
-                    hidden.dispatchEvent(new Event('change'));
-                });
-            });
             onGenSizeChange();
         }
+
+        // 尺寸按钮点击采用事件委托：容器绑定一次，按钮重建后仍生效
+        (function() {
+            const container = document.querySelector('.gen-size-btns');
+            if (!container) return;
+            container.addEventListener('click', (e) => {
+                const btn = e.target.closest('.gen-size-btn');
+                if (!btn) return;
+                const hidden = document.getElementById('genSizePreset');
+                if (!hidden) return;
+                hidden.value = btn.dataset.value;
+                hidden.dispatchEvent(new Event('change'));
+            });
+        })();
 
         // 输入框聚焦时展开生图参数，离开时折叠（仅生图模式）
         (function() {
