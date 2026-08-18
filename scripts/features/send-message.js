@@ -101,16 +101,25 @@
                 }
                 const genUrl = baseUrl + '/images/generations';
 
-                const body = {
-                    model: activeModel,
-                    prompt: prompt,
-                    num_images_per_prompt: 1,
-                    negative_prompt: document.getElementById('genNegativePrompt').value.trim() || undefined,
-                    num_inference_steps: 9,
-                    guidance_scale: 1,
-                    image_scale: 1,
-                    size: getGenSize(),
-                };
+                // OpenAI Images 协议（gpt-image-2 等）与 Flux/StableDiffusion 协议字段不同，按模型分支构建
+                const body = isOpenAIImageModel(activeModel)
+                    ? {
+                        model: activeModel,
+                        prompt: prompt,
+                        size: getGenSize(),
+                        n: 1,
+                        response_format: 'b64_json',
+                      }
+                    : {
+                        model: activeModel,
+                        prompt: prompt,
+                        num_images_per_prompt: 1,
+                        negative_prompt: document.getElementById('genNegativePrompt').value.trim() || undefined,
+                        num_inference_steps: 9,
+                        guidance_scale: 1,
+                        image_scale: 1,
+                        size: getGenSize(),
+                      };
 
                 const response = await fetch(genUrl, {
                     method: 'POST',

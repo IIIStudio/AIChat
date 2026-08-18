@@ -45,6 +45,7 @@
                 userInput.placeholder = '输入图片描述词，Enter 发送';
                 clearImagePreview();
                 if (!isGenModel(activeModel)) autoSelectGenModel();
+                updateGenSizeButtons();
             } else {
                 saveGenSettings(); // 离开生图时保存设置
                 btnChat.classList.add('active');
@@ -99,6 +100,7 @@
                     document.getElementById('genControlsPanel').classList.add('show');
                     userInput.placeholder = '输入图片描述词，Enter 发送';
                     if (!isGenModel(activeModel)) autoSelectGenModel();
+                    updateGenSizeButtons();
                 } else if (mode === 'fav') {
                     imageGenMode = false;
                     favMode = true;
@@ -211,17 +213,47 @@
             });
         })();
 
-        // 尺寸预设按钮点击
-        (function() {
-            document.querySelectorAll('.gen-size-btn').forEach(btn => {
+        // 尺寸预设定义：Flux/StableDiffusion 风格 vs OpenAI Images 风格
+        const GEN_SIZE_OPTIONS_FLUX = [
+            { value: '1024x1024', label: '1:1' },
+            { value: '1024x768', label: '4:3' },
+            { value: '768x1024', label: '3:4' },
+            { value: '1024x576', label: '16:9' },
+            { value: '576x1024', label: '9:16' },
+            { value: 'custom', label: '自定义' },
+        ];
+        const GEN_SIZE_OPTIONS_OPENAI = [
+            { value: '1024x1024', label: '1:1' },
+            { value: '1536x1024', label: '16:9' },
+            { value: '1024x1536', label: '9:16' },
+            { value: 'auto', label: '自动' },
+        ];
+
+        function getGenSizeOptions() {
+            return isOpenAIImageModel(activeModel) ? GEN_SIZE_OPTIONS_OPENAI : GEN_SIZE_OPTIONS_FLUX;
+        }
+
+        // 根据当前模型动态渲染尺寸预设按钮
+        function updateGenSizeButtons() {
+            const container = document.querySelector('.gen-size-btns');
+            const hidden = document.getElementById('genSizePreset');
+            if (!container || !hidden) return;
+            const opts = getGenSizeOptions();
+            container.innerHTML = opts.map(o =>
+                `<button type="button" class="gen-size-btn" data-value="${o.value}">${o.label}</button>`
+            ).join('');
+            // 当前预设值不在新选项内则回退到第一个
+            if (!opts.some(o => o.value === hidden.value)) {
+                hidden.value = opts[0].value;
+            }
+            container.querySelectorAll('.gen-size-btn').forEach(btn => {
                 btn.addEventListener('click', () => {
-                    const hidden = document.getElementById('genSizePreset');
                     hidden.value = btn.dataset.value;
                     hidden.dispatchEvent(new Event('change'));
                 });
             });
-            onGenSizeChange(); // 初始化默认高亮
-        })();
+            onGenSizeChange();
+        }
 
         // 输入框聚焦时展开生图参数，离开时折叠（仅生图模式）
         (function() {

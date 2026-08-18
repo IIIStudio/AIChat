@@ -54,6 +54,12 @@
             return GEN_ONLY_MODELS.includes(name);
         }
 
+        // OpenAI Images 协议模型（gpt-image-2 等），请求体字段与 Flux/StableDiffusion 不同
+        const OPENAI_IMAGE_MODELS = ['gpt-image-2'];
+        function isOpenAIImageModel(name) {
+            return OPENAI_IMAGE_MODELS.includes(name);
+        }
+
         function updateModelDisplay() {
             const el = document.getElementById('displayModelName');
             if (!el) return;
@@ -131,6 +137,7 @@
             } else if (p) {
                 showToast(`已切换到 ${p.name} / ${model}`);
             }
+            if (typeof updateGenSizeButtons === 'function') updateGenSizeButtons();
         }
 
         function retryWithDropdown(blockEl) {
