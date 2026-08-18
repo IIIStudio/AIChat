@@ -241,6 +241,13 @@
             return isOpenAIImageModel(activeModel) ? GEN_SIZE_OPTIONS_OPENAI : GEN_SIZE_OPTIONS_FLUX;
         }
 
+        // gpt-image-2（OpenAI Images 协议）不支持反向词，隐藏对应控件
+        function updateGenNegativePromptVisibility() {
+            const row = document.getElementById('genNegativePromptRow');
+            if (!row) return;
+            row.style.display = isOpenAIImageModel(activeModel) ? 'none' : '';
+        }
+
         // 根据当前模型动态渲染尺寸预设按钮
         function updateGenSizeButtons() {
             const container = document.querySelector('.gen-size-btns');
@@ -255,6 +262,7 @@
                 hidden.value = opts[0].value;
             }
             onGenSizeChange();
+            updateGenNegativePromptVisibility();
         }
 
         // 尺寸按钮点击采用事件委托：容器绑定一次，按钮重建后仍生效
